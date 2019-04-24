@@ -368,9 +368,9 @@ def update_stage_user(stage_user_id):
             connection.bio = stage_user.website
             connection.notes = ''
             connection.excerpt = ''
-            connection.added_by = WPUser.query.filter(WPUser.user_login == 'wpadmin').first().id
-            connection.edited_by = WPUser.query.filter(WPUser.user_login == 'wpadmin').first().id
-            connection.owner = WPUser.query.filter(WPUser.user_login == 'wpadmin').first().id
+            connection.added_by = WPUser.query.filter(WPUser.user_login == app.config.get('ADMIN_USERNAME')).first().id
+            connection.edited_by = WPUser.query.filter(WPUser.user_login == app.config.get('ADMIN_USERNAME')).first().id
+            connection.owner = WPUser.query.filter(WPUser.user_login == app.config.get('ADMIN_USERNAME')).first().id
             connection.user = 0
             connection.status = 'approved'
 
