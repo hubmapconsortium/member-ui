@@ -255,6 +255,10 @@ def update_stage_user(stage_user_id):
         # update wp_user
         wp_user.user_login = stage_user.email
         wp_user.user_pass = generate_password()
+        for meta in wp_user.metas:
+            if meta.meta_key == "wp_capabilities":
+                meta.meta_value = "a:1:{s:6:\"member\";b:1;}"
+
         # delete stage user
         db.session.delete(stage_user)
         db.session.commit()
