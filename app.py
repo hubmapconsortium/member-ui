@@ -494,6 +494,10 @@ def generate_password():
     passlen = 16
     return "".join(random.sample(s, passlen))
 
+@app.rout('/hello', methods=['GET'])
+def hello():
+    return Response("Hello world!", 200)
+
 # Run Server
 if __name__ == "__main__":
     app.run(debug=True)
