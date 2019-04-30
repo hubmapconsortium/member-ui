@@ -290,9 +290,9 @@ def update_stage_user(stage_user_id):
             connection.organization = stage_user.organization
 
             photo_file_name = stage_user.photo.split('/')[-1]
-            pathlib.Path("/home/webadmin/collab-website/wp-site/wp-content/uploads/connections-images/" + stage_user.globus_user_id ).mkdir(parents=True, exist_ok=True)
-            copyfile(stage_user.photo, "/home/webadmin/collab-website/wp-site/wp-content/uploads/connections-images/" + stage_user.globus_user_id + "/" + photo_file_name)
-            connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"\\/home\\/webadmin\\/collab-website\\/wp-site\\/wp-content\\/uploads\\/connections-images\\/" + stage_user.globus_user_id + "\\/" + photo_file_name + "\",\"url\":\"https:\\/\\/dev2.hubmapconsortium.org\\/wp-content\\/uploads\\/connections-images\\/" + stage_user.globus_user_id + "\\/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image\\/jpeg\",\"type\":2}}}}"
+            pathlib.Path(app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() ).mkdir(parents=True, exist_ok=True)
+            copyfile(stage_user.photo, app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "/" + photo_file_name)
+            connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config.get('CONNECTION_IMAGE_PATH') + stage_user.globus_user_id + "\\/" + photo_file_name + "\",\"url\":\"https:\\/\\/dev2.hubmapconsortium.org\\/wp-content\\/uploads\\/connections-images\\/" + stage_user.globus_user_id + "\\/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image\\/jpeg\",\"type\":2}}}}"
             connection.phone_numbers = "a:1:{i:0;a:7:{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:10:\"" + stage_user.phone + "\";}}"
 
             connection_meta_role = ConnectionMeta()
