@@ -389,7 +389,8 @@ def update_stage_user(stage_user_id):
             print("-"*60)
             return Response('Stage user update failed', status=500)
 
-        return Response('Stage user updated', status=200)
+        m_result = wp_user_schema.dump(new_wp_user)
+        return jsonify(m_result)
 
 @app.route('/wp_user', methods=['POST'])
 def add_wp_user():
