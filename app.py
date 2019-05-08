@@ -10,6 +10,9 @@ from shutil import copyfile
 from datetime import datetime
 import pathlib
 import sys, traceback
+import requests
+from PIL import Image
+from io import BytesIO
 
 # Init app
 app = Flask(__name__)
@@ -39,22 +42,24 @@ class StageUser(db.Model):
     component = db.Column(db.String(200))
     other_component = db.Column(db.String(200))
     organization = db.Column(db.String(200))
+    other_organization = db.Column(db.String(200))
     role = db.Column(db.String(100))
+    other_role = db.Column(db.String(200))
     group = db.Column(db.String(500)) # Checkboxes
     photo = db.Column(db.String(500))
     photo_url = db.Column(db.String(500))
     access_requests = db.Column(db.String(500)) # Checkboxes
-    alt_email = db.Column(db.String(100))
+    google_email = db.Column(db.String(200))
+    github_username = db.Column(db.String(200))
+    slack_username = db.Column(db.String(200))
     phone = db.Column(db.String(100))
     website = db.Column(db.String(500))
     biosketch = db.Column(db.String(200))
     expertise = db.Column(db.String(500))
     orcid = db.Column(db.String(100))
-    github = db.Column(db.String(200))
-    slack = db.Column(db.String(200))
-    stack = db.Column(db.String(200))
-    assistant = db.Column(db.Boolean)
-    assistant_email = db.Column(db.String(100))
+    pm = db.Column(db.Boolean)
+    pm_name = db.Column(db.String(100))
+    pm_email = db.Column(db.String(100))
 
     def __init__(self, a_dict):
         try:
@@ -65,31 +70,33 @@ class StageUser(db.Model):
             self.component = a_dict['component'] if 'component' in a_dict else ''
             self.other_component = a_dict['other_component'] if 'other_component' in a_dict else ''
             self.organization = a_dict['organization'] if 'organization' in a_dict else ''
+            self.other_organization = a_dict['other_organization'] if 'other_organization' in a_dict else ''
             self.role = a_dict['role'] if 'role' in a_dict else ''
+            self.other_role = a_dict['other_role'] if 'other_role' in a_dict else ''
             self.group = str(a_dict['group']) if 'group' in a_dict else ''
             self.photo = a_dict['photo'] if 'photo' in a_dict else ''
             self.photo_url = a_dict['photo_url'] if 'photo_url' in a_dict else ''
             self.access_requests = str(a_dict['access_requests']) if 'access_requests' in a_dict else ''
-            self.alt_email = a_dict['alt_email'] if 'alt_email' in a_dict else ''
+            self.google_email = a_dict['google_email'] if 'google_email' in a_dict else ''
+            self.github_username = a_dict['github_username'] if 'github_username' in a_dict else ''
+            self.slack_username = a_dict['slack_username'] if 'slack_username' in a_dict else ''
             self.phone = a_dict['phone'] if 'phone' in a_dict else ''
             self.website = a_dict['website'] if 'website' in a_dict else ''
             self.biosketch = a_dict['biosketch'] if 'biosketch' in a_dict else ''
             self.expertise = a_dict['expertise'] if 'expertise' in a_dict else ''
             self.orcid = a_dict['orcid'] if 'orcid' in a_dict else ''
-            self.github = a_dict['github'] if 'github' in a_dict else ''
-            self.slack = a_dict['slack'] if 'slack' in a_dict else ''
-            self.stack = a_dict['stack'] if 'stack' in a_dict else ''
-            self.assistant = a_dict['assistant'] if 'assistant' in a_dict else ''
-            self.assistant_email = a_dict['assistant_email'] if 'assistant_email' in a_dict else ''
+            self.pm = a_dict['pm'] if 'pm' in a_dict else ''
+            self.pm_name = a_dict['pm_name'] if 'pm_name' in a_dict else ''
+            self.pm_email = a_dict['pm_email'] if 'pm_email' in a_dict else ''
         except e:
             raise e
 
 # StageUser Schema
 class StageUserSchema(ma.Schema):
     class Meta:
-        fields = ('id', 'globus_user_id', 'email', 'first_name', 'last_name', 'component', 'other_component', 'organization', 
-                    'role', 'group', 'photo', 'photo_url', 'access_requests', 'alt_email', 'phone', 'website',
-                    'biosketch', 'orcid', 'github', 'slack', 'stack', 'assistant', 'assistant_email')
+        fields = ('id', 'globus_user_id', 'email', 'first_name', 'last_name', 'component', 'other_component', 'organization', 'other_organization',
+                    'role', 'other_role', 'group', 'photo', 'photo_url', 'access_requests', 'google_email', 'github_username', 'slack_username', 'phone', 'website',
+                    'biosketch', 'orcid', 'pm', 'pm_name', 'pm_email')
 
 # WPUserMeta Class/Model
 class WPUserMeta(db.Model):
@@ -203,16 +210,24 @@ connections_schema = ConnectionSchema(many=True, strict=True)
 # APIs
 @app.route('/stage_user', methods=['GET'])
 def get_stage_users():
-    args = request.args
-    globus_user_id = args['globus_user_id'] if 'globus_user_id' in args else None
-    if globus_user_id:
-        stage_users = StageUser.query.filter(StageUser.globus_user_id == globus_user_id)
-        if stage_users.count() == 0:
-            return Response('No stage user found', status=400)
-    else:
-        stage_users = StageUser.query.all()
-    m_result = stage_users_schema.dump(stage_users)
-    return jsonify(m_result)
+    try:
+        args = request.args
+        globus_user_id = args['globus_user_id'] if 'globus_user_id' in args else None
+        if globus_user_id:
+            stage_users = StageUser.query.filter(StageUser.globus_user_id == globus_user_id)
+            if stage_users.count() == 0:
+                return Response('No stage user found', status=400)
+        else:
+            stage_users = StageUser.query.all()
+        m_result = stage_users_schema.dump(stage_users)
+        return jsonify(m_result)
+    except Exception as e:
+        print(e)
+        print("Exception in user code:")
+        print("-"*60)
+        traceback.print_exc(file=sys.stdout)
+        print("-"*60)
+        return Response('Stage user update failed', status=500)
 
 @app.route('/stage_user', methods=['POST'])
 def add_stage_user():
@@ -225,9 +240,14 @@ def add_stage_user():
         img_file = open('./avatar/noname.jpg', 'r')
         j_stage_user['photo'] = './avatar/noname.jpg'
     else:
-        filename, exetension = request.files['img'].filename.rsplit('.', 1)
-        img_file = request.files['img']
-        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{j_stage_user['globus_user_id']}.{exetension}"))
+        if j_stage_user['photo_url'] != '':
+            response = requests.get(j_stage_user['photo_url'])
+            img_file = Image.open(BytesIO(response.content))
+            extension = img_file.format
+        else:
+            _, extension = request.files['img'].filename.rsplit('.', 1)
+            img_file = request.files['img']
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{j_stage_user['globus_user_id']}.{extension}"))
         img_file.save(save_path)
         j_stage_user['photo'] = save_path
     try:
@@ -295,9 +315,29 @@ def update_stage_user(stage_user_id):
             connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config.get('CONNECTION_IMAGE_PATH') + stage_user.globus_user_id + "\\/" + photo_file_name + "\",\"url\":\"https:\\/\\/dev2.hubmapconsortium.org\\/wp-content\\/uploads\\/connections-images\\/" + stage_user.globus_user_id + "\\/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image\\/jpeg\",\"type\":2}}}}"
             connection.phone_numbers = "a:1:{i:0;a:7:{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:10:\"" + stage_user.phone + "\";}}"
 
+            connection_meta_component = ConnectionMeta()
+            connection_meta_component.meta_key = 'component'
+            connection_meta_component.meta_value = stage_user.component
+            connection.metas.append(connection_meta_component)
+            connection_meta_other_component = ConnectionMeta()
+            connection_meta_other_component.meta_key = 'other_component'
+            connection_meta_other_component.meta_value = stage_user.other_component
+            connection.metas.append(connection_meta_other_component)
+            connection_meta_organization = ConnectionMeta()
+            connection_meta_organization.meta_key = 'organization'
+            connection_meta_organization.meta_value = stage_user.organization
+            connection.metas.append(connection_meta_organization)
+            connection_meta_other_organization = ConnectionMeta()
+            connection_meta_other_organization.meta_key = 'other_organization'
+            connection_meta_other_organization.meta_value = stage_user.other_organization
+            connection.metas.append(connection_meta_other_organization)
             connection_meta_role = ConnectionMeta()
             connection_meta_role.meta_key = 'role'
             connection_meta_role.meta_value = stage_user.role
+            connection.metas.append(connection_meta_role)
+            connection_meta_other_role = ConnectionMeta()
+            connection_meta_other_role.meta_key = 'other_role'
+            connection_meta_other_role.meta_value = stage_user.other_role
             connection.metas.append(connection_meta_role)
             connection_meta_working_group = ConnectionMeta()
             connection_meta_working_group.meta_key = 'working_group'
@@ -307,10 +347,18 @@ def update_stage_user(stage_user_id):
             connection_meta_access_requests.meta_key = 'access_requests'
             connection_meta_access_requests.meta_value = stage_user.access_requests
             connection.metas.append(connection_meta_access_requests)
-            connection_meta_alt_email = ConnectionMeta()
-            connection_meta_alt_email.meta_key = 'alt_email'
-            connection_meta_alt_email.meta_value = stage_user.alt_email
-            connection.metas.append(connection_meta_alt_email)
+            connection_meta_google_email = ConnectionMeta()
+            connection_meta_google_email.meta_key = 'google_email'
+            connection_meta_google_email.meta_value = stage_user.google_email
+            connection.metas.append(connection_meta_google_email)
+            connection_meta_github_username = ConnectionMeta()
+            connection_meta_github_username.meta_key = 'github_username'
+            connection_meta_github_username.meta_value = stage_user.github_username
+            connection.metas.append(connection_meta_github_username)
+            connection_meta_slack_username = ConnectionMeta()
+            connection_meta_slack_username.meta_key = 'slack_username'
+            connection_meta_slack_username.meta_value = stage_user.slack_username
+            connection.metas.append(connection_meta_slack_username)
             connection_meta_website = ConnectionMeta()
             connection_meta_website.meta_key = 'website'
             connection_meta_website.meta_value = stage_user.website
@@ -327,26 +375,18 @@ def update_stage_user(stage_user_id):
             connection_meta_orcid.meta_key = 'orcid'
             connection_meta_orcid.meta_value = stage_user.orcid
             connection.metas.append(connection_meta_orcid)
-            connection_meta_github = ConnectionMeta()
-            connection_meta_github.meta_key = 'github'
-            connection_meta_github.meta_value = stage_user.github
-            connection.metas.append(connection_meta_github)
-            connection_meta_slack = ConnectionMeta()
-            connection_meta_slack.meta_key = 'slack'
-            connection_meta_slack.meta_value = stage_user.slack
-            connection.metas.append(connection_meta_slack)
-            connection_meta_stack = ConnectionMeta()
-            connection_meta_stack.meta_key = 'stack'
-            connection_meta_stack.meta_value = stage_user.stack
-            connection.metas.append(connection_meta_stack)
-            connection_meta_assistant = ConnectionMeta()
-            connection_meta_assistant.meta_key = 'assistant'
-            connection_meta_assistant.meta_value = stage_user.assistant
-            connection.metas.append(connection_meta_assistant)
-            connection_meta_assistant_email = ConnectionMeta()
-            connection_meta_assistant_email.meta_key = 'assistant_email'
-            connection_meta_assistant_email.meta_value = stage_user.assistant_email
-            connection.metas.append(connection_meta_assistant_email)
+            connection_meta_pm = ConnectionMeta()
+            connection_meta_pm.meta_key = 'pm'
+            connection_meta_pm.meta_value = stage_user.pm
+            connection.metas.append(connection_meta_pm)
+            connection_meta_pm_name = ConnectionMeta()
+            connection_meta_pm_name.meta_key = 'pm_name'
+            connection_meta_pm_name.meta_value = stage_user.pm_name
+            connection.metas.append(connection_meta_pm_name)
+            connection_meta_pm_email = ConnectionMeta()
+            connection_meta_pm_email.meta_key = 'pm_email'
+            connection_meta_pm_email.meta_value = stage_user.pm_email
+            connection.metas.append(connection_meta_pm_email)
             
             
             ## default value ##
