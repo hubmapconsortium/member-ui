@@ -272,6 +272,8 @@ def update_stage_user(stage_user_id):
     wp_user = WPUser.query.get(wp_user_id) if wp_user_id else None
     connection = Connection.query.get(connection_id) if connection_id else None
     if stage_user and wp_user:
+        '''match a existing wp_user
+        '''
         # update wp_user
         wp_user.user_login = stage_user.email
         wp_user.user_pass = generate_password()
@@ -286,141 +288,11 @@ def update_stage_user(stage_user_id):
         m_result = wp_user_schema.dump(wp_user)
         return jsonify(m_result)
     else:
+        '''create a new wp_user
+        '''
         try:
-            admin_id = WPUser.query.filter(WPUser.user_login == app.config.get('ADMIN_USERNAME')).first().id
-
             new_wp_user = WPUser()
-            new_wp_user.user_login = stage_user.email
-            new_wp_user.user_email = stage_user.email
-            new_wp_user.user_pass = generate_password()
-            meta_capabilities = WPUserMeta()
-            meta_capabilities.meta_key = "wp_capabilities"
-            meta_capabilities.meta_value = "a:1:{s:6:\"member\";b:1;}"
-            new_wp_user.metas.append(meta_capabilities)
-            meta_globus_user_id = WPUserMeta()
-            meta_globus_user_id.meta_key = "openid-connect-generic-subject-identity"
-            meta_globus_user_id.meta_value = stage_user.globus_user_id
-            new_wp_user.metas.append(meta_globus_user_id)
-
-            if not connection:
-                connection = Connection()
-
-            connection.owners.append(new_wp_user)
-            connection.email = stage_user.email
-            connection.first_name = stage_user.first_name
-            connection.last_name = stage_user.last_name
-            connection.organization = stage_user.organization
-
-            photo_file_name = stage_user.photo.split('/')[-1]
-            pathlib.Path(app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() ).mkdir(parents=True, exist_ok=True)
-            copyfile(stage_user.photo, app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "/" + photo_file_name)
-            connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "/" + photo_file_name + "\",\"url\": \"" + app.config.get('CONNECTION_IMAGE_URL') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image\\/jpeg\",\"type\":2}}}}"
-            connection.phone_numbers = "a:1:{i:0;a:7:{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:10:\"" + stage_user.phone + "\";}}"
-            
-            [db.session.delete(meta) for meta in connection.metas]
-            connection_meta_component = ConnectionMeta()
-            connection_meta_component.meta_key = 'component'
-            connection_meta_component.meta_value = stage_user.component
-            connection.metas.append(connection_meta_component)
-            connection_meta_other_component = ConnectionMeta()
-            connection_meta_other_component.meta_key = 'other_component'
-            connection_meta_other_component.meta_value = stage_user.other_component
-            connection.metas.append(connection_meta_other_component)
-            connection_meta_organization = ConnectionMeta()
-            connection_meta_organization.meta_key = 'organization'
-            connection_meta_organization.meta_value = stage_user.organization
-            connection.metas.append(connection_meta_organization)
-            connection_meta_other_organization = ConnectionMeta()
-            connection_meta_other_organization.meta_key = 'other_organization'
-            connection_meta_other_organization.meta_value = stage_user.other_organization
-            connection.metas.append(connection_meta_other_organization)
-            connection_meta_role = ConnectionMeta()
-            connection_meta_role.meta_key = 'role'
-            connection_meta_role.meta_value = stage_user.role
-            connection.metas.append(connection_meta_role)
-            connection_meta_other_role = ConnectionMeta()
-            connection_meta_other_role.meta_key = 'other_role'
-            connection_meta_other_role.meta_value = stage_user.other_role
-            connection.metas.append(connection_meta_other_role)
-            connection_meta_working_group = ConnectionMeta()
-            connection_meta_working_group.meta_key = 'working_group'
-            connection_meta_working_group.meta_value = stage_user.working_group
-            connection.metas.append(connection_meta_working_group)
-            connection_meta_access_requests = ConnectionMeta()
-            connection_meta_access_requests.meta_key = 'access_requests'
-            connection_meta_access_requests.meta_value = stage_user.access_requests
-            connection.metas.append(connection_meta_access_requests)
-            connection_meta_google_email = ConnectionMeta()
-            connection_meta_google_email.meta_key = 'google_email'
-            connection_meta_google_email.meta_value = stage_user.google_email
-            connection.metas.append(connection_meta_google_email)
-            connection_meta_github_username = ConnectionMeta()
-            connection_meta_github_username.meta_key = 'github_username'
-            connection_meta_github_username.meta_value = stage_user.github_username
-            connection.metas.append(connection_meta_github_username)
-            connection_meta_slack_username = ConnectionMeta()
-            connection_meta_slack_username.meta_key = 'slack_username'
-            connection_meta_slack_username.meta_value = stage_user.slack_username
-            connection.metas.append(connection_meta_slack_username)
-            connection_meta_website = ConnectionMeta()
-            connection_meta_website.meta_key = 'website'
-            connection_meta_website.meta_value = stage_user.website
-            connection.metas.append(connection_meta_website)
-            connection_meta_biosketch = ConnectionMeta()
-            connection_meta_biosketch.meta_key = 'biosketch'
-            connection_meta_biosketch.meta_value = stage_user.biosketch
-            connection.metas.append(connection_meta_biosketch)
-            connection_meta_expertise = ConnectionMeta()
-            connection_meta_expertise.meta_key = 'expertise'
-            connection_meta_expertise.meta_value = stage_user.expertise
-            connection.metas.append(connection_meta_expertise)
-            connection_meta_orcid = ConnectionMeta()
-            connection_meta_orcid.meta_key = 'orcid'
-            connection_meta_orcid.meta_value = stage_user.orcid
-            connection.metas.append(connection_meta_orcid)
-            connection_meta_pm = ConnectionMeta()
-            connection_meta_pm.meta_key = 'pm'
-            connection_meta_pm.meta_value = stage_user.pm
-            connection.metas.append(connection_meta_pm)
-            connection_meta_pm_name = ConnectionMeta()
-            connection_meta_pm_name.meta_key = 'pm_name'
-            connection_meta_pm_name.meta_value = stage_user.pm_name
-            connection.metas.append(connection_meta_pm_name)
-            connection_meta_pm_email = ConnectionMeta()
-            connection_meta_pm_email.meta_key = 'pm_email'
-            connection_meta_pm_email.meta_value = stage_user.pm_email
-            connection.metas.append(connection_meta_pm_email)
-            
-            
-            ## default value ##
-            connection.date_added = str(datetime.today().timestamp())
-            connection.entry_type = 'individual'
-            connection.visibility = 'public'
-            connection.slug = stage_user.first_name.lower() + '-' + stage_user.last_name.lower()
-            connection.family_name = ''
-            connection.honorific_prefix = ''
-            connection.middle_name = ''
-            connection.honorific_suffix = ''
-            connection.title = stage_user.role
-            connection.department = stage_user.component
-            connection.contact_first_name = ''
-            connection.contact_last_name = ''
-            connection.addresses = 'a:0:{}'
-            connection.im = 'a:0:{}'
-            connection.social = 'a:0:{}'
-            connection.links = 'a:0:{}'
-            connection.dates = 'a:0:{}'
-            connection.birthday = ''
-            connection.anniversary = ''
-            connection.bio = stage_user.website
-            connection.notes = ''
-            connection.excerpt = ''
-            connection.added_by = admin_id
-            connection.edited_by = admin_id
-            connection.owner = admin_id
-            connection.user = 0
-            connection.status = 'approved'
-
+            assign_wp_user(new_wp_user, stage_user, connection)
             db.session.add(new_wp_user)
             db.session.delete(stage_user)
             db.session.commit()
@@ -482,21 +354,40 @@ def get_wp_users():
     return jsonify(m_result)
 
 @app.route('/wp_user/<id>', methods=['PUT'])
-def approve_user(id):
+def update_wp_user(id):
     """
     Match a wp user to a existing user if id present
     Create a new user if id not present
     """
     wp_user = WPUser.query.get(id)
-    if 'user_id' in request.form:
-        # update user
-        user = User.query.get(request.form['user_id'])
-    else:
-        # new user
+    j_user = json.loads(request.form['json'])
+    if 'img' not in request.files:
         pass
+    else:
+        if not j_user['photo_url'] == '':
+            response = requests.get(j_user['photo_url'])
+            img_file = Image.open(BytesIO(response.content))
+            extension = img_file.format
+        else:
+            _, extension = request.files['img'].filename.rsplit('.', 1)
+            img_file = request.files['img']
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{j_user['globus_user_id']}.{extension}"))
+        img_file.save(save_path)
+        j_user['photo'] = save_path
+    
+    try:
+        stage_user = StageUser(j_user)
+        assign_wp_user(wp_user, stage_user, wp_user.connection[0])
+        db.session.commit()
+    except Exception as e:
+        print(e)
+        print("Exception in user code:")
+        print("-"*60)
+        traceback.print_exc(file=sys.stdout)
+        print("-"*60)
+        return Response('WP user update failed', status=500)
 
-    # update user fields
-    return user_schema.jsonify(user)
+    return Response('WP user update completed', status=200)
 
 @app.route('/wp_user_meta', methods=['GET'])
 def get_wp_user_metas():
@@ -542,6 +433,141 @@ def generate_password():
 def hello():
     return Response("Hello world!", 200)
 
+def assign_wp_user(wp_user, user_obj, connection=None):
+    admin_id = WPUser.query.filter(WPUser.user_login == app.config.get('ADMIN_USERNAME')).first().id
+
+    wp_user.user_login = user_obj.email
+    wp_user.user_email = user_obj.email
+    wp_user.user_pass = generate_password()
+    meta_capabilities = WPUserMeta()
+    meta_capabilities.meta_key = "wp_capabilities"
+    meta_capabilities.meta_value = "a:1:{s:6:\"member\";b:1;}"
+    wp_user.metas.append(meta_capabilities)
+    meta_globus_user_id = WPUserMeta()
+    meta_globus_user_id.meta_key = "openid-connect-generic-subject-identity"
+    meta_globus_user_id.meta_value = user_obj.globus_user_id
+    wp_user.metas.append(meta_globus_user_id)
+
+    if not connection:
+        connection = Connection()
+    
+    if connection.owners.count() == 0: 
+        connection.owners.append(wp_user)
+    connection.email = user_obj.email
+    connection.first_name = user_obj.first_name
+    connection.last_name = user_obj.last_name
+    connection.organization = user_obj.organization
+
+    if not user_obj.photo == '':
+        photo_file_name = user_obj.photo.split('/')[-1]
+        pathlib.Path(app.config.get('CONNECTION_IMAGE_PATH') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() ).mkdir(parents=True, exist_ok=True)
+        copyfile(user_obj.photo, app.config.get('CONNECTION_IMAGE_PATH') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() + "/" + photo_file_name)
+        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config.get('CONNECTION_IMAGE_PATH') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() + "/" + photo_file_name + "\",\"url\": \"" + app.config.get('CONNECTION_IMAGE_URL') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() + "/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image\\/jpeg\",\"type\":2}}}}"
+    connection.phone_numbers = "a:1:{i:0;a:7:{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:10:\"" + user_obj.phone + "\";}}"
+    
+    [db.session.delete(meta) for meta in connection.metas]
+    connection_meta_component = ConnectionMeta()
+    connection_meta_component.meta_key = 'component'
+    connection_meta_component.meta_value = user_obj.component
+    connection.metas.append(connection_meta_component)
+    connection_meta_other_component = ConnectionMeta()
+    connection_meta_other_component.meta_key = 'other_component'
+    connection_meta_other_component.meta_value = user_obj.other_component
+    connection.metas.append(connection_meta_other_component)
+    connection_meta_organization = ConnectionMeta()
+    connection_meta_organization.meta_key = 'organization'
+    connection_meta_organization.meta_value = user_obj.organization
+    connection.metas.append(connection_meta_organization)
+    connection_meta_other_organization = ConnectionMeta()
+    connection_meta_other_organization.meta_key = 'other_organization'
+    connection_meta_other_organization.meta_value = user_obj.other_organization
+    connection.metas.append(connection_meta_other_organization)
+    connection_meta_role = ConnectionMeta()
+    connection_meta_role.meta_key = 'role'
+    connection_meta_role.meta_value = user_obj.role
+    connection.metas.append(connection_meta_role)
+    connection_meta_other_role = ConnectionMeta()
+    connection_meta_other_role.meta_key = 'other_role'
+    connection_meta_other_role.meta_value = user_obj.other_role
+    connection.metas.append(connection_meta_other_role)
+    connection_meta_working_group = ConnectionMeta()
+    connection_meta_working_group.meta_key = 'working_group'
+    connection_meta_working_group.meta_value = user_obj.working_group
+    connection.metas.append(connection_meta_working_group)
+    connection_meta_access_requests = ConnectionMeta()
+    connection_meta_access_requests.meta_key = 'access_requests'
+    connection_meta_access_requests.meta_value = user_obj.access_requests
+    connection.metas.append(connection_meta_access_requests)
+    connection_meta_google_email = ConnectionMeta()
+    connection_meta_google_email.meta_key = 'google_email'
+    connection_meta_google_email.meta_value = user_obj.google_email
+    connection.metas.append(connection_meta_google_email)
+    connection_meta_github_username = ConnectionMeta()
+    connection_meta_github_username.meta_key = 'github_username'
+    connection_meta_github_username.meta_value = user_obj.github_username
+    connection.metas.append(connection_meta_github_username)
+    connection_meta_slack_username = ConnectionMeta()
+    connection_meta_slack_username.meta_key = 'slack_username'
+    connection_meta_slack_username.meta_value = user_obj.slack_username
+    connection.metas.append(connection_meta_slack_username)
+    connection_meta_website = ConnectionMeta()
+    connection_meta_website.meta_key = 'website'
+    connection_meta_website.meta_value = user_obj.website
+    connection.metas.append(connection_meta_website)
+    connection_meta_biosketch = ConnectionMeta()
+    connection_meta_biosketch.meta_key = 'biosketch'
+    connection_meta_biosketch.meta_value = user_obj.biosketch
+    connection.metas.append(connection_meta_biosketch)
+    connection_meta_expertise = ConnectionMeta()
+    connection_meta_expertise.meta_key = 'expertise'
+    connection_meta_expertise.meta_value = user_obj.expertise
+    connection.metas.append(connection_meta_expertise)
+    connection_meta_orcid = ConnectionMeta()
+    connection_meta_orcid.meta_key = 'orcid'
+    connection_meta_orcid.meta_value = user_obj.orcid
+    connection.metas.append(connection_meta_orcid)
+    connection_meta_pm = ConnectionMeta()
+    connection_meta_pm.meta_key = 'pm'
+    connection_meta_pm.meta_value = user_obj.pm
+    connection.metas.append(connection_meta_pm)
+    connection_meta_pm_name = ConnectionMeta()
+    connection_meta_pm_name.meta_key = 'pm_name'
+    connection_meta_pm_name.meta_value = user_obj.pm_name
+    connection.metas.append(connection_meta_pm_name)
+    connection_meta_pm_email = ConnectionMeta()
+    connection_meta_pm_email.meta_key = 'pm_email'
+    connection_meta_pm_email.meta_value = user_obj.pm_email
+    connection.metas.append(connection_meta_pm_email)
+    
+    
+    ## default value ##
+    connection.date_added = str(datetime.today().timestamp())
+    connection.entry_type = 'individual'
+    connection.visibility = 'public'
+    connection.slug = user_obj.first_name.lower() + '-' + user_obj.last_name.lower()
+    connection.family_name = ''
+    connection.honorific_prefix = ''
+    connection.middle_name = ''
+    connection.honorific_suffix = ''
+    connection.title = user_obj.role
+    connection.department = user_obj.component
+    connection.contact_first_name = ''
+    connection.contact_last_name = ''
+    connection.addresses = 'a:0:{}'
+    connection.im = 'a:0:{}'
+    connection.social = 'a:0:{}'
+    connection.links = 'a:0:{}'
+    connection.dates = 'a:0:{}'
+    connection.birthday = ''
+    connection.anniversary = ''
+    connection.bio = user_obj.website
+    connection.notes = ''
+    connection.excerpt = ''
+    connection.added_by = admin_id
+    connection.edited_by = admin_id
+    connection.owner = admin_id
+    connection.user = 0
+    connection.status = 'approved'
 # Run Server
 if __name__ == "__main__":
     app.run(debug=True)
