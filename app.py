@@ -472,9 +472,21 @@ def assign_wp_user(wp_user, user_obj, connection=None, mode='CREATE'):
     connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(user_obj.phone)}:\"{user_obj.phone}\";}}}}"
     
     access_requests = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'access_requests'), '[]') if mode.upper() == 'EDIT' else '[]'
-    google_email = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'google_email'), '') if mode.upper()) == 'EDIT' else user_obj.google_email
-    github_username = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'github_username'), '') if mode.upper() == 'EDIT' else user_obj.github_username
-    slack_username = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'slack_username'), '') if mode.upper() == 'EDIT' else user_obj.slack_username
+    if mode.upper() == 'EDIT' and user_obj.google_email == '':
+        google_email = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'google_email'), '')
+    else:
+        google_email = user_obj.google_email
+        
+    if mode.upper() == 'EDIT' and user_obj.github_username == '':
+        github_username = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'github_username'), '')
+    else:
+        github_username = user_obj.github_username
+
+    if mode.upper() == 'EDIT' and user_obj.slack_username == '':
+        slack_username = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'slack_username'), '')
+    else:
+        slack_username = user_obj.slack_username
+        
     [db.session.delete(meta) for meta in connection.metas]
     connection_meta_component = ConnectionMeta()
     connection_meta_component.meta_key = 'component'
