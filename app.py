@@ -13,6 +13,7 @@ import sys, traceback
 import requests
 from PIL import Image
 from io import BytesIO
+import ast
 
 # Init app
 app = Flask(__name__)
@@ -258,8 +259,11 @@ def add_stage_user():
     if StageUser.query.filter(StageUser.globus_user_id == new_stage_user.globus_user_id).first():
         return Response('Stage user created', status=201)
     else:
-        db.session.add(new_stage_user)
-        db.session.commit()
+        try:
+            db.session.add(new_stage_user)
+            db.session.commit()
+        except:
+            return Response('Error happend when add a new stage user', status=500)
     return Response('Stage user created', status=201)
 
 @app.route('/stage_user/<stage_user_id>', methods=['PUT'])
@@ -463,8 +467,9 @@ def assign_wp_user(wp_user, user_obj, connection=None):
         pathlib.Path(app.config.get('CONNECTION_IMAGE_PATH') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() ).mkdir(parents=True, exist_ok=True)
         copyfile(user_obj.photo, app.config.get('CONNECTION_IMAGE_PATH') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() + "/" + photo_file_name)
         connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config.get('CONNECTION_IMAGE_PATH') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() + "/" + photo_file_name + "\",\"url\": \"" + app.config.get('CONNECTION_IMAGE_URL') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() + "/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image\\/jpeg\",\"type\":2}}}}"
-    connection.phone_numbers = "a:1:{i:0;a:7:{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:10:\"" + user_obj.phone + "\";}}"
+    connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(user_obj.phone)}:\"{user_obj.phone}\";}}}}"
     
+    access_requests = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'access_requests'), '') if wp_user.id else '[]'
     [db.session.delete(meta) for meta in connection.metas]
     connection_meta_component = ConnectionMeta()
     connection_meta_component.meta_key = 'component'
@@ -496,7 +501,7 @@ def assign_wp_user(wp_user, user_obj, connection=None):
     connection.metas.append(connection_meta_working_group)
     connection_meta_access_requests = ConnectionMeta()
     connection_meta_access_requests.meta_key = 'access_requests'
-    connection_meta_access_requests.meta_value = user_obj.access_requests
+    connection_meta_access_requests.meta_value = str(ast.literal_eval(access_requests) + ast.literal_eval(user_obj.access_requests))
     connection.metas.append(connection_meta_access_requests)
     connection_meta_google_email = ConnectionMeta()
     connection_meta_google_email.meta_key = 'google_email'
