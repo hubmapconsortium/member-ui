@@ -470,6 +470,9 @@ def assign_wp_user(wp_user, user_obj, connection=None):
     connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(user_obj.phone)}:\"{user_obj.phone}\";}}}}"
     
     access_requests = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'access_requests'), '') if wp_user.id else '[]'
+    google_email = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'google_email'), '') if wp_user.id else user_obj.google_email
+    github_username = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'github_username'), '') if wp_user.id else user_obj.github_username
+    slack_username = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'slack_username'), '') if wp_user.id else user_obj.slack_username
     [db.session.delete(meta) for meta in connection.metas]
     connection_meta_component = ConnectionMeta()
     connection_meta_component.meta_key = 'component'
@@ -505,15 +508,15 @@ def assign_wp_user(wp_user, user_obj, connection=None):
     connection.metas.append(connection_meta_access_requests)
     connection_meta_google_email = ConnectionMeta()
     connection_meta_google_email.meta_key = 'google_email'
-    connection_meta_google_email.meta_value = user_obj.google_email
+    connection_meta_google_email.meta_value = google_email
     connection.metas.append(connection_meta_google_email)
     connection_meta_github_username = ConnectionMeta()
     connection_meta_github_username.meta_key = 'github_username'
-    connection_meta_github_username.meta_value = user_obj.github_username
+    connection_meta_github_username.meta_value = github_username
     connection.metas.append(connection_meta_github_username)
     connection_meta_slack_username = ConnectionMeta()
     connection_meta_slack_username.meta_key = 'slack_username'
-    connection_meta_slack_username.meta_value = user_obj.slack_username
+    connection_meta_slack_username.meta_value = slack_username
     connection.metas.append(connection_meta_slack_username)
     connection_meta_website = ConnectionMeta()
     connection_meta_website.meta_key = 'website'
