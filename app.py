@@ -238,8 +238,9 @@ def add_stage_user():
     j_stage_user = json.loads(request.form['json'])
     
     if 'img' not in request.files:
-        img_file = open('./avatar/noname.jpg', 'r')
-        j_stage_user['photo'] = './avatar/noname.jpg'
+        BASE = os.path.dirname(os.path.abspath(__file__))
+        img_file = open(os.path.join(BASE, './avatar/noname.jpg'), 'r')
+        j_stage_user['photo'] = os.path.abspath(img_file.name)
     else:
         if j_stage_user['photo_url'] != '':
             response = requests.get(j_stage_user['photo_url'])
@@ -486,7 +487,7 @@ def assign_wp_user(wp_user, user_obj, connection=None, mode='CREATE'):
         slack_username = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'slack_username'), '')
     else:
         slack_username = user_obj.slack_username
-        
+
     [db.session.delete(meta) for meta in connection.metas]
     connection_meta_component = ConnectionMeta()
     connection_meta_component.meta_key = 'component'
