@@ -14,6 +14,7 @@ import requests
 from PIL import Image
 from io import BytesIO
 import ast
+from shutil import copy2
 
 # Init app
 app = Flask(__name__)
@@ -239,8 +240,9 @@ def add_stage_user():
     
     if 'img' not in request.files:
         BASE = os.path.dirname(os.path.abspath(__file__))
-        img_file = open(os.path.join(BASE, './avatar/noname.jpg'), 'r')
-        j_stage_user['photo'] = os.path.abspath(img_file.name)
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{j_stage_user['globus_user_id']}.jpg"))
+        copy2(os.path.join(BASE, 'avatar/', 'noname.jpg'), save_path)
+        j_stage_user['photo'] = save_path
     else:
         if j_stage_user['photo_url'] != '':
             response = requests.get(j_stage_user['photo_url'])
