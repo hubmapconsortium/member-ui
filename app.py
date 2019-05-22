@@ -57,7 +57,7 @@ class StageUser(db.Model):
     phone = db.Column(db.String(100))
     website = db.Column(db.String(500))
     biosketch = db.Column(db.String(200))
-    expertise = db.Column(db.String(1000))
+    expertise = db.Column(db.Text)
     orcid = db.Column(db.String(100))
     pm = db.Column(db.Boolean)
     pm_name = db.Column(db.String(100))
