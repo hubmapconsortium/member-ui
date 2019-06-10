@@ -1,1 +1,943 @@
-<h1>Register</h1>
+<!DOCTYPE html>
+<html>
+<head>
+<title>Flask app</title>
+
+<!-- Bootstrap 4 -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='bootstrap/css/bootstrap.min.css') }}" />
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/app.css') }}">
+
+<script type="text/javascript" src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/popper.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='bootstrap/js/bootstrap.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/bootstrap-confirmation.min.js') }}"></script>
+
+<script type="text/javascript">
+    // Enable the submit button only after recaptcha is checked
+    // this needs to be defined in the global scope - Zhou
+    function recaptchaCallback() {
+        $('#submitBtn').removeAttr('disabled');
+    };
+    $(function() {
+        var biography_length_limit = 50000;
+        $("#id_component").change(function() {
+            let id = $(this).children("option:selected").val();
+            $("[id^='cmpnt_']").hide();
+            $("div[data-name='" + id + "']").show();
+            if(id==='Other'){ // other selected
+                $(".oth-cmpnt").show();
+            } else {
+                $("#id_other_component").val('');
+                $(".oth-cmpnt").hide();
+            }
+        });
+        $("#id_organization").change(function() {
+            let id = $(this).children("option:selected").val();
+            if(id==='Other'){ // other selected
+                $(".oth-org").show();
+            } else {
+                $("#id_other_organization").val('');
+                $(".oth-org").hide();
+            }
+        });
+        $("#id_role").change(function() {
+            let id = $(this).children("option:selected").val();
+            if(id==='Other'){ // other selected
+                $(".oth-role").show();
+            } else {
+                $("#id_other_role").val('');
+                $(".oth-role").hide();
+            }
+        });
+        $("#id_access_requests_3").change(function() {
+            if (!this.checked){
+                $("#id_google_email").val('');
+            }
+            $(".google-email").toggle(this.checked);
+        });
+        $("#id_access_requests_4").change(function() {
+            if (!this.checked){
+                $("#id_github_username").val('');
+            }
+            $(".github-username").toggle(this.checked);
+        });
+        $("#id_access_requests_5").change(function() {
+            if (!this.checked){
+                $("#id_slack_username").val('');
+            }
+            $(".slack-username").toggle(this.checked);
+        });
+        let id = $("#id_component").children("option:selected").val();
+        $("[id^='cmpnt_']").hide();
+        $("#cmpnt_" + id).show();
+        if(id==='Other'){ // other selected
+            $(".oth-cmpnt").show()
+        } else {
+            $(".oth-cmpnt").hide()
+        }
+        id = $('#id_organization').children("option:selected").val();
+        if(id==='Other'){ // other selected
+            $(".oth-org").show();
+        } else {
+            $(".oth-org").hide();
+        }
+        id = $("#id_role").children("option:selected").val();
+        if(id==='Other'){ // other selected
+            $(".oth-role").show();
+        } else {
+            $(".oth-role").hide();
+        }
+        if ($("#id_access_requests_0").is(':checked')){
+            $("#id_access_requests_0").prop('disabled', true);
+        }
+        if ($("#id_access_requests_1").is(':checked')){
+            $("#id_access_requests_1").prop('disabled', true);
+        }
+        if ($("#id_access_requests_2").is(':checked')){
+            $("#id_access_requests_2").prop('disabled', true);
+        }
+        if ($("#id_access_requests_3").is(':checked')){
+            $("#id_access_requests_3").prop('disabled', true);
+            $(".google-email").show();
+            $("#id_google_email").prop('disabled', true);
+        }
+        if ($("#id_access_requests_4").is(':checked')){
+            $("#id_access_requests_4").prop('disabled', true);
+            $(".github-username").show();
+            $("#id_github_username").prop('disabled', true);
+        }
+        if ($("#id_access_requests_5").is(':checked')){
+            $("#id_access_requests_5").prop('disabled', true);
+            $(".slack-username").show();
+            $("#id_slack_username").prop('disabled', true);
+        }
+        if ($("#id_access_requests_6").is(':checked')){
+            $("#id_access_requests_6").prop('disabled', true);
+        }
+        if($(":radio[id^='id_pm_0']").is(':checked')){
+            $("div.pm-name").show();
+            $("div.pm-email").show();
+        }
+        $('#id_photo_url').change(function() {
+            $('#id_photo').val('');
+        });
+        $('#id_photo').change(function() {
+            $('#id_photo_url').val('');
+        })
+        function readURL(input) {
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    $('#profile_picture').attr('src', e.target.result);
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+        function delay(callback, ms) {
+            var timer = 0;
+            return function() {
+                var context = this, args = arguments;
+                clearTimeout(timer);
+                timer = setTimeout(function () {
+                callback.apply(context, args);
+                }, ms || 0);
+            };
+        }
+        $("#id_photo").change(function() {
+            readURL(this);
+        });
+        $("#id_photo_url").keyup(delay(function(e) {
+            $('#profile_picture').attr('src', "{{ url_for('static', filename = 'images/default_profile.png') }}");
+            $('#profile_picture').attr('src', e.target.value);
+        }, 500));
+        $(":radio[id^='id_pm_']").change(function() {
+            if($(this).val() === 'Yes'){
+                $("div.pm-name").show();
+                $("div.pm-email").show();
+            } else {
+                $("#id_pm_name").val('');
+                $("div.pm-name").hide();
+                $("#id_pm_email").val('');
+                $("div.pm-email").hide();
+            }
+        });
+        $("#id_expertise").keyup(function() {
+            if($(this).val().length > biography_length_limit) {
+                $("#id_expertise").nextAll().remove();
+                $("#id_expertise").addClass('is-invalid');
+                $("#id_expertise").after("<div class='invalid-feedback'>Biography is too long. Please limit the length to " + biography_length_limit + " characters.</div>");
+            } else {
+                $("#id_expertise").removeClass('is-invalid');
+                $("#id_expertise").nextAll().remove();
+            }
+        })
+        
+        $("#registration-form").submit(function(e){
+            e.preventDefault();
+            var form = this;
+            valid = true;
+            $(form).find('.invalid-feedback').remove();
+            $(form).find('.is-invalid').removeClass('is-invalid');
+            if($.trim($("#id_email").val()) === ''){
+                valid = false;
+                $("#id_email").addClass('is-invalid');
+                $("#id_email").after("<div class='invalid-feedback'>Email is required.</div>");
+            }
+            if($.trim($("#id_phone").val()) === ''){
+                valid = false;
+                $("#id_phone").addClass('is-invalid');
+                $("#id_phone").after("<div class='invalid-feedback'>Phone is required.</div>");
+            }
+            if($.trim($("#id_first_name").val()) === ''){
+                valid = false;
+                $("#id_first_name").addClass('is-invalid');
+                $("#id_first_name").after("<div class='invalid-feedback'>First Name is required.</div>");
+            }
+            if($.trim($("#id_last_name").val()) === ''){
+                valid = false;
+                $("#id_last_name").addClass('is-invalid');
+                $("#id_last_name").after("<div class='invalid-feedback'>Last Name is required.</div>");
+            }
+            if($.trim($("#id_component").val()) === '----'){
+                valid = false;
+                $("#id_component").addClass('is-invalid');
+                $("#id_component").after("<div class='invalid-feedback'>Adward/Component is required.</div>");
+            }
+            if($.trim($("#id_component").val()) === 'Other' && $.trim($("#id_other_component").val()) === ''){
+                valid = false;
+                $("#id_other_component").addClass('is-invalid');
+                $("#id_other_component").after("<div class='invalid-feedback'>Award/Component is required.</div>");
+            }
+            if($.trim($("#id_organization").val()) === '----'){
+                valid = false;
+                $("#id_organization").addClass('is-invalid');
+                $("#id_organization").after("<div class='invalid-feedback'>Organization is required.</div>");
+            }
+            if($.trim($("#id_organization").val()) === 'Other' && $.trim($("#id_other_organization").val()) === ''){
+                valid = false;
+                $("#id_other_organization").addClass('is-invalid');
+                $("#id_other_organization").after("<div class='invalid-feedback'>Organization is required.</div>");
+            }
+            if($.trim($("#id_role").val()) === '----'){
+                valid = false;
+                $("#id_role").addClass('is-invalid');
+                $("#id_role").after("<div class='invalid-feedback'>Role is required.</div>");
+            }
+            if($.trim($("#id_role").val()) === 'Other' && $.trim($("#id_other_role").val()) === ''){
+                valid = false;
+                $("#id_other_role").addClass('is-invalid');
+                $("#id_other_role").after("<div class='invalid-feedback'>Role is required.</div>");
+            }
+            if($("#id_access_requests_3").is(':checked') && $.trim($("#id_google_email").val()) === ''){
+                valid = false;
+                $("#id_google_email").addClass('is-invalid');
+                $("#id_google_email").after("<div class='invalid-feedback'>Google account is required.</div>");
+            }
+            if($("#id_access_requests_4").is(':checked') && $.trim($("#id_github_username").val()) === ''){
+                valid = false;
+                $("#id_github_username").addClass('is-invalid');
+                $("#id_github_username").after("<div class='invalid-feedback'>GitHub username is required.</div>");
+            }
+            if($("#id_access_requests_5").is(':checked') && $.trim($("#id_slack_username").val()) === ''){
+                valid = false;
+                $("#id_slack_username").addClass('is-invalid');
+                $("#id_slack_username").after("<div class='invalid-feedback'>Slack username is required.</div>");
+            }
+            if($("#id_expertise").val().length > biography_length_limit){
+                valid = false;
+                $("#id_expertise").addClass('is-invalid');
+                $("#id_expertise").after("<div class='invalid-feedback'>Biography is too long. Please limit the length to " + biography_length_limit + " characters.</div>");
+            }
+            if($("#id_pm_0").is(':checked') && $.trim($("#id_pm_name").val()) === ''){
+                valid = false;
+                $("#id_pm_name").addClass('is-invalid');
+                $("#id_pm_name").after("<div class='invalid-feedback'>Project Manager's name is required.</div>");
+            }
+            if($("#id_pm_0").is(':checked') && $.trim($("#id_pm_email").val()) === ''){
+                valid = false;
+                $("#id_pm_email").addClass('is-invalid');
+                $("#id_pm_email").after("<div class='invalid-feedback'>Project Manager's email is required.</div>");
+            }
+            if(valid){
+                form.submit();
+            } else {
+                $(".main-error-message").show();
+            }
+        });
+        $('[data-toggle="tooltip"]').tooltip()
+    });
+</script>
+
+</head>
+
+<body id="body">
+
+<div>
+<header id="header" class="navbar navbar-light bg-light">
+<nav class="container">
+<a class="navbar-brand" href="/">
+<img src="https://hubmapconsortium.org/wp-content/uploads/2019/01/HuBMAP-Retina-Logo-Color-300x110.png" width="300" height="110" class="d-inline-block align-top"
+alt="HuBMAP logo" /></a>
+<div class="float-right">
+<span class="username">Zhou Yuan</span>
+<a href="http://localhost:5000/logout" class="btn btn btn-outline-danger"> Logout </a>
+</div>
+</nav>
+</header>
+
+
+<div id="content" class="container">
+
+<h1>HuBMAP User Registration</h1>
+
+{% if data.isAuthenticated %}
+
+<div class="row">
+    <div class="col-xs-12 col-sm-10 offset-sm-1">
+        <form id="registration-form" method="POST" action="/register" enctype="multipart/form-data">
+        	<!-- CSRF protection -->
+            {{ form.csrf_token }}
+            {% if form.csrf_token.errors %}
+			    <div class="warning">You have submitted an invalid CSRF token</div>
+			{% endif %}
+			
+            <input type="hidden" name="globus_user_id" value="{{ globus_user_id }}">
+            <input type="hidden" name="wp_user_id" value="{{ wp_user_id }}">
+            <div class="row">
+                <div class="col">
+                    <div class="form-group">
+                        <label for="first-name">First Name <span class="text-danger">*</span></label>
+                        {{ form.first_name }}
+                        <div class="invalid-feedback">
+                            {{ form.first_name.errors}}
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="form-group">
+                        <label for="last-name">Last Name <span class="text-danger">*</span></label>
+                        {{ form.last_name }}
+                        <div class="invalid-feedback">
+                            {{ form.last_name.errors}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <div class="form-group">
+                        <label for="email">Email address <span class="text-danger">*</span></label>
+                        {{ form.email }}
+                        <div class="invalid-feedback">
+                            {{ form.email.errors}}
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="form-group">
+                        <label for="phone">Phone number <span class="text-danger">*</span></label>
+                        {{ form.phone }}
+                        <div class="invalid-feedback">
+                            {{ form.phone.errors}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+
+
+
+
+            {#
+            <div class="row">
+                <div class="col">
+                    <div class="form-group">
+                        <label for="component">Award/component <span class="text-danger">*</span></label>
+                        {{ form.component }}
+                        <div class="invalid-feedback">
+                            {{ form.component.errors }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xs-12 col-sm-10 offset-sm-2">
+                            <div class="form-group hided oth-cmpnt">
+                                <label for="other_component">Component: What component are you with?</label>
+                                {{ form.other_component }}
+                                <div class="invalid-feedback">
+                                    {{ form.other_component.errors }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="form-group">
+                        <label for="organization">Organization <span class="text-danger">*</span></label>
+                        {{ form.organization }}
+                        <div class="invalid-feedback">
+                            {{ form.organization.errors }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xs-12 col-sm-10 offset-sm-2">
+                            <div class="form-group hided oth-org">
+                                <label for="other_organization">Organization: What organization are you with?</label>
+                                {{ form.other_organization }}
+                                <div class="invalid-feedback">
+                                    {{ form.other_organization.errors }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+            {% for cmpnt in components %}
+                <div class="card" id="cmpnt_{{cmpnt.id}}" data-name="{{cmpnt.display_name}}" style="width: 34rem; display: none">
+                <div class="card-body">
+                    <h5 class="card-title">{{ cmpnt.display_name }}</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">{{ cmpnt.hubmap_role}}</h6>
+                    {% if cmpnt.contact_pi == "None" and cmpnt.pi == "None" %}
+                    {% else %}
+                        {% if cmpnt.pi != "None" %}
+                            <p class="card-text"><b>PIs</b><br />
+                        {% else %}
+                            <p class="card-text"><b>PI</b><br />
+                        {% endif %}
+                        {{ cmpnt.contact_pi }} <b>(Contact)</b><br />
+                        {% for pi in cmpnt.pis %}
+                            {% if pi != "None" %}
+                                {{ pi }}<br />
+                            {% endif %}
+                        {% endfor %}
+                        </p>
+                    {% endif %}
+                </div>
+                </div>
+            {% endfor %}
+            </div>
+            <div class="form-group">
+                <label for="role">Role in HuBMAP <span class="text-danger">*</span></label>
+                {{ form.role }}
+                <div class="invalid-feedback">
+                    {{ form.role.errors }}
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-xs-12 col-sm-10 offset-sm-2">
+                    <div class="form-group hided oth-role">
+                        <label for="other_role">Role: What is your role in HuBMAP?</label>
+                        {{ form.other_role }}
+                        <div class="invalid-feedback">
+                            {{ form.other_role.errors }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <label for="file">Profile Picture</label>
+            <div class="row">
+                <div class="col-xs-12 col-sm-3">
+                    <img src="{{ profile_img }}" alt="" class="img-thumbnail" id="profile_picture">
+                </div>
+                <div class="col-xs-12 col-sm-9">
+                    <ul class="nav nav-tabs" id="myTab" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="file-tab" data-toggle="tab" href="#file" role="tab" aria-controls="file" aria-selected="true">Upload New Image</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="url-tab" data-toggle="tab" href="#url" role="tab" aria-controls="url" aria-selected="false">Pull Image From Exsitng URL</a>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="myTabContent">
+                        <div class="tab-pane fade show active" id="file" role="tabpanel" aria-labelledby="file-tab">
+                            <div class="form-photo">
+                                {{ form.photo }}
+                                <div class="invalid-feedback">
+                                    {{ form.photo.errors }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="url" role="tabpanel" aria-labelledby="url-tab">
+                            <div class="form-photo-url">
+                                {{ form.photo_url }}
+                                <div class="invalid-feedback">
+                                    {{ form.photo_url.errors }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="group">What HuBMAP working groups are you a member of?</label>
+                {{ form.working_group }}
+                <div class="invalid-feedback">
+                    {{ form.working_group.errors }}
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-xs-12 col-sm-6" style="min-height: 20em;">
+                    <div class="form-group">
+                        <label for="access-requests">Which HuBMAP resources will you need to access?</label>
+                        {{ form.access_requests }}
+                        <div class="invalid-feedback">
+                            {{ form.access_requests.errors }}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xs-12 col-sm-6">
+                    <div class="row">
+                        <div class="col-xs-12 col-sm-10">
+                            <div class="form-group form-group-sm hided google-email">
+                                <label for="google_email">What email address is linked to your preferred Google account? <button type="button" class="btn btn-link" data-toggle="tooltip" data-placement="right" data-html="true" title="Please enter the email address that you use to log into Google.  HuBMAP specific Google documents will be shared with this account.">what is this?</button></label>
+                                {{ form.google_email }}
+                                <div class="invalid-feedback">
+                                    {{ form.google_email.errors }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xs-12 col-sm-10">
+                            <div class="form-group form-group-sm hided github-username">
+                                <label for="github_username">What is your GitHub username?</label>
+                                {{ form.github_username }}
+                                <div class="invalid-feedback">
+                                    {{ form.github_username.errors }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xs-12 col-sm-10">
+                            <div class="form-group form-group-sm hided slack-username">
+                                <label for="slack_username">What email address should an invite to the slack HuBMAP workspace be sent to?</label>
+                                {{ form.slack_username }}
+                                <div class="invalid-feedback">
+                                    {{ form.slack_username.errors }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="orcid">What is your ORCID ID?</label>
+                {{ form.orcid }}
+                <div class="invalid-feedback">
+                    {{ form.orcid.errors}}
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="website">Personal Website: Please enter the URL of a profile page to share with the consortium.</label>
+                {{ form.website }}
+                <div class="invalid-feedback">
+                    {{ form.website.errors}}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="expertise">Biography: Please provide any biographical information that you'd like to share. This information may be shared publicly.</label>
+                {{ form.expertise }}
+                <div class="invalid-feedback">
+                    {{ form.expertise.errors}}
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="pm">Is there a project manager who should be copied on all communications to you?</label>
+                {{ form.pm }}
+                <div class="invalid-feedback">
+                    {{ form.pm.errors}}
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-xs-12 col-sm-10 offset-sm-2">
+                    <div class="form-group hided pm-name">
+                        <label for="pm_name">Project Manager's Name</label>
+                        {{ form.pm_name }}
+                        <div class="invalid-feedback">
+                            {{ form.pm_name.errors}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-xs-12 col-sm-10 offset-sm-2">
+                    <div class="form-group hided pm-email">
+                        <label for="pm_email">Project Manager's Email</label>
+                        {{ form.pm_email }}
+                        <div class="invalid-feedback">
+                            {{ form.pm_email.errors}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{ form.non_field_errors }}
+            <div class="text-danger hided main-error-message">
+                There are are errors, please correct the fields above.
+            </div>
+
+            <!-- reCAPTCHA v2 checkbox -->
+            <div class="row">
+                <div class="col-sm-12">
+                    <div class="form-group g-recaptcha" data-callback="recaptchaCallback" data-sitekey="{{ recaptcha_site_key }}"></div>
+                </div>
+            </div>
+            
+            #}
+
+            <button type="submit" id="submitBtn" class="btn btn-primary">Submit</button>
+        </form>
+
+        <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+
+    </div>
+</div>
+
+
+
+
+{% else %}
+	<div class="alert alert-info" role="alert">
+	<h1>Login</h1>
+	<p>
+	User authendication is required for registration, please
+	click the button and you will be redirected to the Globus login page.
+	There you can login with your institutional credentials. Thank you!
+	</p>
+
+	<hr />
+
+	<a class="btn btn-primary btn-lg" href="http://localhost:5000/login">
+	Login with your institutional credentials via Globus
+	</a>
+	</div>
+{% endif %}
+
+</div>
+
+</div>
+</body>
+</html>
+
+
+
+
+
+{#
+
+    <div class="page-content">
+        <div class="container">
+            <div class="row">
+                <div class="col-xs-12 col-sm-10 offset-sm-1">
+                    <h2>{{ heading }}</h2>
+                    <form id="registration-form" method="POST" action="{{ action_path }}" enctype="multipart/form-data">
+                        <input type="hidden" name="globus_user_id" value="{{ globus_user_id }}">
+                        <input type="hidden" name="wp_user_id" value="{{ wp_user_id }}">
+                        <div class="row">
+                            <div class="col">
+                                <div class="form-group">
+                                    <label for="first-name">First Name <span class="text-danger">*</span></label>
+                                    {% comment %} <input type="text" class="form-control" name="first_name" id="id_first_name" value="{{ user.first_name }}"> {% endcomment %}
+                                    {{ form.first_name }}
+                                    <div class="invalid-feedback">
+                                        {{ form.first_name.errors}}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="form-group">
+                                    <label for="last-name">Last Name <span class="text-danger">*</span></label>
+                                    {% comment %} <input type="text" class="form-control" name="last_name" id="id_last_name" value="{{ user.last_name }}"> {% endcomment %}
+                                    {{ form.last_name }}
+                                    <div class="invalid-feedback">
+                                        {{ form.last_name.errors}}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <div class="form-group">
+                                    <label for="email">Email address <span class="text-danger">*</span></label>
+                                    {% comment %} <input type="email" class="form-control" name="email" id="id_email" value="{{ user.email }}"> {% endcomment %}
+                                    {{ form.email }}
+                                    <div class="invalid-feedback">
+                                        {{ form.email.errors}}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="form-group">
+                                    <label for="phone">Phone number <span class="text-danger">*</span></label>
+                                    {{ form.phone }}
+                                    <div class="invalid-feedback">
+                                        {{ form.phone.errors}}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <div class="form-group">
+                                    <label for="component">Award/component <span class="text-danger">*</span></label>
+                                    {{ form.component }}
+                                    <div class="invalid-feedback">
+                                        {{ form.component.errors }}
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-12 col-sm-10 offset-sm-2">
+                                        <div class="form-group hided oth-cmpnt">
+                                            <label for="other_component">Component: What component are you with?</label>
+                                            {{ form.other_component }}
+                                            <div class="invalid-feedback">
+                                                {{ form.other_component.errors }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="form-group">
+                                    <label for="organization">Organization <span class="text-danger">*</span></label>
+                                    {{ form.organization }}
+                                    <div class="invalid-feedback">
+                                        {{ form.organization.errors }}
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-12 col-sm-10 offset-sm-2">
+                                        <div class="form-group hided oth-org">
+                                            <label for="other_organization">Organization: What organization are you with?</label>
+                                            {{ form.other_organization }}
+                                            <div class="invalid-feedback">
+                                                {{ form.other_organization.errors }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% comment %} <div class="form-group hided oth-cmpnt">
+                            <label for="message">Why do you need access to the HuBMAP data portal?</label>
+                            {{ form.message }}
+                            <div class="invalid-feedback">
+                                {{ form.message.errors }}
+                            </div>
+                        </div> {% endcomment %}
+                        <div class="form-group">
+                        {% for cmpnt in components %}
+                            <div class="card" id="cmpnt_{{cmpnt.id}}" data-name="{{cmpnt.display_name}}" style="width: 34rem; display: none">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ cmpnt.display_name }}</h5>
+                                <h6 class="card-subtitle mb-2 text-muted">{{ cmpnt.hubmap_role}}</h6>
+                                {% if cmpnt.contact_pi == "None" and cmpnt.pi == "None" %}
+                                {% else %}
+                                    {% if cmpnt.pi != "None" %}
+                                        <p class="card-text"><b>PIs</b><br />
+                                    {% else %}
+                                        <p class="card-text"><b>PI</b><br />
+                                    {% endif %}
+                                    {{ cmpnt.contact_pi }} <b>(Contact)</b><br />
+                                    {% for pi in cmpnt.pis %}
+                                        {% if pi != "None" %}
+                                            {{ pi }}<br />
+                                        {% endif %}
+                                    {% endfor %}
+                                    </p>
+                                {% endif %}
+                            </div>
+                            </div>
+                        {% endfor %}
+                        </div>
+                        <div class="form-group">
+                            <label for="role">Role in HuBMAP <span class="text-danger">*</span></label>
+                            {{ form.role }}
+                            <div class="invalid-feedback">
+                                {{ form.role.errors }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-xs-12 col-sm-10 offset-sm-2">
+                                <div class="form-group hided oth-role">
+                                    <label for="other_role">Role: What is your role in HuBMAP?</label>
+                                    {{ form.other_role }}
+                                    <div class="invalid-feedback">
+                                        {{ form.other_role.errors }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <label for="file">Profile Picture</label>
+                        <div class="row">
+                            <div class="col-xs-12 col-sm-3">
+                                <img src="{{ profile_img }}" alt="" class="img-thumbnail" id="profile_picture">
+                            </div>
+                            <div class="col-xs-12 col-sm-9">
+                                <ul class="nav nav-tabs" id="myTab" role="tablist">
+                                    <li class="nav-item">
+                                        <a class="nav-link active" id="file-tab" data-toggle="tab" href="#file" role="tab" aria-controls="file" aria-selected="true">Upload New Image</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" id="url-tab" data-toggle="tab" href="#url" role="tab" aria-controls="url" aria-selected="false">Pull Image From Exsitng URL</a>
+                                    </li>
+                                </ul>
+                                <div class="tab-content" id="myTabContent">
+                                    <div class="tab-pane fade show active" id="file" role="tabpanel" aria-labelledby="file-tab">
+                                        <div class="form-photo">
+                                            {{ form.photo }}
+                                            <div class="invalid-feedback">
+                                                {{ form.photo.errors }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="tab-pane fade" id="url" role="tabpanel" aria-labelledby="url-tab">
+                                        <div class="form-photo-url">
+                                            {{ form.photo_url }}
+                                            <div class="invalid-feedback">
+                                                {{ form.photo_url.errors }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="group">What HuBMAP working groups are you a member of?</label>
+                            {{ form.working_group }}
+                            <div class="invalid-feedback">
+                                {{ form.working_group.errors }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-xs-12 col-sm-6" style="min-height: 20em;">
+                                <div class="form-group">
+                                    <label for="access-requests">Which HuBMAP resources will you need to access?</label>
+                                    {{ form.access_requests }}
+                                    <div class="invalid-feedback">
+                                        {{ form.access_requests.errors }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xs-12 col-sm-6">
+                                <div class="row">
+                                    <div class="col-xs-12 col-sm-10">
+                                        <div class="form-group form-group-sm hided google-email">
+                                            <label for="google_email">What email address is linked to your preferred Google account? <button type="button" class="btn btn-link" data-toggle="tooltip" data-placement="right" data-html="true" title="Please enter the email address that you use to log into Google.  HuBMAP specific Google documents will be shared with this account.">what is this?</button></label>
+                                            {{ form.google_email }}
+                                            <div class="invalid-feedback">
+                                                {{ form.google_email.errors }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-12 col-sm-10">
+                                        <div class="form-group form-group-sm hided github-username">
+                                            <label for="github_username">What is your GitHub username?</label>
+                                            {{ form.github_username }}
+                                            <div class="invalid-feedback">
+                                                {{ form.github_username.errors }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-12 col-sm-10">
+                                        <div class="form-group form-group-sm hided slack-username">
+                                            <label for="slack_username">What email address should an invite to the slack HuBMAP workspace be sent to?</label>
+                                            {{ form.slack_username }}
+                                            <div class="invalid-feedback">
+                                                {{ form.slack_username.errors }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="orcid">What is your ORCID ID?</label>
+                            {{ form.orcid }}
+                            <div class="invalid-feedback">
+                                {{ form.orcid.errors}}
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="website">Personal Website: Please enter the URL of a profile page to share with the consortium.</label>
+                            {{ form.website }}
+                            <div class="invalid-feedback">
+                                {{ form.website.errors}}
+                            </div>
+                        </div>
+                        {% comment %} <div class="form-group">
+                            <label for="biosketch">Biosketch</label>
+                            {{ form.biosketch }}
+                            <div class="invalid-feedback">
+                                {{ form.biosketch.errors}}
+                            </div>
+                        </div> {% endcomment %}
+                        <div class="form-group">
+                            <label for="expertise">Biography: Please provide any biographical information that you'd like to share. This information may be shared publicly.</label>
+                            {{ form.expertise }}
+                            <div class="invalid-feedback">
+                                {{ form.expertise.errors}}
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="pm">Is there a project manager who should be copied on all communications to you?</label>
+                            {{ form.pm }}
+                            <div class="invalid-feedback">
+                                {{ form.pm.errors}}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-xs-12 col-sm-10 offset-sm-2">
+                                <div class="form-group hided pm-name">
+                                    <label for="pm_name">Project Manager's Name</label>
+                                    {{ form.pm_name }}
+                                    <div class="invalid-feedback">
+                                        {{ form.pm_name.errors}}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-xs-12 col-sm-10 offset-sm-2">
+                                <div class="form-group hided pm-email">
+                                    <label for="pm_email">Project Manager's Email</label>
+                                    {{ form.pm_email }}
+                                    <div class="invalid-feedback">
+                                        {{ form.pm_email.errors}}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {{ form.non_field_errors }}
+                        <div class="text-danger hided main-error-message">
+                            There are are errors, please correct the fields above.
+                        </div>
+
+                        <!-- reCAPTCHA v2 checkbox -->
+                        <div class="row">
+                            <div class="col-sm-12">
+                                <div class="form-group g-recaptcha" data-callback="recaptchaCallback" data-sitekey="{{ recaptcha_site_key }}"></div>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="submitBtn" class="btn btn-primary" disabled>Submit</button>
+                    </form>
+
+                    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+#}

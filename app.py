@@ -1,4 +1,5 @@
-from flask import Flask, request, jsonify, Response, render_template
+from flask import Flask, request, jsonify, Response, render_template, session, redirect, url_for
+from globus_sdk import AuthClient, AccessTokenAuthorizer, ConfidentialAppAuthClient
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from werkzeug import secure_filename
@@ -15,11 +16,13 @@ from PIL import Image
 from io import BytesIO
 import ast
 from shutil import copy2
+from wtforms import Form, StringField, validators
+from wtforms.csrf.session import SessionCSRF
+from datetime import timedelta
 
-# Init app
-app = Flask(__name__)
 
-# Database
+# Init app and use the config from instance folder
+app = Flask(__name__, instance_relative_config=True)
 app.config.from_pyfile('config.cfg')
 
 # Init DB
@@ -209,10 +212,224 @@ wp_user_metas_schema = WPUserMetaSchema(many=True, strict=True)
 connection_schema = ConnectionSchema(strict=True)
 connections_schema = ConnectionSchema(many=True, strict=True)
 
+# Registration form fields defined in wtforms
+class RegistrationForm(Form):
+    class Meta:
+        csrf = True
+        csrf_class = SessionCSRF
+        csrf_secret = b'EPj00jpfj8Gx1SjnyLxwBBSQfnQ9DJYe0Ym'
+        csrf_time_limit = timedelta(minutes=20)
+
+        @property
+        def csrf_context(self):
+            return session
+
+    first_name = StringField(u'First Name', validators=[validators.input_required()])
+    last_name = StringField(u'Last Name', validators=[validators.input_required()])
+    email = StringField('Email Address', [validators.Length(min=6, max=35)])
+    phone = StringField('Phone', validators=[validators.input_required()])
+
+
+    
+
+
 # Serve Pages
+
+# Redirect users from react app login page to Globus auth login widget then redirect back
+@app.route('/login')
+def login():
+    redirect_uri = url_for('login', _external=True)
+    #redirect_uri = app.config['FLASK_APP_BASE_URI'] + 'login'
+
+    confidential_app_auth_client = ConfidentialAppAuthClient(app.config['GLOBUS_APP_ID'], app.config['GLOBUS_APP_SECRET'])
+    confidential_app_auth_client.oauth2_start_flow(redirect_uri)
+
+    # If there's no "code" query string parameter, we're in this route
+    # starting a Globus Auth login flow.
+    # Redirect out to Globus Auth
+    if 'code' not in request.args:                                        
+        auth_uri = confidential_app_auth_client.oauth2_get_authorize_url(additional_params={"scope": "openid profile email urn:globus:auth:scope:transfer.api.globus.org:all urn:globus:auth:scope:auth.globus.org:view_identities urn:globus:auth:scope:nexus.api.globus.org:groups" })
+        return redirect(auth_uri)
+    # If we do have a "code" param, we're coming back from Globus Auth
+    # and can start the process of exchanging an auth code for a token.
+    else:
+        auth_code = request.args.get('code')
+
+        token_response = confidential_app_auth_client.oauth2_exchange_code_for_tokens(auth_code)
+        
+        # Get all Bearer tokens
+        auth_token = token_response.by_resource_server['auth.globus.org']['access_token']
+        nexus_token = token_response.by_resource_server['nexus.api.globus.org']['access_token']
+        transfer_token = token_response.by_resource_server['transfer.api.globus.org']['access_token']
+
+        # Also get the user info (sub, email, name, preferred_username) using the AuthClient with the auth token
+        user_info = get_user_info(auth_token)
+
+        print(user_info)
+
+        # Store the resulting tokens in server session
+        session['isAuthenticated'] = True
+        session['globus_user_id'] = user_info['sub']
+        session['name'] = user_info['name']
+        session['email'] = user_info['email']
+        session['auth_token'] = auth_token
+        session['nexus_token'] = nexus_token
+        session['transfer_token'] = transfer_token
+      
+        # Finally redirect back to the registeration page
+        return redirect(url_for('register'))
+
+@app.route('/logout')
+def logout():
+    """
+    - Revoke the tokens with Globus Auth.
+    - Destroy the session state.
+    - Redirect the user to the Globus Auth logout page.
+    """
+    confidential_app_auth_client = ConfidentialAppAuthClient(app.config['GLOBUS_APP_ID'], app.config['GLOBUS_APP_SECRET'])
+
+    # Revoke the tokens with Globus Auth
+    if 'tokens' in session:    
+        for token in (token_info['access_token']
+            for token_info in session['tokens'].values()):
+                confidential_app_auth_client.oauth2_revoke_token(token)
+
+    # Destroy the session state
+    session.clear()
+
+    # build the logout URI with query params
+    # there is no tool to help build this (yet!)
+    globus_logout_url = (
+        'https://auth.globus.org/v2/web/logout' +
+        '?client={}'.format(app.config['GLOBUS_APP_ID']) +
+        '&redirect_uri={}'.format(app.config['FLASK_APP_BASE_URI'] + 'register') +
+        '&redirect_name={}'.format(app.config['FLASK_APP_NAME']))
+
+    # Redirect the user to the Globus Auth logout page
+    return redirect(globus_logout_url)
+
+
+def get_user_info(token):
+    auth_client = AuthClient(authorizer=AccessTokenAuthorizer(token))
+    return auth_client.oauth2_userinfo()
+
+
+
+
+
+
+
 @app.route("/register", methods=['GET', 'POST'])
 def register():
-    return render_template("register.html")
+    if request.method == 'POST':
+        # reCAPTCHA validation
+        recaptcha_response = request.POST.get('g-recaptcha-response')
+        values = {
+            'secret': app.config['GOOGLE_RECAPTCHA_SECRET_KEY'],
+            'response': recaptcha_response
+        }
+        data = urllib.parse.urlencode(values).encode()
+        req = urllib.request.Request(app.config['GOOGLE_RECAPTCHA_VERIFY_URL'], data = data)
+        response = urllib.request.urlopen(req)
+        result = json.loads(response.read().decode())
+
+        # For testing only
+        result['success'] = True
+
+        form = RegistrationForm(request.form)
+        if result['success']:
+            if (form.validate()):
+                
+
+                # new_user, img_to_upload = construct_user(request, form)
+                # rspns = requests.post(settings.REGISTER_URL + "/stage_user", files = {'json': (None, json.dumps(new_user), 'application/json'),
+                #                                                             'img': img_to_upload})
+                
+                # if rspns.ok:
+                #     try:
+                #         wgs_ul = "<ul>"
+                #         for wg in new_user['working_group']:
+                #             wgs_ul += f"<li>{wg}</li>"
+                #         if len(new_user['working_group']) == 0:
+                #             wgs_ul += "<li>None</li>"
+                #         wgs_ul += "</ul>"
+
+                #         ars_ul = "<ul>"
+                #         for ar in new_user['access_requests']:
+                #             if ar == 'HuBMAP Google Drive Share':
+                #                 ars_ul += f"<li>{ar}: {new_user['google_email']}</li>"
+                #             elif ar == 'HuBMAP GitHub Repository':
+                #                 ars_ul += f"<li>{ar}: {new_user['github_username']}</li>"
+                #             elif ar == 'HuBMAP Slack Workspace':
+                #                 ars_ul += f"<li>{ar}: {new_user['slack_username']}</li>"
+                #             else:
+                #                 ars_ul += f"<li>{ar}</li>"
+                #         ars_ul += "</ul>"
+                #         pm_line = f"The user would like the following project manager to be copied on all communications:  {new_user['pm_name']} {new_user['pm_email']}" if new_user['pm'] == 'Yes' else ''
+                #         html_content = f"""The user {new_user['first_name']} {new_user['last_name']} with email: {new_user['email']} and username: {new_user['email']} has registered.  
+                #             This user has registered as a member of the {new_user['component']} at {new_user['organization']} as a {new_user['role']}.  
+                #             The user is a member of the following working group(s):<br />
+                #             {wgs_ul}
+                #             <br />
+                #             The user requested access to use HuBMAP service(s):<br />
+                #             {ars_ul}
+                #             <br />
+                #             {pm_line}
+                #             <br />
+                #             To approve this user: <a href="{request.META['HTTP_HOST']}/match_user?globus_user_id={new_user['globus_user_id']}">{request.META['HTTP_HOST']}/match_user?globus_user_id={new_user['globus_user_id']}</a>
+                #             """
+                #         send_mail(
+                #             'HuBMAP new user signed up',
+                #             f"To approve this user: <a href=\"{request.META['HTTP_HOST']}/match_user?globus_user_id={new_user['globus_user_id']}\">{request.META['HTTP_HOST']}/match_user?globus_user_id={new_user['globus_user_id']}</a>",
+                #             'HuBMAP Data Portal',
+                #             [u.email for u in User.objects.filter(is_superuser=True)] + json.loads(settings.EMAIL_CC_LIST),
+                #             fail_silently=False,
+                #             html_message=html_content
+                #         )
+                #     except Exception as e: 
+                #         print(e)
+                #         print("send email failed")
+                #         pass
+                #     base_url = request.build_absolute_uri("/").rstrip("/")
+                context = {
+                            'status': "success",
+                            'message': "Your registration has been completed and has been sent for approval. Please contact <a href='mailto:admin@hubmapconsortium.org'>admin@hubmapconsortium.org</a> if you have any questions.",
+                        }
+
+                return render('confirmation.html', data = context)
+            else:
+                context={
+                    'status': 'danger',
+                    'message': 'An unexpected error occurred while trying to save your information. Please contact <a href="mailto:admin@hubmapconsortium.org">hel@hubmapconsortium.org</a> for help resolving the problem.'
+                }
+                return render('error.html', data = context)
+        
+        # Show reCAPTCHA error
+        else:
+            context={
+                'status': 'danger',
+                'message': 'reCAPTCHA error'
+            }
+            return render('error.html', data = context)
+    # Handle GET
+    else:
+        if 'isAuthenticated' in session:
+            context = {
+                'isAuthenticated': True if session['isAuthenticated']  else False,
+                #'globus_user_id': session['globus_user_id'],
+                'recaptcha_site_key': app.config['GOOGLE_RECAPTCHA_SITE_KEY']
+            }
+            
+            form = RegistrationForm(initial={'first_name': session['name'], 'last_name': session['name'], 'email': session['name']})
+
+            return render_template('register.html', data = context, form = form)
+        else:
+            context = {
+                'isAuthenticated': False
+            }
+
+            return render_template('register.html', data = context)
+
 
 @app.route("/profile", methods=['GET', 'POST'])
 def profile():
