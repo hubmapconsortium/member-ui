@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from werkzeug import secure_filename
@@ -208,6 +208,19 @@ wp_user_metas_schema = WPUserMetaSchema(many=True, strict=True)
 
 connection_schema = ConnectionSchema(strict=True)
 connections_schema = ConnectionSchema(many=True, strict=True)
+
+# Serve Pages
+@app.route("/register", methods=['GET', 'POST'])
+def register():
+    return render_template("register.html")
+
+@app.route("/profile", methods=['GET', 'POST'])
+def profile():
+    return render_template("profile.html")
+
+@app.route("/match_user", methods=['GET', 'POST'])
+def match_user():
+    return render_template("match_user.html")
 
 # APIs
 @app.route('/stage_user', methods=['GET'])
@@ -593,6 +606,7 @@ def assign_wp_user(wp_user, user_obj, connection=None, mode='CREATE'):
     connection.owner = admin_id
     connection.user = 0
     connection.status = 'approved'
+
 # Run Server
 if __name__ == "__main__":
     app.run(debug=True)

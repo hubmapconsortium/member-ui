@@ -1,0 +1,9 @@
+# Editors
+.vscode
+
+# Python
+.pytest_cache
+
+# images file
+./avatar/*
+!./avatar/noname.jpg
