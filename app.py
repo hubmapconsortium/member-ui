@@ -225,7 +225,7 @@ class RegistrationForm(FlaskForm):
     
 
 
-# Serve Pages
+# Routing
 
 # Redirect users from react app login page to Globus auth login widget then redirect back
 @app.route('/login')
@@ -332,8 +332,6 @@ def register():
         if result['success']:
             form = RegistrationForm()
             if form.validate_on_submit():
-                
-
                 # new_user, img_to_upload = construct_user(request, form)
                 # rspns = requests.post(settings.REGISTER_URL + "/stage_user", files = {'json': (None, json.dumps(new_user), 'application/json'),
                 #                                                             'img': img_to_upload})
@@ -385,13 +383,17 @@ def register():
                 #         pass
                 #     base_url = request.build_absolute_uri("/").rstrip("/")
                 context = {
-                            'status': "success",
-                            'message': "Your registration has been completed and has been sent for approval. Please contact <a href='mailto:admin@hubmapconsortium.org'>admin@hubmapconsortium.org</a> if you have any questions.",
-                        }
+                    'isAuthenticated': True,
+                    'username': session['name'],
+                    'status': "success",
+                    'message': "Your registration has been completed and has been sent for approval. Please contact <a href='mailto:admin@hubmapconsortium.org'>admin@hubmapconsortium.org</a> if you have any questions.",
+                }
 
                 return render_template('confirmation.html', data = context)
             else:
                 context={
+                    'isAuthenticated': True,
+                    'username': session['name'],
                     'status': 'danger',
                     'message': 'An unexpected error occurred while trying to save your information. Please contact <a href="mailto:admin@hubmapconsortium.org">hel@hubmapconsortium.org</a> for help resolving the problem.'
                 }
@@ -400,6 +402,8 @@ def register():
         # Show reCAPTCHA error
         else:
             context={
+                'isAuthenticated': True,
+                'username': session['name'],
                 'status': 'danger',
                 'message': 'reCAPTCHA error'
             }
@@ -408,7 +412,7 @@ def register():
     else:
         if 'isAuthenticated' in session:
             context = {
-                'isAuthenticated': True if session['isAuthenticated']  else False,
+                'isAuthenticated': True,
                 'username': session['name'],
                 #'globus_user_id': session['globus_user_id'],
                 'recaptcha_site_key': app.config['GOOGLE_RECAPTCHA_SITE_KEY']

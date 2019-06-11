@@ -1,12 +1,11 @@
-<div class="page-content">
-    <div class="container">
-        <div class="row">
-            <div class="col-xs-12 col-sm-6 offset-sm-3">
-                <div class="alert alert-{{ data.status }}" role="alert">
-                    {{ data.message }}
-                </div>
-            </div>
-        </div>
-    </div>
+{% extends "layouts/main.html" %}
+{% block content %}
+<div class="row">
+<div class="col-sm-8 offset-sm-2">
+<div class="alert alert-{{ data.status }}" role="alert">
+{{ data.message }}
 </div>
+</div>
+</div>
+{% endblock %}
 
