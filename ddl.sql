@@ -25,6 +25,7 @@ CREATE TABLE `stage_user` (
   `pm` tinyint(1) DEFAULT NULL,
   `pm_name` varchar(100) DEFAULT NULL,
   `pm_email` varchar(100) DEFAULT NULL,
+  `created_at` timestamp,
   PRIMARY KEY (`id`),
   UNIQUE KEY `globus_user_id` (`globus_user_id`),
   UNIQUE KEY `email` (`email`)

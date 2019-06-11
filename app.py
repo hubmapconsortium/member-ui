@@ -62,6 +62,7 @@ class StageUser(db.Model):
     pm = db.Column(db.Boolean)
     pm_name = db.Column(db.String(100))
     pm_email = db.Column(db.String(100))
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
 
     def __init__(self, a_dict):
         try:
@@ -98,7 +99,7 @@ class StageUserSchema(ma.Schema):
     class Meta:
         fields = ('id', 'globus_user_id', 'email', 'first_name', 'last_name', 'component', 'other_component', 'organization', 'other_organization',
                     'role', 'other_role', 'working_group', 'photo', 'photo_url', 'access_requests', 'google_email', 'github_username', 'slack_username', 'phone', 'website',
-                    'biosketch', 'orcid', 'pm', 'pm_name', 'pm_email')
+                    'biosketch', 'orcid', 'pm', 'pm_name', 'pm_email', 'created_at')
 
 # WPUserMeta Class/Model
 class WPUserMeta(db.Model):
