@@ -297,6 +297,7 @@ def get_user_info(token):
 
 # Create user info based on submitted form data
 def construct_user(request):
+    print(request.form)
     photo_file = None
     imgByteArr = None
     if 'photo' in request.files and request.files['photo']:
@@ -317,22 +318,24 @@ def construct_user(request):
         "email": request.form['email'],
         "first_name": request.form['first_name'],
         "last_name": request.form['last_name'],
+        "phone": request.form['phone'],
         "component": request.form['component'],
         "other_component": request.form['other_component'],
         "organization": request.form['organization'],
         "other_organization": request.form['other_organization'],
         "role": request.form['role'],
         "other_role": request.form['other_role'],
-        "working_group": request.form['working_group'],
+        # multiple checkboxes
+        "working_group": request.form.getlist('working_group'),
         "photo": '',
         "photo_url": request.form['photo_url'],
-        "access_requests": ['Collaboration Portal'] + request.form['access_requests'],
+        # multiple checkboxes
+        "access_requests": ['Collaboration Portal'] + request.form.getlist('access_requests'),
         "google_email": request.form['google_email'],
         "github_username": request.form['github_username'],
         "slack_username": request.form['slack_username'],
-        "phone": request.form['phone'],
         "website": request.form['website'],
-        "biosketch": request.form['biosketch'],
+        #"biosketch": request.form['biosketch'],
         "expertise": request.form['expertise'],
         "orcid": request.form['orcid'],
         "pm": True if request.form['pm'].lower() == 'yes' else False,
