@@ -85,12 +85,12 @@ function cn_register_custom_metabox_and_text_field() {
 				'type'       => 'checkboxgroup',       // This is the field type being added.
 				'size'       => 'regular',    // This can be changed to one of the following: 'small', 'regular', 'large'
 				'options'    => array(
-                    'communication_engagement'   => 'Communications & Engagement',
-                    'data_science'   => 'Data Science',
-                    'policies' => 'Policies',
-                    'tissue_techonology_datacollection'  => 'Tissue, Technology & Data Collection',
-                    'tools_models'  => 'Tools & Models',
-					'na' => 'NA',
+                    'Communications & Engagement'   => 'Communications & Engagement',
+                    'Data Science'   => 'Data Science',
+                    'Policies' => 'Policies',
+                    'Tissue, Technology & Data Collection'  => 'Tissue, Technology & Data Collection',
+                    'Tools & Models'  => 'Tools & Models',
+					'NA' => 'NA',
                 ),
 			),
 		),
@@ -108,13 +108,13 @@ function cn_register_custom_metabox_and_text_field() {
                 'id'         => 'access_requests', // Change this so it is unique to you project. Each field id MUST be unique.
                 'type'       => 'checkboxgroup',  // This is the field type being added.
                 'options'    => array(
-                    'sample_data'   => 'Sample Data Portal',
-                    'hubmap_data'   => 'HuBMAP Data Portal',
-                    'collaboration_portal' => 'Collaboration Portal',
-                    'hubmap_google_drive'  => 'HuBMAP Google Drive share',
-                    'hubmap_github'  => 'HuBMAP GitHub repository',
-                    'hubmap_slack' => 'HuBMAP Slack Workspace',
-                    'component_page' => 'Edit my component\'s project page GitHub username?'
+                    'Sample Data Portal'   => 'Sample Data Portal',
+                    'HuBMAP Data Portal'   => 'HuBMAP Data Portal',
+                    'Collaboration Portal' => 'Collaboration Portal',
+                    'HuBMAP Google Drive share'  => 'HuBMAP Google Drive share',
+                    'HuBMAP GitHub repository'  => 'HuBMAP GitHub repository',
+                    'HuBMAP Slack Workspace' => 'HuBMAP Slack Workspace',
+                    'Edit My Component\'s Project Page' => 'Edit my component\'s project page'
                 ),
                 'default'    => '', // This is the default selected option. Leave blank for none.
             ),

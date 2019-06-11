@@ -301,7 +301,7 @@ def update_stage_user(stage_user_id):
             if meta.meta_key == "wp_capabilities":
                 meta.meta_value = "a:1:{s:6:\"member\";b:1;}"
 
-        connection = wp_user.connection[0] if wp_user.connection else None
+        # connection = wp_user.connection[0] if wp_user.connection else None
         assign_wp_user(wp_user, stage_user, connection)
         # delete stage user
         db.session.delete(stage_user)
@@ -461,14 +461,15 @@ def assign_wp_user(wp_user, user_obj, connection=None, mode='CREATE'):
     wp_user.user_login = user_obj.email
     wp_user.user_email = user_obj.email
     wp_user.user_pass = generate_password()
-    meta_capabilities = WPUserMeta()
-    meta_capabilities.meta_key = "wp_capabilities"
-    meta_capabilities.meta_value = "a:1:{s:6:\"member\";b:1;}"
-    wp_user.metas.append(meta_capabilities)
-    meta_globus_user_id = WPUserMeta()
-    meta_globus_user_id.meta_key = "openid-connect-generic-subject-identity"
-    meta_globus_user_id.meta_value = user_obj.globus_user_id
-    wp_user.metas.append(meta_globus_user_id)
+    if mode == 'CREATE':
+        meta_capabilities = WPUserMeta()
+        meta_capabilities.meta_key = "wp_capabilities"
+        meta_capabilities.meta_value = "a:1:{s:6:\"member\";b:1;}"
+        wp_user.metas.append(meta_capabilities)
+        meta_globus_user_id = WPUserMeta()
+        meta_globus_user_id.meta_key = "openid-connect-generic-subject-identity"
+        meta_globus_user_id.meta_value = user_obj.globus_user_id
+        wp_user.metas.append(meta_globus_user_id)
 
     if not connection:
         connection = Connection()
