@@ -279,8 +279,10 @@
 <img src="https://hubmapconsortium.org/wp-content/uploads/2019/01/HuBMAP-Retina-Logo-Color-300x110.png" width="300" height="110" class="d-inline-block align-top"
 alt="HuBMAP logo" /></a>
 <div class="float-right">
-<span class="username">Zhou Yuan</span>
+{% if data.isAuthenticated %}
+<span class="username">{{data.username}}</span>
 <a href="http://localhost:5000/logout" class="btn btn btn-outline-danger"> Logout </a>
+{% endif %}
 </div>
 </nav>
 </header>

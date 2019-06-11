@@ -409,6 +409,7 @@ def register():
         if 'isAuthenticated' in session:
             context = {
                 'isAuthenticated': True if session['isAuthenticated']  else False,
+                'username': session['name'],
                 #'globus_user_id': session['globus_user_id'],
                 'recaptcha_site_key': app.config['GOOGLE_RECAPTCHA_SITE_KEY']
             }
