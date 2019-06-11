@@ -1,14 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Flask app</title>
-
-<!-- Bootstrap 4 -->
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+<title>HuBMAP User Registration</title>
 
 <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='bootstrap/css/bootstrap.min.css') }}" />
 <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/app.css') }}">
 
+<script type="text/javascript" src="{{ url_for('static', filename='js/fontawesome-all.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='js/popper.min.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='bootstrap/js/bootstrap.min.js') }}"></script>
@@ -174,98 +172,98 @@
             }
         })
         
-        $("#registration-form").submit(function(e){
-            e.preventDefault();
-            var form = this;
-            valid = true;
-            $(form).find('.invalid-feedback').remove();
-            $(form).find('.is-invalid').removeClass('is-invalid');
-            if($.trim($("#id_email").val()) === ''){
-                valid = false;
-                $("#id_email").addClass('is-invalid');
-                $("#id_email").after("<div class='invalid-feedback'>Email is required.</div>");
-            }
-            if($.trim($("#id_phone").val()) === ''){
-                valid = false;
-                $("#id_phone").addClass('is-invalid');
-                $("#id_phone").after("<div class='invalid-feedback'>Phone is required.</div>");
-            }
-            if($.trim($("#id_first_name").val()) === ''){
-                valid = false;
-                $("#id_first_name").addClass('is-invalid');
-                $("#id_first_name").after("<div class='invalid-feedback'>First Name is required.</div>");
-            }
-            if($.trim($("#id_last_name").val()) === ''){
-                valid = false;
-                $("#id_last_name").addClass('is-invalid');
-                $("#id_last_name").after("<div class='invalid-feedback'>Last Name is required.</div>");
-            }
-            if($.trim($("#id_component").val()) === '----'){
-                valid = false;
-                $("#id_component").addClass('is-invalid');
-                $("#id_component").after("<div class='invalid-feedback'>Adward/Component is required.</div>");
-            }
-            if($.trim($("#id_component").val()) === 'Other' && $.trim($("#id_other_component").val()) === ''){
-                valid = false;
-                $("#id_other_component").addClass('is-invalid');
-                $("#id_other_component").after("<div class='invalid-feedback'>Award/Component is required.</div>");
-            }
-            if($.trim($("#id_organization").val()) === '----'){
-                valid = false;
-                $("#id_organization").addClass('is-invalid');
-                $("#id_organization").after("<div class='invalid-feedback'>Organization is required.</div>");
-            }
-            if($.trim($("#id_organization").val()) === 'Other' && $.trim($("#id_other_organization").val()) === ''){
-                valid = false;
-                $("#id_other_organization").addClass('is-invalid');
-                $("#id_other_organization").after("<div class='invalid-feedback'>Organization is required.</div>");
-            }
-            if($.trim($("#id_role").val()) === '----'){
-                valid = false;
-                $("#id_role").addClass('is-invalid');
-                $("#id_role").after("<div class='invalid-feedback'>Role is required.</div>");
-            }
-            if($.trim($("#id_role").val()) === 'Other' && $.trim($("#id_other_role").val()) === ''){
-                valid = false;
-                $("#id_other_role").addClass('is-invalid');
-                $("#id_other_role").after("<div class='invalid-feedback'>Role is required.</div>");
-            }
-            if($("#id_access_requests_3").is(':checked') && $.trim($("#id_google_email").val()) === ''){
-                valid = false;
-                $("#id_google_email").addClass('is-invalid');
-                $("#id_google_email").after("<div class='invalid-feedback'>Google account is required.</div>");
-            }
-            if($("#id_access_requests_4").is(':checked') && $.trim($("#id_github_username").val()) === ''){
-                valid = false;
-                $("#id_github_username").addClass('is-invalid');
-                $("#id_github_username").after("<div class='invalid-feedback'>GitHub username is required.</div>");
-            }
-            if($("#id_access_requests_5").is(':checked') && $.trim($("#id_slack_username").val()) === ''){
-                valid = false;
-                $("#id_slack_username").addClass('is-invalid');
-                $("#id_slack_username").after("<div class='invalid-feedback'>Slack username is required.</div>");
-            }
-            if($("#id_expertise").val().length > biography_length_limit){
-                valid = false;
-                $("#id_expertise").addClass('is-invalid');
-                $("#id_expertise").after("<div class='invalid-feedback'>Biography is too long. Please limit the length to " + biography_length_limit + " characters.</div>");
-            }
-            if($("#id_pm_0").is(':checked') && $.trim($("#id_pm_name").val()) === ''){
-                valid = false;
-                $("#id_pm_name").addClass('is-invalid');
-                $("#id_pm_name").after("<div class='invalid-feedback'>Project Manager's name is required.</div>");
-            }
-            if($("#id_pm_0").is(':checked') && $.trim($("#id_pm_email").val()) === ''){
-                valid = false;
-                $("#id_pm_email").addClass('is-invalid');
-                $("#id_pm_email").after("<div class='invalid-feedback'>Project Manager's email is required.</div>");
-            }
-            if(valid){
-                form.submit();
-            } else {
-                $(".main-error-message").show();
-            }
-        });
+    //     $("#registration-form").submit(function(e){
+    //         e.preventDefault();
+    //         var form = this;
+    //         valid = true;
+    //         $(form).find('.invalid-feedback').remove();
+    //         $(form).find('.is-invalid').removeClass('is-invalid');
+    //         if($.trim($("#id_email").val()) === ''){
+    //             valid = false;
+    //             $("#id_email").addClass('is-invalid');
+    //             $("#id_email").after("<div class='invalid-feedback'>Email is required.</div>");
+    //         }
+    //         if($.trim($("#id_phone").val()) === ''){
+    //             valid = false;
+    //             $("#id_phone").addClass('is-invalid');
+    //             $("#id_phone").after("<div class='invalid-feedback'>Phone is required.</div>");
+    //         }
+    //         if($.trim($("#id_first_name").val()) === ''){
+    //             valid = false;
+    //             $("#id_first_name").addClass('is-invalid');
+    //             $("#id_first_name").after("<div class='invalid-feedback'>First Name is required.</div>");
+    //         }
+    //         if($.trim($("#id_last_name").val()) === ''){
+    //             valid = false;
+    //             $("#id_last_name").addClass('is-invalid');
+    //             $("#id_last_name").after("<div class='invalid-feedback'>Last Name is required.</div>");
+    //         }
+    //         if($.trim($("#id_component").val()) === '----'){
+    //             valid = false;
+    //             $("#id_component").addClass('is-invalid');
+    //             $("#id_component").after("<div class='invalid-feedback'>Adward/Component is required.</div>");
+    //         }
+    //         if($.trim($("#id_component").val()) === 'Other' && $.trim($("#id_other_component").val()) === ''){
+    //             valid = false;
+    //             $("#id_other_component").addClass('is-invalid');
+    //             $("#id_other_component").after("<div class='invalid-feedback'>Award/Component is required.</div>");
+    //         }
+    //         if($.trim($("#id_organization").val()) === '----'){
+    //             valid = false;
+    //             $("#id_organization").addClass('is-invalid');
+    //             $("#id_organization").after("<div class='invalid-feedback'>Organization is required.</div>");
+    //         }
+    //         if($.trim($("#id_organization").val()) === 'Other' && $.trim($("#id_other_organization").val()) === ''){
+    //             valid = false;
+    //             $("#id_other_organization").addClass('is-invalid');
+    //             $("#id_other_organization").after("<div class='invalid-feedback'>Organization is required.</div>");
+    //         }
+    //         if($.trim($("#id_role").val()) === '----'){
+    //             valid = false;
+    //             $("#id_role").addClass('is-invalid');
+    //             $("#id_role").after("<div class='invalid-feedback'>Role is required.</div>");
+    //         }
+    //         if($.trim($("#id_role").val()) === 'Other' && $.trim($("#id_other_role").val()) === ''){
+    //             valid = false;
+    //             $("#id_other_role").addClass('is-invalid');
+    //             $("#id_other_role").after("<div class='invalid-feedback'>Role is required.</div>");
+    //         }
+    //         if($("#id_access_requests_3").is(':checked') && $.trim($("#id_google_email").val()) === ''){
+    //             valid = false;
+    //             $("#id_google_email").addClass('is-invalid');
+    //             $("#id_google_email").after("<div class='invalid-feedback'>Google account is required.</div>");
+    //         }
+    //         if($("#id_access_requests_4").is(':checked') && $.trim($("#id_github_username").val()) === ''){
+    //             valid = false;
+    //             $("#id_github_username").addClass('is-invalid');
+    //             $("#id_github_username").after("<div class='invalid-feedback'>GitHub username is required.</div>");
+    //         }
+    //         if($("#id_access_requests_5").is(':checked') && $.trim($("#id_slack_username").val()) === ''){
+    //             valid = false;
+    //             $("#id_slack_username").addClass('is-invalid');
+    //             $("#id_slack_username").after("<div class='invalid-feedback'>Slack username is required.</div>");
+    //         }
+    //         if($("#id_expertise").val().length > biography_length_limit){
+    //             valid = false;
+    //             $("#id_expertise").addClass('is-invalid');
+    //             $("#id_expertise").after("<div class='invalid-feedback'>Biography is too long. Please limit the length to " + biography_length_limit + " characters.</div>");
+    //         }
+    //         if($("#id_pm_0").is(':checked') && $.trim($("#id_pm_name").val()) === ''){
+    //             valid = false;
+    //             $("#id_pm_name").addClass('is-invalid');
+    //             $("#id_pm_name").after("<div class='invalid-feedback'>Project Manager's name is required.</div>");
+    //         }
+    //         if($("#id_pm_0").is(':checked') && $.trim($("#id_pm_email").val()) === ''){
+    //             valid = false;
+    //             $("#id_pm_email").addClass('is-invalid');
+    //             $("#id_pm_email").after("<div class='invalid-feedback'>Project Manager's email is required.</div>");
+    //         }
+    //         if(valid){
+    //             form.submit();
+    //         } else {
+    //             $(".main-error-message").show();
+    //         }
+    //     });
         $('[data-toggle="tooltip"]').tooltip()
     });
 </script>
@@ -287,7 +285,7 @@ alt="HuBMAP logo" /></a>
 </nav>
 </header>
 
-
+<div class="page-content">
 <div id="content" class="container">
 
 <h1>HuBMAP User Registration</h1>
@@ -295,13 +293,10 @@ alt="HuBMAP logo" /></a>
 {% if data.isAuthenticated %}
 
 <div class="row">
-    <div class="col-xs-12 col-sm-10 offset-sm-1">
+    <div class="col-sm-12">
         <form id="registration-form" method="POST" action="/register" enctype="multipart/form-data">
         	<!-- CSRF protection -->
             {{ form.csrf_token }}
-            {% if form.csrf_token.errors %}
-			    <div class="warning">You have submitted an invalid CSRF token</div>
-			{% endif %}
 			
             <input type="hidden" name="globus_user_id" value="{{ globus_user_id }}">
             <input type="hidden" name="wp_user_id" value="{{ wp_user_id }}">
@@ -309,7 +304,7 @@ alt="HuBMAP logo" /></a>
                 <div class="col">
                     <div class="form-group">
                         <label for="first-name">First Name <span class="text-danger">*</span></label>
-                        {{ form.first_name }}
+                        {{ form.first_name(class_="form-control") }}
                         <div class="invalid-feedback">
                             {{ form.first_name.errors}}
                         </div>
@@ -318,7 +313,7 @@ alt="HuBMAP logo" /></a>
                 <div class="col">
                     <div class="form-group">
                         <label for="last-name">Last Name <span class="text-danger">*</span></label>
-                        {{ form.last_name }}
+                        {{ form.last_name(class_="form-control") }}
                         <div class="invalid-feedback">
                             {{ form.last_name.errors}}
                         </div>
@@ -329,7 +324,7 @@ alt="HuBMAP logo" /></a>
                 <div class="col">
                     <div class="form-group">
                         <label for="email">Email address <span class="text-danger">*</span></label>
-                        {{ form.email }}
+                        {{ form.email(class_="form-control") }}
                         <div class="invalid-feedback">
                             {{ form.email.errors}}
                         </div>
@@ -338,7 +333,7 @@ alt="HuBMAP logo" /></a>
                 <div class="col">
                     <div class="form-group">
                         <label for="phone">Phone number <span class="text-danger">*</span></label>
-                        {{ form.phone }}
+                        {{ form.phone(class_="form-control") }}
                         <div class="invalid-feedback">
                             {{ form.phone.errors}}
                         </div>
@@ -621,6 +616,9 @@ alt="HuBMAP logo" /></a>
 </div>
 
 </div>
+
+</div>
+
 </body>
 </html>
 

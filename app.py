@@ -16,9 +16,11 @@ from PIL import Image
 from io import BytesIO
 import ast
 from shutil import copy2
-from wtforms import Form, StringField, validators
-from wtforms.csrf.session import SessionCSRF
-from datetime import timedelta
+from flask_wtf import FlaskForm
+from wtforms import StringField
+from wtforms.validators import DataRequired
+import urllib.parse
+import urllib.request
 
 
 # Init app and use the config from instance folder
@@ -213,21 +215,11 @@ connection_schema = ConnectionSchema(strict=True)
 connections_schema = ConnectionSchema(many=True, strict=True)
 
 # Registration form fields defined in wtforms
-class RegistrationForm(Form):
-    class Meta:
-        csrf = True
-        csrf_class = SessionCSRF
-        csrf_secret = b'EPj00jpfj8Gx1SjnyLxwBBSQfnQ9DJYe0Ym'
-        csrf_time_limit = timedelta(minutes=20)
-
-        @property
-        def csrf_context(self):
-            return session
-
-    first_name = StringField(u'First Name', validators=[validators.input_required()])
-    last_name = StringField(u'Last Name', validators=[validators.input_required()])
-    email = StringField('Email Address', [validators.Length(min=6, max=35)])
-    phone = StringField('Phone', validators=[validators.input_required()])
+class RegistrationForm(FlaskForm):
+    first_name = StringField('First Name')
+    last_name = StringField('Last Name')
+    email = StringField('Email Address', validators=[DataRequired()])
+    phone = StringField('Phone')
 
 
     
@@ -323,7 +315,7 @@ def get_user_info(token):
 def register():
     if request.method == 'POST':
         # reCAPTCHA validation
-        recaptcha_response = request.POST.get('g-recaptcha-response')
+        recaptcha_response = request.args.get('g-recaptcha-response')
         values = {
             'secret': app.config['GOOGLE_RECAPTCHA_SECRET_KEY'],
             'response': recaptcha_response
@@ -336,9 +328,10 @@ def register():
         # For testing only
         result['success'] = True
 
-        form = RegistrationForm(request.form)
+        
         if result['success']:
-            if (form.validate()):
+            form = RegistrationForm()
+            if form.validate_on_submit():
                 
 
                 # new_user, img_to_upload = construct_user(request, form)
@@ -396,13 +389,13 @@ def register():
                             'message': "Your registration has been completed and has been sent for approval. Please contact <a href='mailto:admin@hubmapconsortium.org'>admin@hubmapconsortium.org</a> if you have any questions.",
                         }
 
-                return render('confirmation.html', data = context)
+                return render_template('confirmation.html', data = context)
             else:
                 context={
                     'status': 'danger',
                     'message': 'An unexpected error occurred while trying to save your information. Please contact <a href="mailto:admin@hubmapconsortium.org">hel@hubmapconsortium.org</a> for help resolving the problem.'
                 }
-                return render('error.html', data = context)
+                return render_template('error.html', data = context)
         
         # Show reCAPTCHA error
         else:
@@ -410,7 +403,7 @@ def register():
                 'status': 'danger',
                 'message': 'reCAPTCHA error'
             }
-            return render('error.html', data = context)
+            return render_template('error.html', data = context)
     # Handle GET
     else:
         if 'isAuthenticated' in session:
