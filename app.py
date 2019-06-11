@@ -16,11 +16,11 @@ from PIL import Image
 from io import BytesIO
 import ast
 from shutil import copy2
-from flask_wtf import FlaskForm
-from wtforms import StringField
-from wtforms.validators import DataRequired
 import urllib.parse
 import urllib.request
+import requests
+import string
+import random
 
 
 # Init app and use the config from instance folder
@@ -214,16 +214,6 @@ wp_user_metas_schema = WPUserMetaSchema(many=True, strict=True)
 connection_schema = ConnectionSchema(strict=True)
 connections_schema = ConnectionSchema(many=True, strict=True)
 
-# Registration form fields defined in wtforms
-class RegistrationForm(FlaskForm):
-    first_name = StringField('First Name')
-    last_name = StringField('Last Name')
-    email = StringField('Email Address', validators=[DataRequired()])
-    phone = StringField('Phone')
-
-
-    
-
 
 # Routing
 
@@ -305,16 +295,65 @@ def get_user_info(token):
     auth_client = AuthClient(authorizer=AccessTokenAuthorizer(token))
     return auth_client.oauth2_userinfo()
 
+# Create user info based on submitted form data
+def construct_user(request):
+    photo_file = None
+    imgByteArr = None
+    if 'photo' in request.files and request.files['photo']:
+        photo_file = request.files['photo']
+    
+    url = request.form['photo_url']
+    if photo_file is None and url:
+        response = requests(url)
+        img = Image.open(BytesIO(response.content))
+        imgByteArr = BytesIO()
+        img.save(imgByteArr, format=img.format)
+        imgByteArr = imgByteArr.getvalue()
 
+    new_user = {
+        # Get the globus user id from session data
+        "globus_user_id": session['globus_user_id'],
+        # All others are from the form data
+        "email": request.form['email'],
+        "first_name": request.form['first_name'],
+        "last_name": request.form['last_name'],
+        "component": request.form['component'],
+        "other_component": request.form['other_component'],
+        "organization": request.form['organization'],
+        "other_organization": request.form['other_organization'],
+        "role": request.form['role'],
+        "other_role": request.form['other_role'],
+        "working_group": request.form['working_group'],
+        "photo": '',
+        "photo_url": request.form['photo_url'],
+        "access_requests": ['Collaboration Portal'] + request.form['access_requests'],
+        "google_email": request.form['google_email'],
+        "github_username": request.form['github_username'],
+        "slack_username": request.form['slack_username'],
+        "phone": request.form['phone'],
+        "website": request.form['website'],
+        "biosketch": request.form['biosketch'],
+        "expertise": request.form['expertise'],
+        "orcid": request.form['orcid'],
+        "pm": True if request.form['pm'].lower() == 'yes' else False,
+        "pm_name": request.form['pm_name'],
+        "pm_email": request.form['pm_email']
+    }
+    img_to_upload = photo_file if photo_file is not None else imgByteArr if imgByteArr is not None else None
 
+    return new_user, img_to_upload
 
-
-
+def generate_csrf_token(stringLength = 10):
+    if 'csrf_token' not in session:
+        letters = string.ascii_lowercase
+        session['csrf_token'] = ''.join(random.choice(letters) for i in range(stringLength))
+    return session['csrf_token']
 
 @app.route("/register", methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
         # reCAPTCHA validation
+        # Use request.args.get() instead of request.form[''] since esponse' is not the form
         recaptcha_response = request.args.get('g-recaptcha-response')
         values = {
             'secret': app.config['GOOGLE_RECAPTCHA_SECRET_KEY'],
@@ -328,60 +367,72 @@ def register():
         # For testing only
         result['success'] = True
 
-        
+        # Currently no backend form validation
+        # Only front end validation and reCAPTCHA - Zhou
         if result['success']:
-            form = RegistrationForm()
-            if form.validate_on_submit():
-                # new_user, img_to_upload = construct_user(request, form)
-                # rspns = requests.post(settings.REGISTER_URL + "/stage_user", files = {'json': (None, json.dumps(new_user), 'application/json'),
-                #                                                             'img': img_to_upload})
-                
-                # if rspns.ok:
-                #     try:
-                #         wgs_ul = "<ul>"
-                #         for wg in new_user['working_group']:
-                #             wgs_ul += f"<li>{wg}</li>"
-                #         if len(new_user['working_group']) == 0:
-                #             wgs_ul += "<li>None</li>"
-                #         wgs_ul += "</ul>"
+            # CSRF check
+            session_csrf_token = session.pop('csrf_token', None)
 
-                #         ars_ul = "<ul>"
-                #         for ar in new_user['access_requests']:
-                #             if ar == 'HuBMAP Google Drive Share':
-                #                 ars_ul += f"<li>{ar}: {new_user['google_email']}</li>"
-                #             elif ar == 'HuBMAP GitHub Repository':
-                #                 ars_ul += f"<li>{ar}: {new_user['github_username']}</li>"
-                #             elif ar == 'HuBMAP Slack Workspace':
-                #                 ars_ul += f"<li>{ar}: {new_user['slack_username']}</li>"
-                #             else:
-                #                 ars_ul += f"<li>{ar}</li>"
-                #         ars_ul += "</ul>"
-                #         pm_line = f"The user would like the following project manager to be copied on all communications:  {new_user['pm_name']} {new_user['pm_email']}" if new_user['pm'] == 'Yes' else ''
-                #         html_content = f"""The user {new_user['first_name']} {new_user['last_name']} with email: {new_user['email']} and username: {new_user['email']} has registered.  
-                #             This user has registered as a member of the {new_user['component']} at {new_user['organization']} as a {new_user['role']}.  
-                #             The user is a member of the following working group(s):<br />
-                #             {wgs_ul}
-                #             <br />
-                #             The user requested access to use HuBMAP service(s):<br />
-                #             {ars_ul}
-                #             <br />
-                #             {pm_line}
-                #             <br />
-                #             To approve this user: <a href="{request.META['HTTP_HOST']}/match_user?globus_user_id={new_user['globus_user_id']}">{request.META['HTTP_HOST']}/match_user?globus_user_id={new_user['globus_user_id']}</a>
-                #             """
-                #         send_mail(
-                #             'HuBMAP new user signed up',
-                #             f"To approve this user: <a href=\"{request.META['HTTP_HOST']}/match_user?globus_user_id={new_user['globus_user_id']}\">{request.META['HTTP_HOST']}/match_user?globus_user_id={new_user['globus_user_id']}</a>",
-                #             'HuBMAP Data Portal',
-                #             [u.email for u in User.objects.filter(is_superuser=True)] + json.loads(settings.EMAIL_CC_LIST),
-                #             fail_silently=False,
-                #             html_message=html_content
-                #         )
-                #     except Exception as e: 
-                #         print(e)
-                #         print("send email failed")
-                #         pass
-                #     base_url = request.build_absolute_uri("/").rstrip("/")
+            if not session_csrf_token or session_csrf_token != request.form['csrf_token']:
+                context={
+                    'isAuthenticated': True,
+                    'username': session['name'],
+                    'status': 'danger',
+                    'message': 'Invalid CSRF token!'
+                }
+                return render_template('error.html', data = context)
+            else:
+                new_user, img_to_upload = construct_user(request)
+
+                # Send user info to web services API
+                rspns = requests.post(app.config['WEB_SERVICE_API_BASE_URI'] + "stage_user", files = {'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
+                
+                if rspns.ok:
+                    try:
+                        wgs_ul = "<ul>"
+                        for wg in new_user['working_group']:
+                            wgs_ul += f"<li>{wg}</li>"
+                        if len(new_user['working_group']) == 0:
+                            wgs_ul += "<li>None</li>"
+                        wgs_ul += "</ul>"
+
+                        ars_ul = "<ul>"
+                        for ar in new_user['access_requests']:
+                            if ar == 'HuBMAP Google Drive Share':
+                                ars_ul += f"<li>{ar}: {new_user['google_email']}</li>"
+                            elif ar == 'HuBMAP GitHub Repository':
+                                ars_ul += f"<li>{ar}: {new_user['github_username']}</li>"
+                            elif ar == 'HuBMAP Slack Workspace':
+                                ars_ul += f"<li>{ar}: {new_user['slack_username']}</li>"
+                            else:
+                                ars_ul += f"<li>{ar}</li>"
+                        ars_ul += "</ul>"
+                        pm_line = f"The user would like the following project manager to be copied on all communications:  {new_user['pm_name']} {new_user['pm_email']}" if new_user['pm'] == 'Yes' else ''
+                        html_content = f"""The user {new_user['first_name']} {new_user['last_name']} with email: {new_user['email']} and username: {new_user['email']} has registered.  
+                            This user has registered as a member of the {new_user['component']} at {new_user['organization']} as a {new_user['role']}.  
+                            The user is a member of the following working group(s):<br />
+                            {wgs_ul}
+                            <br />
+                            The user requested access to use HuBMAP service(s):<br />
+                            {ars_ul}
+                            <br />
+                            {pm_line}
+                            <br />
+                            To approve this user: <a href="{request.META['HTTP_HOST']}/match_user?globus_user_id={new_user['globus_user_id']}">{request.META['HTTP_HOST']}/match_user?globus_user_id={new_user['globus_user_id']}</a>
+                            """
+                        send_mail(
+                            'HuBMAP new user signed up',
+                            f"To approve this user: <a href=\"{request.META['HTTP_HOST']}/match_user?globus_user_id={new_user['globus_user_id']}\">{request.META['HTTP_HOST']}/match_user?globus_user_id={new_user['globus_user_id']}</a>",
+                            'HuBMAP Data Portal',
+                            [u.email for u in User.objects.filter(is_superuser=True)] + json.loads(settings.EMAIL_CC_LIST),
+                            fail_silently=False,
+                            html_message=html_content
+                        )
+                    except Exception as e: 
+                        print(e)
+                        print("send email failed")
+                        pass
+                    base_url = request.build_absolute_uri("/").rstrip("/")
                 context = {
                     'isAuthenticated': True,
                     'username': session['name'],
@@ -390,15 +441,6 @@ def register():
                 }
 
                 return render_template('confirmation.html', data = context)
-            else:
-                context={
-                    'isAuthenticated': True,
-                    'username': session['name'],
-                    'status': 'danger',
-                    'message': 'An unexpected error occurred while trying to save your information. Please contact <a href="mailto:admin@hubmapconsortium.org">hel@hubmapconsortium.org</a> for help resolving the problem.'
-                }
-                return render_template('error.html', data = context)
-        
         # Show reCAPTCHA error
         else:
             context={
@@ -414,13 +456,11 @@ def register():
             context = {
                 'isAuthenticated': True,
                 'username': session['name'],
-                #'globus_user_id': session['globus_user_id'],
+                'csrf_token': generate_csrf_token(),
                 'recaptcha_site_key': app.config['GOOGLE_RECAPTCHA_SITE_KEY']
             }
-            
-            form = RegistrationForm(initial={'first_name': session['name'], 'last_name': session['name'], 'email': session['name']})
 
-            return render_template('register.html', data = context, form = form)
+            return render_template('register.html', data = context)
         else:
             context = {
                 'isAuthenticated': False
