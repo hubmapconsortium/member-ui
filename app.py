@@ -68,6 +68,7 @@ class StageUser(db.Model):
     pm_name = db.Column(db.String(100))
     pm_email = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    deny = db.Column(db.Boolean)
 
     def __init__(self, a_dict):
         try:
@@ -104,7 +105,7 @@ class StageUserSchema(ma.Schema):
     class Meta:
         fields = ('id', 'globus_user_id', 'email', 'first_name', 'last_name', 'component', 'other_component', 'organization', 'other_organization',
                     'role', 'other_role', 'working_group', 'photo', 'photo_url', 'access_requests', 'google_email', 'github_username', 'slack_username', 'phone', 'website',
-                    'biosketch', 'orcid', 'pm', 'pm_name', 'pm_email', 'created_at')
+                    'biosketch', 'orcid', 'pm', 'pm_name', 'pm_email', 'created_at', 'deny')
 
 # WPUserMeta Class/Model
 class WPUserMeta(db.Model):
@@ -339,13 +340,22 @@ def construct_user(request):
         #"biosketch": request.form['biosketch'],
         "expertise": request.form['expertise'],
         "orcid": request.form['orcid'],
-        "pm": True if request.form['pm'].lower() == 'yes' else False,
+        "pm": get_pm_selection(request.form),
         "pm_name": request.form['pm_name'],
         "pm_email": request.form['pm_email']
     }
     img_to_upload = photo_file if photo_file is not None else imgByteArr if imgByteArr is not None else None
 
     return new_user, img_to_upload
+
+def get_pm_selection(form):
+    value = form.get('pm', '')
+    if value == 'yes':
+        return True
+    elif value == 'no':
+        return False
+    else:
+        return None
 
 def generate_csrf_token(stringLength = 10):
     if 'csrf_token' not in session:
@@ -389,7 +399,7 @@ def register():
                 new_user, img_to_upload = construct_user(request)
 
                 # Send user info to web services API
-                rspns = requests.post(app.config['WEB_SERVICE_API_BASE_URI'] + "stage_user", files = {'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
+                rspns = requests.post(app.config['FLASK_APP_BASE_URI'] + "stage_user", files = {'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
                 
                 if rspns.ok:
                     try:
@@ -422,11 +432,11 @@ def register():
                             <br />
                             {pm_line}
                             <br />
-                            To approve this user: <a href="{request.META['HTTP_HOST']}/match_user?globus_user_id={new_user['globus_user_id']}">{request.META['HTTP_HOST']}/match_user?globus_user_id={new_user['globus_user_id']}</a>
+                            To approve this user: <a href="{request.url_root}/match_user?globus_user_id={new_user['globus_user_id']}">{request.url_root}/match_user?globus_user_id={new_user['globus_user_id']}</a>
                             """
                         send_mail(
                             'HuBMAP new user signed up',
-                            f"To approve this user: <a href=\"{request.META['HTTP_HOST']}/match_user?globus_user_id={new_user['globus_user_id']}\">{request.META['HTTP_HOST']}/match_user?globus_user_id={new_user['globus_user_id']}</a>",
+                            f"To approve this user: <a href=\"{request.url_root}/match_user?globus_user_id={new_user['globus_user_id']}\">{request.url_root}/match_user?globus_user_id={new_user['globus_user_id']}</a>",
                             'HuBMAP Data Portal',
                             [u.email for u in User.objects.filter(is_superuser=True)] + json.loads(app.config['EMAIL_CC_LIST']),
                             fail_silently=False,
@@ -436,7 +446,6 @@ def register():
                         print(e)
                         print("send email failed")
                         pass
-                    base_url = request.build_absolute_uri("/").rstrip("/")
                 context = {
                     'isAuthenticated': True,
                     'username': session['name'],

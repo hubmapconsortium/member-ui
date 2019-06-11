@@ -15,6 +15,7 @@ phpserialize = "*"
 pymysql = "*"
 requests = "*"
 pillow = "*"
+globus-sdk = "*"
 
 [requires]
 python_version = "3.7"
