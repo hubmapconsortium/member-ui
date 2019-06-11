@@ -427,7 +427,7 @@ def register():
                             'HuBMAP new user signed up',
                             f"To approve this user: <a href=\"{request.META['HTTP_HOST']}/match_user?globus_user_id={new_user['globus_user_id']}\">{request.META['HTTP_HOST']}/match_user?globus_user_id={new_user['globus_user_id']}</a>",
                             'HuBMAP Data Portal',
-                            [u.email for u in User.objects.filter(is_superuser=True)] + json.loads(settings.EMAIL_CC_LIST),
+                            [u.email for u in User.objects.filter(is_superuser=True)] + json.loads(app.config['EMAIL_CC_LIST']),
                             fail_silently=False,
                             html_message=html_content
                         )
