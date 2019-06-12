@@ -1117,20 +1117,9 @@
 
 
 {% else %}
-	<div class="alert alert-info" role="alert">
-	<h1>Login</h1>
-	<p>
-	User authendication is required for registration, please
-	click the button and you will be redirected to the Globus login page.
-	There you can login with your institutional credentials. Thank you!
-	</p>
-
-	<hr />
-
-	<a class="btn btn-primary btn-lg" href="http://localhost:5000/login">
-	Login with your institutional credentials via Globus
-	</a>
-	</div>
+	
+    {% include 'login.html' %}
+    
 {% endif %}
 
 {% endblock %}

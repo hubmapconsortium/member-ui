@@ -2,6 +2,8 @@
 
 ## Installation
 
+We use [Pipenv](https://docs.pipenv.org/en/latest/) to manage dependencies for this application. Pipenv is recommended for collaborative projects as it's a higher-level tool that simplifies dependency management for common use cases.
+
 Install [Pipenv](https://docs.pipenv.org/en/latest/)
 
 ## activate env
@@ -42,7 +44,7 @@ pipenv install
 
 ## run flask development server
 ```
-export FLASK_APP=hello.py
+export FLASK_APP=app.py
 export FLASK_ENV=development
 flask run
 ```

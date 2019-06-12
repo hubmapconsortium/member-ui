@@ -484,7 +484,40 @@ def register():
 
 @app.route("/profile", methods=['GET', 'POST'])
 def profile():
-    return render_template("profile.html")
+    if request.method == 'POST':
+        # CSRF check
+        session_csrf_token = session.pop('csrf_token', None)
+
+        if not session_csrf_token or session_csrf_token != request.form['csrf_token']:
+            context={
+                'isAuthenticated': True,
+                'username': session['name'],
+                'status': 'danger',
+                'message': 'Invalid CSRF token!'
+            }
+            return render_template('error.html', data = context)
+        else:
+            new_user, img_to_upload = construct_user(request)
+
+            # Send user info to web services API
+            rspns = requests.post(app.config['FLASK_APP_BASE_URI'] + "stage_user", files = {'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
+                
+    else:
+        if 'isAuthenticated' in session:
+            context = {
+                'isAuthenticated': True,
+                'username': session['name'],
+                'csrf_token': generate_csrf_token()
+            }
+
+            return render_template('profile.html', data = context)
+        else:
+            context = {
+                'isAuthenticated': False
+            }
+
+            return render_template('profile.html', data = context)
+            
 
 @app.route("/match_user", methods=['GET', 'POST'])
 def match_user():
