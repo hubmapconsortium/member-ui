@@ -23,6 +23,7 @@ import string
 import random
 from flask_mail import Mail, Message
 from pprint import pprint
+from phpserialize import *
 
 
 # Init app and use the config from instance folder
@@ -228,6 +229,7 @@ def send_new_user_registration_mail(data):
     msg.html = render_template('email/new_user_registration_email.html', data = data)
     mail.send(msg)
 
+# Send email to admins once user profile updated
 def send_user_profile_update_mail(data):
     msg = Message('User profile updated', app.config['MAIL_ADMIN_LIST'])
     msg.html = render_template('email/user_profile_update_email.html', data = data)
@@ -239,6 +241,7 @@ def send_new_user_approval_mail(recipient, data):
     msg.html = render_template('email/new_user_approval_email.html', data = data)
     mail.send(msg)
 
+# Send user email once registration is denied
 def send_new_user_approval_mail(recipient, data):
     msg = Message('New user registration denied', [recipient] + app.config['MAIL_ADMIN_LIST'])
     msg.html = render_template('email/new_user_denied_email.html', data = data)
@@ -489,19 +492,96 @@ def profile():
             return render_template('error.html', data = context)
         else:
             new_user, img_to_upload = construct_user(request)
+            wp_user_id = request.POST['wp_user_id']
 
-            # Send user info to web services API
-            rspns = requests.post(app.config['FLASK_APP_BASE_URI'] + "stage_user", files = {'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
-                
-    else:
-        if 'isAuthenticated' in session:
+            # Send user info to web services API for updating
+            # rspns = requests.put(app.config['FLASK_APP_BASE_URI'] + "wp_user/" + wp_user_id, files={'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
+            
+            # if rspns.ok:
+            #     try:
+            #         # Send email to admin for user profile update
+            #         send_user_profile_update_mail(new_user)
+            #     except Exception as e: 
+            #         print(e)
+            #         print("send email failed")
+            #         pass
             context = {
                 'isAuthenticated': True,
                 'username': session['name'],
-                'csrf_token': generate_csrf_token()
+                'status': "success",
+                'message': "Your profile information has been updated successfully.",
             }
 
-            return render_template('profile.html', data = context)
+            return render_template('confirmation.html', data = context)
+              
+    else:
+        if 'isAuthenticated' in session:
+            # Fetch user profile data from API service
+            #rspns = requests.get(app.config['WEB_SERVICE_API_BASE_URI'] + "wp_user", params = {'globus_user_id': session['globus_user_id']})
+            
+            # if rspns.ok:
+            #     # Render the user data in profile
+            #     context = {
+            #         'isAuthenticated': True,
+            #         'username': session['name'],
+            #         'csrf_token': generate_csrf_token()
+            #     }
+
+            #     return render_template('profile.html', data = context)
+            # else:
+            #     context = {
+            #         'isAuthenticated': True,
+            #         'username': session['name'],
+            #         'status': 'warning',
+            #         'message': 'An unexpected error occurred while trying to load your profile.  Please contact <a href="mailto:admin@hubmapconsortium.org">admin@hubmapconsortium.org</a> for help resolving the problem.'
+            #     }
+            #     return render_template('error.html', data = context)
+
+            # for testing only
+            with open('wp_user.json', 'r') as f:
+                wp_user = json.load(f)
+
+            # Parsing the json to get initial user profile data
+            initial_data = {
+                'first_name': wp_user['connection'][0]['first_name'],
+                'last_name': wp_user['connection'][0]['last_name'],
+                'email': wp_user['connection'][0]['email'],
+                'phone': loads(wp_user['connection'][0]['phone_numbers'].encode())[0][b'number'].decode(),
+                'component': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'component'), {'meta_value': ''})['meta_value'],
+                'other_component': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_component'), {'meta_value': ''})['meta_value'],
+                'organization': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'organization'), {'meta_value': ''})['meta_value'],
+                'other_organization': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_organization'), {'meta_value': ''})['meta_value'],
+                'role': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'role'), {'meta_value': ''})['meta_value'],
+                'other_role': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_role'), {'meta_value': ''})['meta_value'],
+                'working_group': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'working_group'), {'meta_value': ''})['meta_value'],
+                'access_requests': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'access_requests'), {'meta_value': ''})['meta_value'],
+                'google_email': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'google_email'), {'meta_value': ''})['meta_value'],
+                'github_username': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'github_username'), {'meta_value': ''})['meta_value'],
+                'slack_username': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'slack_username'), {'meta_value': ''})['meta_value'],
+                'website': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'website'), {'meta_value': ''})['meta_value'],
+                'expertise': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'expertise'), {'meta_value': ''})['meta_value'],
+                'orcid': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'orcid'), {'meta_value': ''})['meta_value'],
+                'pm': 'Yes' if next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm'), {'meta_value': ''})['meta_value'] == '1' else 'No',
+                'pm_name': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm_name'), {'meta_value': ''})['meta_value'],
+                'pm_email': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm_email'), {'meta_value': ''})['meta_value'],
+            }
+
+            pprint(initial_data)
+            # if not initial_data['working_group'].strip() == '':
+            #     initial_data['working_group'] = ast.literal_eval(initial_data['working_group'])
+            # if not initial_data['access_requests'].strip() == '':
+            #     initial_data['access_requests'] = ast.literal_eval(initial_data['access_requests'])
+
+            context = {
+                'isAuthenticated': True,
+                'username': session['name'],
+                'csrf_token': generate_csrf_token(),
+                'wp_user_id': wp_user['id']
+            }
+
+            d = {**context, **initial_data}
+            pprint(d)
+            return render_template('profile.html', data = {**context, **initial_data})
         else:
             context = {
                 'isAuthenticated': False

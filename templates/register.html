@@ -277,7 +277,6 @@
     <div class="col-sm-12">
         <form id="registration-form" method="POST" action="/register" enctype="multipart/form-data">
 			<input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
-            <input type="hidden" name="wp_user_id" value="{{ wp_user_id }}">
 
             <div class="row">
                 <div class="col">
@@ -1119,7 +1118,7 @@
 {% else %}
 	
     {% include 'login.html' %}
-    
+
 {% endif %}
 
 {% endblock %}
