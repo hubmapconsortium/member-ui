@@ -765,6 +765,7 @@ def assign_wp_user(wp_user, user_obj, connection=None, mode='CREATE'):
     connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(user_obj.phone)}:\"{user_obj.phone}\";}}}}"
     
     access_requests = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'access_requests'), '[]') if mode.upper() == 'EDIT' else '[]'
+    working_group = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'working_group'), '[]') if mode.upper() == 'EDIT' else '[]'
     if mode.upper() == 'EDIT' and user_obj.google_email == '':
         google_email = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'google_email'), '')
     else:
@@ -807,11 +808,11 @@ def assign_wp_user(wp_user, user_obj, connection=None, mode='CREATE'):
     connection.metas.append(connection_meta_other_role)
     connection_meta_working_group = ConnectionMeta()
     connection_meta_working_group.meta_key = 'working_group'
-    connection_meta_working_group.meta_value = user_obj.working_group
+    connection_meta_working_group.meta_value = str(ast.literal_eval(working_group) + ast.literal_eval(user_obj.working_group)).replace('\'', '"')
     connection.metas.append(connection_meta_working_group)
     connection_meta_access_requests = ConnectionMeta()
     connection_meta_access_requests.meta_key = 'access_requests'
-    connection_meta_access_requests.meta_value = str(ast.literal_eval(access_requests) + ast.literal_eval(user_obj.access_requests))
+    connection_meta_access_requests.meta_value = str(ast.literal_eval(access_requests) + ast.literal_eval(user_obj.access_requests)).replace('\'', '"')
     connection.metas.append(connection_meta_access_requests)
     connection_meta_google_email = ConnectionMeta()
     connection_meta_google_email.meta_key = 'google_email'
