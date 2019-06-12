@@ -1,0 +1,50 @@
+HuBMAP new user registered. <br /><br />
+
+Name: {{ data['first_name'] }} {{ data['last_name'] }} <br />
+Email: {{ data['email'] }} <br />
+
+Component: {{ data['component'] }} <br />
+Organization: {{ data['organization'] }} <br />
+Role: {{ data['role'] }}<br />
+
+<br />
+Working group(s): <br />
+<ul>
+{% for grp in data['working_group'] %} 
+<li>{{ grp }} </li>
+{% endfor %}
+</ul>
+
+<br />
+HuBMAP service(s) access requested: <br />
+<ul>
+{% for req in data['access_requests'] %}
+<li>{{ req }} </li>
+{% endfor %}
+</ul>
+
+<br />
+
+{% if 'HuBMAP Google Drive Share' in data['access_requests'] %}
+Google account for HuBMAP Google Drive Share: {{ data['google_email'] }} <br />
+{% endif %}
+
+{% if 'HuBMAP GitHub Repository' in data['access_requests'] %}
+Github username: {{ data['github_username'] }} <br />
+{% endif %}
+
+{% if 'HuBMAP Slack Workspace' in data['access_requests'] %}
+Email for HuBMAP Slack Workspace: {{ data['slack_username'] }} <br />
+{% endif %}
+
+<br />
+{% if data['pm'] %}
+The user would like the following project manager to be copied on all communications: <br />
+Name: {{ data['pm_name'] }} <br />
+Email: {{ data['pm_email'] }} <br />
+{% else %}
+No project manager for this user
+{% endif %}
+<br /><br />
+
+URL to approve this user: <a href="{{ config['FLASK_APP_BASE_URI'] }}/match_user?globus_user_id={{ data['globus_user_id'] }}">{{ config['FLASK_APP_BASE_URI'] }}/match_user?globus_user_id={{ data['globus_user_id'] }}</a>

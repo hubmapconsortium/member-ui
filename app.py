@@ -21,11 +21,16 @@ import urllib.request
 import requests
 import string
 import random
+from flask_mail import Mail, Message
+from pprint import pprint
 
 
 # Init app and use the config from instance folder
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_pyfile('config.cfg')
+
+# Flask-Mail instance
+mail = Mail(app)
 
 # Init DB
 db = SQLAlchemy(app)
@@ -217,6 +222,28 @@ connection_schema = ConnectionSchema(strict=True)
 connections_schema = ConnectionSchema(many=True, strict=True)
 
 
+# Send email confirmation of new user registration to admins
+def send_new_user_registration_mail(data):
+    msg = Message('New user registration submitted', app.config['MAIL_ADMIN_LIST'])
+    msg.html = render_template('email/new_user_registration_email.html', data = data)
+    mail.send(msg)
+
+def send_user_profile_update_mail(data):
+    msg = Message('User profile updated', app.config['MAIL_ADMIN_LIST'])
+    msg.html = render_template('email/user_profile_update_email.html', data = data)
+    mail.send(msg)
+
+# Once admin approves the new user registration, email the new user as well as the admins
+def send_new_user_approval_mail(recipient, data):
+    msg = Message('New user registration approved', [recipient] + app.config['MAIL_ADMIN_LIST'])
+    msg.html = render_template('email/new_user_approval_email.html', data = data)
+    mail.send(msg)
+
+def send_new_user_approval_mail(recipient, data):
+    msg = Message('New user registration denied', [recipient] + app.config['MAIL_ADMIN_LIST'])
+    msg.html = render_template('email/new_user_denied_email.html', data = data)
+    mail.send(msg)
+
 # Routing
 
 # Redirect users from react app login page to Globus auth login widget then redirect back
@@ -299,7 +326,6 @@ def get_user_info(token):
 
 # Create user info based on submitted form data
 def construct_user(request):
-    print(request.form)
     photo_file = None
     imgByteArr = None
     if 'photo' in request.files and request.files['photo']:
@@ -337,13 +363,13 @@ def construct_user(request):
         "github_username": request.form['github_username'],
         "slack_username": request.form['slack_username'],
         "website": request.form['website'],
-        #"biosketch": request.form['biosketch'],
         "expertise": request.form['expertise'],
         "orcid": request.form['orcid'],
         "pm": get_pm_selection(request.form),
         "pm_name": request.form['pm_name'],
         "pm_email": request.form['pm_email']
     }
+
     img_to_upload = photo_file if photo_file is not None else imgByteArr if imgByteArr is not None else None
 
     return new_user, img_to_upload
@@ -397,55 +423,20 @@ def register():
                 return render_template('error.html', data = context)
             else:
                 new_user, img_to_upload = construct_user(request)
+                pprint(new_user)
+                send_new_user_registration_mail(new_user)
 
-                # Send user info to web services API
-                rspns = requests.post(app.config['FLASK_APP_BASE_URI'] + "stage_user", files = {'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
+                # # Send user info to web services API
+                # rspns = requests.post(app.config['FLASK_APP_BASE_URI'] + "stage_user", files = {'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
                 
-                if rspns.ok:
-                    try:
-                        wgs_ul = "<ul>"
-                        for wg in new_user['working_group']:
-                            wgs_ul += f"<li>{wg}</li>"
-                        if len(new_user['working_group']) == 0:
-                            wgs_ul += "<li>None</li>"
-                        wgs_ul += "</ul>"
-
-                        ars_ul = "<ul>"
-                        for ar in new_user['access_requests']:
-                            if ar == 'HuBMAP Google Drive Share':
-                                ars_ul += f"<li>{ar}: {new_user['google_email']}</li>"
-                            elif ar == 'HuBMAP GitHub Repository':
-                                ars_ul += f"<li>{ar}: {new_user['github_username']}</li>"
-                            elif ar == 'HuBMAP Slack Workspace':
-                                ars_ul += f"<li>{ar}: {new_user['slack_username']}</li>"
-                            else:
-                                ars_ul += f"<li>{ar}</li>"
-                        ars_ul += "</ul>"
-                        pm_line = f"The user would like the following project manager to be copied on all communications:  {new_user['pm_name']} {new_user['pm_email']}" if new_user['pm'] == 'Yes' else ''
-                        html_content = f"""The user {new_user['first_name']} {new_user['last_name']} with email: {new_user['email']} and username: {new_user['email']} has registered.  
-                            This user has registered as a member of the {new_user['component']} at {new_user['organization']} as a {new_user['role']}.  
-                            The user is a member of the following working group(s):<br />
-                            {wgs_ul}
-                            <br />
-                            The user requested access to use HuBMAP service(s):<br />
-                            {ars_ul}
-                            <br />
-                            {pm_line}
-                            <br />
-                            To approve this user: <a href="{request.url_root}/match_user?globus_user_id={new_user['globus_user_id']}">{request.url_root}/match_user?globus_user_id={new_user['globus_user_id']}</a>
-                            """
-                        send_mail(
-                            'HuBMAP new user signed up',
-                            f"To approve this user: <a href=\"{request.url_root}/match_user?globus_user_id={new_user['globus_user_id']}\">{request.url_root}/match_user?globus_user_id={new_user['globus_user_id']}</a>",
-                            'HuBMAP Data Portal',
-                            [u.email for u in User.objects.filter(is_superuser=True)] + json.loads(app.config['EMAIL_CC_LIST']),
-                            fail_silently=False,
-                            html_message=html_content
-                        )
-                    except Exception as e: 
-                        print(e)
-                        print("send email failed")
-                        pass
+                # if rspns.ok:
+                #     try:
+                #         # Send email to admin for new user approval
+                #         send_new_user_registration_mail(new_user)
+                #     except Exception as e: 
+                #         print(e)
+                #         print("send email failed")
+                #         pass
                 context = {
                     'isAuthenticated': True,
                     'username': session['name'],
@@ -517,7 +508,7 @@ def profile():
             }
 
             return render_template('profile.html', data = context)
-            
+
 
 @app.route("/match_user", methods=['GET', 'POST'])
 def match_user():

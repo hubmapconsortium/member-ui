@@ -1,16 +1,11 @@
 {% extends "layouts/main.html" %}
 {% block content %}
 
-<h1>HuBMAP User Profile</h1>
+<h1>HuBMAP User Profile Update</h1>
 
 {% if data.isAuthenticated %}
 
 <script type="text/javascript">
-    // Enable the submit button only after recaptcha is checked
-    // this needs to be defined in the global scope - Zhou
-    function recaptchaCallback() {
-        $('#submitBtn').removeAttr('disabled');
-    };
     $(function() {
         var biography_length_limit = 50000;
         
@@ -1097,18 +1092,8 @@
                             There are errors, please correct the fields above.
                         </div>
 
-            <!-- reCAPTCHA v2 checkbox -->
-            <div class="row">
-                <div class="col-sm-12">
-                    <div class="form-group g-recaptcha" data-callback="recaptchaCallback" data-sitekey="{{ data.recaptcha_site_key }}"></div>
-                </div>
-            </div>
-
-
-            <button type="submit" id="submitBtn" class="btn btn-primary" >Submit</button>
+            <button type="submit" id="submitBtn" class="btn btn-primary" >Update</button>
         </form>
-
-        <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
     </div>
 </div>

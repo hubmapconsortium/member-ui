@@ -16,6 +16,7 @@ pymysql = "*"
 requests = "*"
 pillow = "*"
 globus-sdk = "*"
+flask-mail = "*"
 
 [requires]
 python_version = "3.7"
