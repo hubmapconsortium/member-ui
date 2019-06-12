@@ -284,6 +284,38 @@ function cn_register_custom_metabox_and_text_field() {
 			),
 		),
 	);
+
+	$email_atts = array(
+		'title'    => 'Email',         // Change this to a name which applies to your project.
+		'id'       => 'email',           // Change this so it is unique to you project.
+		'context'  => 'normal',
+		'priority' => 'core',
+		'fields'   => array(
+			array(
+				'name'       => 'email', // Change this field name to something which applies to you project.
+				'show_label' => TRUE,         // Whether or not to display the 'name'. Changing it to false will suppress the name.
+				'id'         => 'email',   // Change this so it is unique to you project. Each field id MUST be unique.
+				'type'       => 'text',       // This is the field type being added.
+				'size'       => 'regular',    // This can be changed to one of the following: 'small', 'regular', 'large'
+			),
+		),
+	);
+
+	$phone_atts = array(
+		'title'    => 'Phone',         // Change this to a name which applies to your project.
+		'id'       => 'phone',           // Change this so it is unique to you project.
+		'context'  => 'normal',
+		'priority' => 'core',
+		'fields'   => array(
+			array(
+				'name'       => 'phone', // Change this field name to something which applies to you project.
+				'show_label' => TRUE,         // Whether or not to display the 'name'. Changing it to false will suppress the name.
+				'id'         => 'phone',   // Change this so it is unique to you project. Each field id MUST be unique.
+				'type'       => 'text',       // This is the field type being added.
+				'size'       => 'regular',    // This can be changed to one of the following: 'small', 'regular', 'large'
+			),
+		),
+	);
  
     cnMetaboxAPI::add( $role_atts );
     cnMetaboxAPI::add( $other_role_atts);
@@ -299,6 +331,8 @@ function cn_register_custom_metabox_and_text_field() {
     cnMetaboxAPI::add( $pm_atts );
     cnMetaboxAPI::add( $pm_name_atts );
 	cnMetaboxAPI::add( $pm_email_atts );
+	cnMetaboxAPI::add( $email_atts );
+	cnMetaboxAPI::add( $phone_atts );
 }
 
 // Register the custom fields CSV Import mapping options and processing callback.

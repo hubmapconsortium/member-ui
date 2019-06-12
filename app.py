@@ -737,7 +737,7 @@ def assign_wp_user(wp_user, user_obj, connection=None, mode='CREATE'):
     wp_user.user_login = user_obj.email
     wp_user.user_email = user_obj.email
     wp_user.user_pass = generate_password()
-    if mode == 'CREATE':
+    if not wp_user.id:
         meta_capabilities = WPUserMeta()
         meta_capabilities.meta_key = "wp_capabilities"
         meta_capabilities.meta_value = "a:1:{s:6:\"member\";b:1;}"
@@ -752,7 +752,8 @@ def assign_wp_user(wp_user, user_obj, connection=None, mode='CREATE'):
     
     if connection.owners.count() == 0: 
         connection.owners.append(wp_user)
-    connection.email = user_obj.email
+    
+    connection.email = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:2199;s:4:\"type\";s:4:\"work\";s:4:\"name\";s:10:\"Work Email\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:7:\"address\";s:{len(user_obj.email)}:\"{user_obj.email}\";}}}}"
     connection.first_name = user_obj.first_name
     connection.last_name = user_obj.last_name
     connection.organization = user_obj.organization
@@ -761,7 +762,7 @@ def assign_wp_user(wp_user, user_obj, connection=None, mode='CREATE'):
         photo_file_name = user_obj.photo.split('/')[-1]
         pathlib.Path(app.config.get('CONNECTION_IMAGE_PATH') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() ).mkdir(parents=True, exist_ok=True)
         copyfile(user_obj.photo, app.config.get('CONNECTION_IMAGE_PATH') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() + "/" + photo_file_name)
-        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config.get('CONNECTION_IMAGE_PATH') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() + "\/" + photo_file_name + "\",\"url\": \"" + app.config.get('CONNECTION_IMAGE_URL') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() + "\/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image\\/jpeg\",\"type\":2}}}}"
+        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config.get('CONNECTION_IMAGE_PATH') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() + "\\/" + photo_file_name + "\",\"url\": \"" + app.config.get('CONNECTION_IMAGE_URL') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() + "\\/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image\\/jpeg\",\"type\":2}}}}"
     connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(user_obj.phone)}:\"{user_obj.phone}\";}}}}"
     
     access_requests = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'access_requests'), '[]') if mode.upper() == 'EDIT' else '[]'
@@ -854,6 +855,14 @@ def assign_wp_user(wp_user, user_obj, connection=None, mode='CREATE'):
     connection_meta_pm_email.meta_key = 'pm_email'
     connection_meta_pm_email.meta_value = user_obj.pm_email
     connection.metas.append(connection_meta_pm_email)
+    connection_meta_email = ConnectionMeta()
+    connection_meta_email.meta_key = 'email'
+    connection_meta_email.meta_value = user_obj.email
+    connection.metas.append(connection_meta_email)
+    connection_meta_phone = ConnectionMeta()
+    connection_meta_phone.meta_key = 'phone'
+    connection_meta_phone.meta_value = user_obj.phone
+    connection.metas.append(connection_meta_phone)
     
     
     ## default value ##
@@ -876,7 +885,7 @@ def assign_wp_user(wp_user, user_obj, connection=None, mode='CREATE'):
     connection.dates = 'a:0:{}'
     connection.birthday = ''
     connection.anniversary = ''
-    connection.bio = user_obj.website
+    connection.bio = user_obj.expertise
     connection.notes = ''
     connection.excerpt = ''
     connection.added_by = admin_id
@@ -884,6 +893,8 @@ def assign_wp_user(wp_user, user_obj, connection=None, mode='CREATE'):
     connection.owner = admin_id
     connection.user = 0
     connection.status = 'approved'
+
+    return connection
 
 # Run Server
 if __name__ == "__main__":
