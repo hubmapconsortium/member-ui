@@ -559,6 +559,8 @@ def update_stage_user(stage_user_id):
     stage_user = StageUser.query.get(stage_user_id)
     wp_user = WPUser.query.get(wp_user_id) if wp_user_id else None
     connection = Connection.query.get(connection_id) if connection_id else None
+    deny = request.args.get('deny')
+
     if stage_user and wp_user:
         '''match a existing wp_user
         '''
@@ -576,6 +578,12 @@ def update_stage_user(stage_user_id):
         db.session.commit()
 
         m_result = wp_user_schema.dump(wp_user)
+        return jsonify(m_result)
+    elif deny == 'True':
+        stage_user.deny = True
+        db.session.commit()
+
+        m_result = stage_user_schema.dump(stage_user)
         return jsonify(m_result)
     else:
         '''create a new wp_user
