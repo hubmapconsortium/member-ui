@@ -111,8 +111,8 @@ function cn_register_custom_metabox_and_text_field() {
                     'Sample Data Portal'   => 'Sample Data Portal',
                     'HuBMAP Data Portal'   => 'HuBMAP Data Portal',
                     'Collaboration Portal' => 'Collaboration Portal',
-                    'HuBMAP Google Drive share'  => 'HuBMAP Google Drive share',
-                    'HuBMAP GitHub repository'  => 'HuBMAP GitHub repository',
+                    'HuBMAP Google Drive Share'  => 'HuBMAP Google Drive Share',
+                    'HuBMAP GitHub Repository'  => 'HuBMAP GitHub Repository',
                     'HuBMAP Slack Workspace' => 'HuBMAP Slack Workspace',
                     'Edit My Component\'s Project Page' => 'Edit my component\'s project page'
                 ),
@@ -246,8 +246,8 @@ function cn_register_custom_metabox_and_text_field() {
 				'type'       => 'radio',       // This is the field type being added.
 				'size'       => 'regular',    // This can be changed to one of the following: 'small', 'regular', 'large'
 				'options'    => array(
-                    'yes'   => 'Yes',
-                    'no'   => 'No',
+                    '1'   => 'Yes',
+                    '0'   => 'No',
                 ),
 			),
 		),
