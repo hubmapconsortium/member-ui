@@ -7,3 +7,6 @@
 # images file
 avatar/*.*
 !./avatar/noname.jpg
+
+# Flask config
+instance/app.cfg

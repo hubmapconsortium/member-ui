@@ -16,6 +16,7 @@
         
         // Hide these by default
         $(".oth-cmpnt").hide();
+        $(".component_detail_card").hide();
         $(".oth-org").hide();
         $(".oth-role").hide();
         $(".google-email").hide();
@@ -277,14 +278,13 @@
     <div class="col-sm-12">
         <form id="registration-form" method="POST" action="/register" enctype="multipart/form-data">
 			<input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
-            <input type="hidden" name="wp_user_id" value="{{ wp_user_id }}">
 
             <div class="row">
                 <div class="col">
                     <div class="form-group">
                         <label for="first-name">First Name <span class="text-danger">*</span></label>
                         
-                        <input type="text" name="first_name" value="" class="form-control" maxlength="100" id="id_first_name">
+                        <input type="text" name="first_name" value="{{ data.first_name }}" class="form-control" maxlength="100" id="id_first_name">
                         <div class="invalid-feedback">
                             
                         </div>
@@ -294,7 +294,7 @@
                     <div class="form-group">
                         <label for="last-name">Last Name <span class="text-danger">*</span></label>
                         
-                        <input type="text" name="last_name" value="" class="form-control" maxlength="100" id="id_last_name">
+                        <input type="text" name="last_name" value="{{ data.last_name }}" class="form-control" maxlength="100" id="id_last_name">
                         <div class="invalid-feedback">
                             
                         </div>
@@ -306,7 +306,7 @@
                     <div class="form-group">
                         <label for="email">Email address <span class="text-danger">*</span></label>
                         
-                        <input type="email" name="email" value="" class="form-control" maxlength="100" id="id_email">
+                        <input type="email" name="email" value="{{ data.email }}" class="form-control" maxlength="100" id="id_email">
                         <div class="invalid-feedback">
                             
                         </div>
@@ -326,44 +326,7 @@
                 <div class="col">
                     <div class="form-group">
                         <label for="component">Award/component <span class="text-danger">*</span></label>
-                        <select name="component" class="form-control" id="id_component">
-<option value="----">----</option>
-
-  <option value="Collaboration Core - University of South Dakota">Collaboration Core - University of South Dakota</option>
-
-  <option value="HIVE IEC - Carnegie Mellon University">HIVE IEC - Carnegie Mellon University</option>
-
-  <option value="HIVE MC - Indiana University Bloomington">HIVE MC - Indiana University Bloomington</option>
-
-  <option value="HIVE MC - New York Genome Center">HIVE MC - New York Genome Center</option>
-
-  <option value="HIVE TC - Carnegie Mellon University">HIVE TC - Carnegie Mellon University</option>
-
-  <option value="HIVE TC - Harvard Medical School">HIVE TC - Harvard Medical School</option>
-
-  <option value="NIH">NIH</option>
-
-  <option value="TMC - California Institute of Technology">TMC - California Institute of Technology</option>
-
-  <option value="TMC - Stanford University">TMC - Stanford University</option>
-
-  <option value="TMC - University of California, San Diego">TMC - University of California, San Diego</option>
-
-  <option value="TMC - University of Florida">TMC - University of Florida</option>
-
-  <option value="TMC - Vanderbilt University">TMC - Vanderbilt University</option>
-
-  <option value="TTD - California Institute of Technology">TTD - California Institute of Technology</option>
-
-  <option value="TTD - Harvard University">TTD - Harvard University</option>
-
-  <option value="TTD - Purdue University">TTD - Purdue University</option>
-
-  <option value="TTD - Stanford University">TTD - Stanford University</option>
-
-  <option value="Other">Other</option>
-
-</select>
+                        {% include 'component_selection.html' %}
                                     <div class="invalid-feedback">
                                         
                                     </div>
@@ -383,86 +346,8 @@
                             <div class="col">
                                 <div class="form-group">
                                     <label for="organization">Organization <span class="text-danger">*</span></label>
-                                    <select name="organization" class="form-control" id="id_organization">
-  <option value="----">----</option>
+                                    {% include 'organization_selection.html' %}
 
-  <option value="California Institute of Technology">California Institute of Technology</option>
-
-  <option value="Carnegie Mellon University">Carnegie Mellon University</option>
-
-  <option value="Department of Biomedical Informatics (DBMI)/Unversity of Pittsburgh(Pitt)">Department of Biomedical Informatics (DBMI)/Unversity of Pittsburgh(Pitt)</option>
-
-  <option value="Harvard Medical School">Harvard Medical School</option>
-
-  <option value="Harvard University">Harvard University</option>
-
-  <option value="Indiana University">Indiana University</option>
-
-  <option value="Knowinnovation Inc.">Knowinnovation Inc.</option>
-
-  <option value="NCI">NCI</option>
-
-  <option value="NHGRI">NHGRI</option>
-
-  <option value="NHLBI">NHLBI</option>
-
-  <option value="NIA">NIA</option>
-
-  <option value="NIAID">NIAID</option>
-
-  <option value="NIAMS">NIAMS</option>
-
-  <option value="NIBIB">NIBIB</option>
-
-  <option value="NICHD">NICHD</option>
-
-  <option value="NIDA">NIDA</option>
-
-  <option value="NIDDK">NIDDK</option>
-
-  <option value="NIGMS">NIGMS</option>
-
-  <option value="NIMH">NIMH</option>
-
-  <option value="NINDS">NINDS</option>
-
-  <option value="New York Genome Center">New York Genome Center</option>
-
-  <option value="OD">OD</option>
-
-  <option value="PSC(Pittsburgh Supercomputing Center)/CMU">PSC(Pittsburgh Supercomputing Center)/CMU</option>
-
-  <option value="Pacific Northwest National Laboratory">Pacific Northwest National Laboratory</option>
-
-  <option value="Purdue University">Purdue University</option>
-
-  <option value="Renaissance Computing Institute (RENCI), University of North Carolina, Chapel Hill">Renaissance Computing Institute (RENCI), University of North Carolina, Chapel Hill</option>
-
-  <option value="Stanford University">Stanford University</option>
-
-  <option value="University of California, San Diego">University of California, San Diego</option>
-
-  <option value="University of California, Santa Cruz">University of California, Santa Cruz</option>
-
-  <option value="University of Florida">University of Florida</option>
-
-  <option value="University of Pittsburgh">University of Pittsburgh</option>
-
-  <option value="University of Rochester Medical Center">University of Rochester Medical Center</option>
-
-  <option value="University of South Dakota">University of South Dakota</option>
-
-  <option value="University of Washington">University of Washington</option>
-
-  <option value="University of Zurich">University of Zurich</option>
-
-  <option value="Vanderbilt University">Vanderbilt University</option>
-
-  <option value="Vanderbilt University Medical Center">Vanderbilt University Medical Center</option>
-
-  <option value="Other">Other</option>
-
-</select>
                                     <div class="invalid-feedback">
                                         
                                     </div>
@@ -482,394 +367,13 @@
                         </div>
                         
                         <div class="form-group">
-                        
-                            <div class="card" id="cmpnt_14" data-name="Collaboration Core - University of South Dakota" style="width: 34rem; display: none">
-                            <div class="card-body">
-                                <h5 class="card-title">Collaboration Core - University of South Dakota</h5>
-                                <h6 class="card-subtitle mb-2 text-muted">Collaboration Core</h6>
-                                
-                                    
-                                        <p class="card-text"><b>PIs</b><br />
-                                    
-                                    Paula M Mabee <b>(Contact)</b><br />
-                                    
-                                        
-                                            William Christopher Lenhardt<br />
-                                        
-                                    
-                                    </p>
-                                
-                            </div>
-                            </div>
-                        
-                            <div class="card" id="cmpnt_15" data-name="HIVE IEC - Carnegie Mellon University" style="width: 34rem; display: none">
-                            <div class="card-body">
-                                <h5 class="card-title">HIVE IEC - Carnegie Mellon University</h5>
-                                <h6 class="card-subtitle mb-2 text-muted">HIVE Infrastructure Component</h6>
-                                
-                                    
-                                        <p class="card-text"><b>PIs</b><br />
-                                    
-                                    Nicholas A. Nystrom <b>(Contact)</b><br />
-                                    
-                                        
-                                            Jonathan C. Silverstein<br />
-                                        
-                                    
-                                    </p>
-                                
-                            </div>
-                            </div>
-                        
-                            <div class="card" id="cmpnt_12" data-name="HIVE MC - Indiana University Bloomington" style="width: 34rem; display: none">
-                            <div class="card-body">
-                                <h5 class="card-title">HIVE MC - Indiana University Bloomington</h5>
-                                <h6 class="card-subtitle mb-2 text-muted">HIVE Mapping Component</h6>
-                                
-                                    
-                                        <p class="card-text"><b>PI</b><br />
-                                    
-                                    Katy Borner <b>(Contact)</b><br />
-                                    
-                                        
-                                    
-                                    </p>
-                                
-                            </div>
-                            </div>
-                        
-                            <div class="card" id="cmpnt_16" data-name="HIVE MC - New York Genome Center" style="width: 34rem; display: none">
-                            <div class="card-body">
-                                <h5 class="card-title">HIVE MC - New York Genome Center</h5>
-                                <h6 class="card-subtitle mb-2 text-muted">HIVE Mapping Component</h6>
-                                
-                                    
-                                        <p class="card-text"><b>PIs</b><br />
-                                    
-                                    Rahul Satija <b>(Contact)</b><br />
-                                    
-                                        
-                                            John Carlo Marioni<br />
-                                        
-                                    
-                                    </p>
-                                
-                            </div>
-                            </div>
-                        
-                            <div class="card" id="cmpnt_11" data-name="HIVE TC - Carnegie Mellon University" style="width: 34rem; display: none">
-                            <div class="card-body">
-                                <h5 class="card-title">HIVE TC - Carnegie Mellon University</h5>
-                                <h6 class="card-subtitle mb-2 text-muted">HIVE Tools Component</h6>
-                                
-                                    
-                                        <p class="card-text"><b>PIs</b><br />
-                                    
-                                    Ziv Bar-Joseph <b>(Contact)</b><br />
-                                    
-                                        
-                                            Benedict Paten<br />
-                                        
-                                    
-                                        
-                                             Sarah Teichmann<br />
-                                        
-                                    
-                                    </p>
-                                
-                            </div>
-                            </div>
-                        
-                            <div class="card" id="cmpnt_13" data-name="HIVE TC - Harvard Medical School" style="width: 34rem; display: none">
-                            <div class="card-body">
-                                <h5 class="card-title">HIVE TC - Harvard Medical School</h5>
-                                <h6 class="card-subtitle mb-2 text-muted">HIVE Tools Component</h6>
-                                
-                                    
-                                        <p class="card-text"><b>PI</b><br />
-                                    
-                                    Nils Gehlenborg <b>(Contact)</b><br />
-                                    
-                                        
-                                    
-                                    </p>
-                                
-                            </div>
-                            </div>
-                        
-                            <div class="card" id="cmpnt_17" data-name="NIH" style="width: 34rem; display: none">
-                            <div class="card-body">
-                                <h5 class="card-title">NIH</h5>
-                                <h6 class="card-subtitle mb-2 text-muted">NIH Leadership</h6>
-                                
-                                
-                            </div>
-                            </div>
-                        
-                            <div class="card" id="cmpnt_7" data-name="TMC - California Institute of Technology" style="width: 34rem; display: none">
-                            <div class="card-body">
-                                <h5 class="card-title">TMC - California Institute of Technology</h5>
-                                <h6 class="card-subtitle mb-2 text-muted">Tissue Mapping Center</h6>
-                                
-                                    
-                                        <p class="card-text"><b>PIs</b><br />
-                                    
-                                    Long Cai <b>(Contact)</b><br />
-                                    
-                                        
-                                            Jay Ashok Shendure<br />
-                                        
-                                    
-                                        
-                                             Bruce Colston Trapnell<br />
-                                        
-                                    
-                                    </p>
-                                
-                            </div>
-                            </div>
-                        
-                            <div class="card" id="cmpnt_9" data-name="TMC - Stanford University" style="width: 34rem; display: none">
-                            <div class="card-body">
-                                <h5 class="card-title">TMC - Stanford University</h5>
-                                <h6 class="card-subtitle mb-2 text-muted">Tissue Mapping Center</h6>
-                                
-                                    
-                                        <p class="card-text"><b>PIs</b><br />
-                                    
-                                    Michael P. Snyder <b>(Contact)</b><br />
-                                    
-                                        
-                                            Garry P Nolan<br />
-                                        
-                                    
-                                    </p>
-                                
-                            </div>
-                            </div>
-                        
-                            <div class="card" id="cmpnt_10" data-name="TMC - University of California, San Diego" style="width: 34rem; display: none">
-                            <div class="card-body">
-                                <h5 class="card-title">TMC - University of California, San Diego</h5>
-                                <h6 class="card-subtitle mb-2 text-muted">Tissue Mapping Center</h6>
-                                
-                                    
-                                        <p class="card-text"><b>PIs</b><br />
-                                    
-                                    Kun Zhang <b>(Contact)</b><br />
-                                    
-                                        
-                                            James S. Hagood<br />
-                                        
-                                    
-                                        
-                                             Sanjay Jain<br />
-                                        
-                                    
-                                        
-                                             Peter V. Kharchenko<br />
-                                        
-                                    
-                                        
-                                             Xin Sun<br />
-                                        
-                                    
-                                    </p>
-                                
-                            </div>
-                            </div>
-                        
-                            <div class="card" id="cmpnt_6" data-name="TMC - University of Florida" style="width: 34rem; display: none">
-                            <div class="card-body">
-                                <h5 class="card-title">TMC - University of Florida</h5>
-                                <h6 class="card-subtitle mb-2 text-muted">Tissue Mapping Center</h6>
-                                
-                                    
-                                        <p class="card-text"><b>PIs</b><br />
-                                    
-                                    Mark A. Atkinson <b>(Contact)</b><br />
-                                    
-                                        
-                                            Bernd Bodenmiller<br />
-                                        
-                                    
-                                        
-                                             Harry S. Nick<br />
-                                        
-                                    
-                                    </p>
-                                
-                            </div>
-                            </div>
-                        
-                            <div class="card" id="cmpnt_8" data-name="TMC - Vanderbilt University" style="width: 34rem; display: none">
-                            <div class="card-body">
-                                <h5 class="card-title">TMC - Vanderbilt University</h5>
-                                <h6 class="card-subtitle mb-2 text-muted">Tissue Mapping Center</h6>
-                                
-                                    
-                                        <p class="card-text"><b>PIs</b><br />
-                                    
-                                    Richard M Caprioli <b>(Contact)</b><br />
-                                    
-                                        
-                                            Jeffrey M Spraggins<br />
-                                        
-                                    
-                                    </p>
-                                
-                            </div>
-                            </div>
-                        
-                            <div class="card" id="cmpnt_2" data-name="TTD - California Institute of Technology" style="width: 34rem; display: none">
-                            <div class="card-body">
-                                <h5 class="card-title">TTD - California Institute of Technology</h5>
-                                <h6 class="card-subtitle mb-2 text-muted">Transformative Technology Development</h6>
-                                
-                                    
-                                        <p class="card-text"><b>PIs</b><br />
-                                    
-                                    Long Cai <b>(Contact)</b><br />
-                                    
-                                        
-                                            Guo-Cheng Yuan<br />
-                                        
-                                    
-                                    </p>
-                                
-                            </div>
-                            </div>
-                        
-                            <div class="card" id="cmpnt_5" data-name="TTD - Harvard University" style="width: 34rem; display: none">
-                            <div class="card-body">
-                                <h5 class="card-title">TTD - Harvard University</h5>
-                                <h6 class="card-subtitle mb-2 text-muted">Transformative Technology Development</h6>
-                                
-                                    
-                                        <p class="card-text"><b>PI</b><br />
-                                    
-                                    Peng Yin <b>(Contact)</b><br />
-                                    
-                                        
-                                    
-                                    </p>
-                                
-                            </div>
-                            </div>
-                        
-                            <div class="card" id="cmpnt_4" data-name="TTD - Purdue University" style="width: 34rem; display: none">
-                            <div class="card-body">
-                                <h5 class="card-title">TTD - Purdue University</h5>
-                                <h6 class="card-subtitle mb-2 text-muted">Transformative Technology Development</h6>
-                                
-                                    
-                                        <p class="card-text"><b>PI</b><br />
-                                    
-                                    Julia Laskin <b>(Contact)</b><br />
-                                    
-                                        
-                                    
-                                    </p>
-                                
-                            </div>
-                            </div>
-                        
-                            <div class="card" id="cmpnt_3" data-name="TTD - Stanford University" style="width: 34rem; display: none">
-                            <div class="card-body">
-                                <h5 class="card-title">TTD - Stanford University</h5>
-                                <h6 class="card-subtitle mb-2 text-muted">Transformative Technology Development</h6>
-                                
-                                    
-                                        <p class="card-text"><b>PIs</b><br />
-                                    
-                                    Pehr A Harbury <b>(Contact)</b><br />
-                                    
-                                        
-                                            Tushar Jasubhai Desai<br />
-                                        
-                                    
-                                    </p>
-                                
-                            </div>
-                            </div>
-                        
+                            {% include 'component_cards.html' %}
                         </div>
+
                         <div class="form-group">
                             <label for="role">Role in HuBMAP <span class="text-danger">*</span></label>
-                            <select name="role" class="form-control" id="id_role">
-  <option value="----">----</option>
+                            {% include 'role_selection.html' %}
 
-  <option value="Administrative Assistant">Administrative Assistant</option>
-
-  <option value="Agreement Specialist">Agreement Specialist</option>
-
-  <option value="Co-investigator">Co-investigator</option>
-
-  <option value="Compliance Officer">Compliance Officer</option>
-
-  <option value="Computer Scientist">Computer Scientist</option>
-
-  <option value="Data Analysis Core">Data Analysis Core</option>
-
-  <option value="Data Architect">Data Architect</option>
-
-  <option value="Data Manager">Data Manager</option>
-
-  <option value="Data Scientist">Data Scientist</option>
-
-  <option value="Designer">Designer</option>
-
-  <option value="External Program Consultant">External Program Consultant</option>
-
-  <option value="Graduate Student">Graduate Student</option>
-
-  <option value="Image Scientist">Image Scientist</option>
-
-  <option value="Informatics">Informatics</option>
-
-  <option value="Lead Software Developer">Lead Software Developer</option>
-
-  <option value="ML scientist">ML scientist</option>
-
-  <option value="Meeting Facilitator">Meeting Facilitator</option>
-
-  <option value="Network Support">Network Support</option>
-
-  <option value="PI">PI</option>
-
-  <option value="PI (Contact)">PI (Contact)</option>
-
-  <option value="Pathology Assessment">Pathology Assessment</option>
-
-  <option value="Postdoctoral fellow">Postdoctoral fellow</option>
-
-  <option value="Program Coordinator">Program Coordinator</option>
-
-  <option value="Program Officer">Program Officer</option>
-
-  <option value="Project Manager">Project Manager</option>
-
-  <option value="Project Scientist">Project Scientist</option>
-
-  <option value="Researcher">Researcher</option>
-
-  <option value="Scientific Program Manager">Scientific Program Manager</option>
-
-  <option value="Software Developer">Software Developer</option>
-
-  <option value="Software Engineer">Software Engineer</option>
-
-  <option value="System Support">System Support</option>
-
-  <option value="Team Leader">Team Leader</option>
-
-  <option value="WG Member">WG Member</option>
-
-  <option value="Website developer">Website developer</option>
-
-  <option value="Other">Other</option>
-
-</select>
                             <div class="invalid-feedback">
                                 
                             </div>
@@ -990,7 +494,7 @@
                                 <div class="row">
                                     <div class="col-sm-12">
                                         <div class="form-group form-group-sm google-email">
-                                            <label for="google_email">What email address is linked to your preferred Google account? <span class="text-danger">*</span> <button type="button" class="btn btn-link" data-toggle="tooltip" data-placement="right" data-html="true" title="Please enter the email address that you use to log into Google.  HuBMAP specific Google documents will be shared with this account.">what is this?</button></label>
+                                            <label for="google_email">Your Google account email address: <span class="text-danger">*</span> <button type="button" class="btn btn-link" data-toggle="tooltip" data-placement="right" data-html="true" title="Please enter the email address that you use to log into Google.  HuBMAP specific Google documents will be shared with this account.">what is this?</button></label>
                                             <input type="email" name="google_email" class="form-control" maxlength="100" id="id_google_email">
                                             <div class="invalid-feedback">
                                                 
@@ -1001,7 +505,7 @@
                                 <div class="row">
                                     <div class="col-sm-12">
                                         <div class="form-group form-group-sm github-username">
-                                            <label for="github_username">What is your GitHub username? <span class="text-danger">*</span></label>
+                                            <label for="github_username">Your GitHub username: <span class="text-danger">*</span></label>
                                             <input type="text" name="github_username" class="form-control" maxlength="100" id="id_github_username">
                                             <div class="invalid-feedback">
                                                 
@@ -1012,7 +516,7 @@
                                 <div class="row">
                                     <div class="col-sm-12">
                                         <div class="form-group form-group-sm slack-username">
-                                            <label for="slack_username">What email address should an invite to the slack HuBMAP workspace be sent to? <span class="text-danger">*</span></label>
+                                            <label for="slack_username">Your email address for the slack invitation: <span class="text-danger">*</span></label>
                                             <input type="text" name="slack_username" class="form-control" maxlength="100" id="id_slack_username">
                                             <div class="invalid-feedback">
                                                 
@@ -1049,7 +553,7 @@
                         
                         <div class="form-group">
                             <label for="expertise">Biography: Please provide any biographical information that you'd like to share. This information may be shared publicly.</label>
-                            <textarea name="expertise" cols="40" rows="10" class="form-control" id="id_expertise">
+                            <textarea name="expertise" cols="40" rows="6" class="form-control" id="id_expertise">
 </textarea>
                             <div class="invalid-feedback">
                                 
@@ -1062,7 +566,7 @@
  Yes</label>
 
 </li>
-    <li><label for="id_pm_1"><input type="radio" name="pm" value="No" id="id_pm_1">
+    <li><label for="id_pm_1"><input type="radio" name="pm" value="No" id="id_pm_1" checked>
  No</label>
 
 </li>
@@ -1117,20 +621,9 @@
 
 
 {% else %}
-	<div class="alert alert-info" role="alert">
-	<h1>Login</h1>
-	<p>
-	User authendication is required for registration, please
-	click the button and you will be redirected to the Globus login page.
-	There you can login with your institutional credentials. Thank you!
-	</p>
+	
+    {% include 'login.html' %}
 
-	<hr />
-
-	<a class="btn btn-primary btn-lg" href="http://localhost:5000/login">
-	Login with your institutional credentials via Globus
-	</a>
-	</div>
 {% endif %}
 
 {% endblock %}

@@ -15,7 +15,7 @@ GOOGLE_RECAPTCHA_SITE_KEY = '6LdgJ6YUAAAAAB2_O7UhTzpg7XZYdJdLLl19oukC'
 GOOGLE_RECAPTCHA_SECRET_KEY = '6LdgJ6YUAAAAANo6yBuVbP5seIYhFkG1TeQ7F5Ch'
 GOOGLE_RECAPTCHA_VERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify'
 
-
+# DB connection and settings
 SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://wp_dev_user:hm17WPdev!@localhost/wp_dev'
 #SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://root:?ZHl4>tyAhq9@localhost/wp_dev'
 SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -26,7 +26,14 @@ CONNECTION_IMAGE_PATH = '/home/webadmin/wp-content/uploads/connections-images/'
 CONNECTION_IMAGE_URL = 'https://dev2.hubmapconsortium.org/wp-content/uploads/connections-images/'
 #MAX_CONTENT_PATH = 100000 # Specifies Maximum size of file will be uploaded
 
-# Web service
-# Need the trailing slash /
-WEB_SERVICE_API_BASE_URI = 'http://localhost:5000/'
-EMAIL_CC_LIST = []
+# Email settings for Flask-Mail extension
+MAIL_SERVER = 'smtp.gmail.com'
+MAIL_PORT = 587
+MAIL_USE_TLS = True
+MAIL_USERNAME = 'hubmap.data@gmail.com'
+MAIL_PASSWORD = 'demouser'
+MAIL_DEFAULT_SENDER = ('HuBMAP Registration and Profile', 'hubmap.data@gmail.com')
+
+# Admin emails, not part of Flask-Mail configuration
+MAIL_ADMIN_LIST = ["yuanzhou19@gmail.com", "zhy19@pitt.edu"]
+
