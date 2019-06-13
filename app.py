@@ -39,7 +39,6 @@ db = SQLAlchemy(app)
 # Init MA
 ma = Marshmallow(app)
 
-
 connects = db.Table('user_connection',
         db.Column('user_id', db.Integer, db.ForeignKey('wp_users.id')),
         db.Column('connection_id', db.Integer, db.ForeignKey('wp_connections.id'))
@@ -247,6 +246,118 @@ def send_new_user_approval_mail(recipient, data):
     msg.html = render_template('email/new_user_denied_email.html', data = data)
     mail.send(msg)
 
+# Get user info from globus with the auth access token
+def get_user_info(token):
+    auth_client = AuthClient(authorizer=AccessTokenAuthorizer(token))
+    return auth_client.oauth2_userinfo()
+
+# Create user info based on submitted form data
+def construct_user(request):
+    photo_file = None
+    imgByteArr = None
+    if 'photo' in request.files and request.files['photo']:
+        photo_file = request.files['photo']
+    
+    url = request.form['photo_url']
+    if photo_file is None and url:
+        response = requests(url)
+        img = Image.open(BytesIO(response.content))
+        imgByteArr = BytesIO()
+        img.save(imgByteArr, format=img.format)
+        imgByteArr = imgByteArr.getvalue()
+
+    new_user = {
+        # Get the globus user id from session data
+        "globus_user_id": session['globus_user_id'],
+        # All others are from the form data
+        "email": request.form['email'],
+        "first_name": request.form['first_name'],
+        "last_name": request.form['last_name'],
+        "phone": request.form['phone'],
+        "component": request.form['component'],
+        "other_component": request.form['other_component'],
+        "organization": request.form['organization'],
+        "other_organization": request.form['other_organization'],
+        "role": request.form['role'],
+        "other_role": request.form['other_role'],
+        # multiple checkboxes
+        "working_group": request.form.getlist('working_group'),
+        "photo": '',
+        "photo_url": request.form['photo_url'],
+        # multiple checkboxes
+        "access_requests": ['Collaboration Portal'] + request.form.getlist('access_requests'),
+        "google_email": request.form['google_email'],
+        "github_username": request.form['github_username'],
+        "slack_username": request.form['slack_username'],
+        "website": request.form['website'],
+        "expertise": request.form['expertise'],
+        "orcid": request.form['orcid'],
+        "pm": get_pm_selection(request.form),
+        "pm_name": request.form['pm_name'],
+        "pm_email": request.form['pm_email']
+    }
+
+    img_to_upload = photo_file if photo_file is not None else imgByteArr if imgByteArr is not None else None
+
+    return new_user, img_to_upload
+
+# Check if the user is already a registered member
+def user_is_member():
+    rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params={'globus_user_id': session['globus_user_id']})
+    if not rspns.ok:
+        return False
+    wp_users = rspns.json()[0]
+    first_wp_user = wp_users[0]
+    meta_capability = next((meta for meta in first_wp_user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
+    if ('meta_value' in meta_capability and 
+            ('member' in meta_capability['meta_value'] or 'administrator' in meta_capability['meta_value'])):
+        return True
+    else:
+        return False
+
+# Check if user is an admin
+def user_is_admin():
+    rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params={'globus_user_id': session['globus_user_id']})
+    if not rspns.ok:
+        return False
+    wp_users = rspns.json()[0]
+    first_wp_user = wp_users[0]
+    meta_capability = next((meta for meta in first_wp_user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
+    if ('meta_value' in meta_capability and 
+            ('administrator' in meta_capability['meta_value'])):
+        return True
+    else:
+        return False
+
+# Check if the user registration is still pending for approval
+def user_in_pending():
+    rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/stage_user", params={'globus_user_id': session['globus_user_id']})
+    if rspns.ok:
+        stage_users = rspns.json()[0]
+        if len(stage_users) > 0:
+            return True
+        else:
+            return False
+    else:
+        return False
+
+
+def get_pm_selection(form):
+    value = form.get('pm', '')
+    if value == 'yes':
+        return True
+    elif value == 'no':
+        return False
+    else:
+        return None
+
+def generate_csrf_token(stringLength = 10):
+    if 'csrf_token' not in session:
+        letters = string.ascii_lowercase
+        session['csrf_token'] = ''.join(random.choice(letters) for i in range(stringLength))
+    return session['csrf_token']
+
+
 # Routing
 
 # Default
@@ -330,120 +441,6 @@ def logout():
     # Redirect the user to the Globus Auth logout page
     return redirect(globus_logout_url)
 
-
-def get_user_info(token):
-    auth_client = AuthClient(authorizer=AccessTokenAuthorizer(token))
-    return auth_client.oauth2_userinfo()
-
-# Create user info based on submitted form data
-def construct_user(request):
-    photo_file = None
-    imgByteArr = None
-    if 'photo' in request.files and request.files['photo']:
-        photo_file = request.files['photo']
-    
-    url = request.form['photo_url']
-    if photo_file is None and url:
-        response = requests(url)
-        img = Image.open(BytesIO(response.content))
-        imgByteArr = BytesIO()
-        img.save(imgByteArr, format=img.format)
-        imgByteArr = imgByteArr.getvalue()
-
-    new_user = {
-        # Get the globus user id from session data
-        "globus_user_id": session['globus_user_id'],
-        # All others are from the form data
-        "email": request.form['email'],
-        "first_name": request.form['first_name'],
-        "last_name": request.form['last_name'],
-        "phone": request.form['phone'],
-        "component": request.form['component'],
-        "other_component": request.form['other_component'],
-        "organization": request.form['organization'],
-        "other_organization": request.form['other_organization'],
-        "role": request.form['role'],
-        "other_role": request.form['other_role'],
-        # multiple checkboxes
-        "working_group": request.form.getlist('working_group'),
-        "photo": '',
-        "photo_url": request.form['photo_url'],
-        # multiple checkboxes
-        "access_requests": ['Collaboration Portal'] + request.form.getlist('access_requests'),
-        "google_email": request.form['google_email'],
-        "github_username": request.form['github_username'],
-        "slack_username": request.form['slack_username'],
-        "website": request.form['website'],
-        "expertise": request.form['expertise'],
-        "orcid": request.form['orcid'],
-        "pm": get_pm_selection(request.form),
-        "pm_name": request.form['pm_name'],
-        "pm_email": request.form['pm_email']
-    }
-
-    img_to_upload = photo_file if photo_file is not None else imgByteArr if imgByteArr is not None else None
-
-    return new_user, img_to_upload
-
-# Check if the user is already a registered member
-def user_is_member():
-    rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params={'globus_user_id': session['globus_user_id']})
-    print("===============user_is_member===============")
-    pprint(rspns.json())
-    if not rspns.ok:
-        return False
-    wp_users = rspns.json()[0]
-    first_wp_user = wp_users[0]
-    meta_capability = next((meta for meta in first_wp_user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
-    if ('meta_value' in meta_capability and 
-            ('member' in meta_capability['meta_value'] or 'administrator' in meta_capability['meta_value'])):
-        return True
-    else:
-        return False
-
-def user_is_admin():
-    rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params={'globus_user_id': session['globus_user_id']})
-    print("===============user_is_admin===============")
-    pprint(rspns.json())
-    if not rspns.ok:
-        return False
-    wp_users = rspns.json()[0]
-    first_wp_user = wp_users[0]
-    meta_capability = next((meta for meta in first_wp_user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
-    if ('meta_value' in meta_capability and 
-            ('administrator' in meta_capability['meta_value'])):
-        return True
-    else:
-        return False
-
-# Check if the user registration is still pending for approval
-def user_in_pending():
-    rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/stage_user", params={'globus_user_id': session['globus_user_id']})
-    print("===============user_in_pending===============")
-    if rspns.ok:
-        stage_users = rspns.json()[0]
-        if len(stage_users) > 0:
-            return True
-        else:
-            return False
-    else:
-        return False
-
-
-def get_pm_selection(form):
-    value = form.get('pm', '')
-    if value == 'yes':
-        return True
-    elif value == 'no':
-        return False
-    else:
-        return None
-
-def generate_csrf_token(stringLength = 10):
-    if 'csrf_token' not in session:
-        letters = string.ascii_lowercase
-        session['csrf_token'] = ''.join(random.choice(letters) for i in range(stringLength))
-    return session['csrf_token']
 
 @app.route("/register", methods=['GET', 'POST'])
 def register():
@@ -589,10 +586,7 @@ def profile():
                 rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params = {'globus_user_id': session['globus_user_id']})
                 
                 if rspns.ok:
-                    
                     wp_user = rspns.json()[0][0]
-                    pprint("===========wp_user============")
-                    pprint(wp_user)
 
                     # Parsing the json to get initial user profile data
                     initial_data = {
@@ -622,6 +616,9 @@ def profile():
                     }
 
                     pprint(initial_data)
+
+                    # Something wrong with the code below, error
+
                     # if not initial_data['working_group'].strip() == '':
                     #     initial_data['working_group'] = ast.literal_eval(initial_data['working_group'])
                     # if not initial_data['access_requests'].strip() == '':
