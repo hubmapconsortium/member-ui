@@ -840,10 +840,6 @@ def generate_password():
     passlen = 16
     return "".join(random.sample(s, passlen))
 
-@app.route('/hello', methods=['GET'])
-def hello():
-    return Response("Hello world!", 200)
-
 def assign_wp_user(wp_user, user_obj, connection=None, mode='CREATE'):
     admin_id = WPUser.query.filter(WPUser.user_login == app.config.get('ADMIN_USERNAME')).first().id
 
