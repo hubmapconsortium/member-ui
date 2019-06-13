@@ -388,6 +388,7 @@ def construct_user(request):
 # Check if the user is already a registered member
 def user_is_member():
     rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params={'globus_user_id': session['globus_user_id']})
+    print("===============user_is_member===============")
     pprint(rspns.json())
     if not rspns.ok:
         return False
@@ -404,7 +405,7 @@ def user_is_member():
 # Check if the user registration is still pending for approval
 def user_in_pending():
     rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/stage_user", params={'globus_user_id': session['globus_user_id']})
-
+    print("===============user_in_pending===============")
     if rspns.ok:
         stage_users = rspns.json()[0]
         if len(stage_users) > 0:
@@ -540,16 +541,16 @@ def profile():
                 wp_user_id = request.POST['wp_user_id']
 
                 # Send user info to web services API for updating
-                # rspns = requests.put(app.config['FLASK_APP_BASE_URI'] + "/wp_user/" + wp_user_id, files={'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
+                rspns = requests.put(app.config['FLASK_APP_BASE_URI'] + "/wp_user/" + wp_user_id, files={'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
                 
-                # if rspns.ok:
-                #     try:
-                #         # Send email to admin for user profile update
-                #         send_user_profile_update_mail(new_user)
-                #     except Exception as e: 
-                #         print(e)
-                #         print("send email failed")
-                #         pass
+                if rspns.ok:
+                    try:
+                        # Send email to admin for user profile update
+                        send_user_profile_update_mail(new_user)
+                    except Exception as e: 
+                        print(e)
+                        print("send email failed")
+                        pass
                 context = {
                     'isAuthenticated': True,
                     'username': session['name'],
@@ -558,10 +559,9 @@ def profile():
                 }
 
                 return render_template('confirmation.html', data = context)
-                  
         else:
             if user_is_member():
-                            # Fetch user profile data
+                # Fetch user profile data
                 rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params = {'globus_user_id': session['globus_user_id']})
                 
                 if rspns.ok:
@@ -636,14 +636,27 @@ def profile():
 def match_user():
     # Only for admin
     if 'isAuthenticated' in session:
-        if request.method == 'POST':
-            print("POST")
+        if user_is_admin():
+            if request.method == 'POST':
+                print("POST")
+            else:
+                # This is the globus_user_id in the query string, not the logged in user's globus user id in session
+                globus_user_id = request.args.get('globus_user_id')
+                rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params={'globus_user_id': globus_user_id, 'member': True})
+                # Need to parse the rspns to get user data to render
+
+                # Display the user info
+                context={
+                    'isAuthenticated': True,
+                    'username': session['name']
+                }
+                return render_template('match_user.html', context)
         else:
             context={
                 'isAuthenticated': True,
                 'username': session['name'],
                 'status': 'danger',
-                'message': 'The page you are looking for was not found. You need to be logged in as an admin user'
+                'message': 'You need to be logged in as an admin user to access this page!'
             }
             return render_template('error.html', context)
     else:
