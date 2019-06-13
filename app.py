@@ -482,7 +482,7 @@ def register():
                         'isAuthenticated': True,
                         'username': session['name'],
                         'status': "success",
-                        'message': "Your registration has been submitted for approval. Please contact <a href='mailto:admin@hubmapconsortium.org'>admin@hubmapconsortium.org</a> if you have any questions.",
+                        'message': "Your registration has been submitted for approval.",
                     }
 
                     return render_template('confirmation.html', data = context)
@@ -501,11 +501,11 @@ def register():
                 context = {
                     'isAuthenticated': True,
                     'username': session['name'],
-                    'status': 'warning',
-                    'message': 'We have your registration already, no need to reigster again. Please contact <a href="mailto:admin@hubmapconsortium.org">admin@hubmapconsortium.org</a> if you have any questions.'
+                    'status': 'info',
+                    'message': 'We have your registration already, no need to reigster again.'
                 }
 
-                return render_template('error.html', data = context)
+                return render_template('info.html', data = context)
             else:
                 context = {
                     'isAuthenticated': True,
@@ -616,18 +616,18 @@ def profile():
                         'isAuthenticated': True,
                         'username': session['name'],
                         'status': 'warning',
-                        'message': 'An unexpected error occurred while trying to load your profile.  Please contact <a href="mailto:admin@hubmapconsortium.org">admin@hubmapconsortium.org</a> for help resolving the problem.'
+                        'message': 'An unexpected error occurred while trying to load your profile.'
                     }
                     return render_template('error.html', data = context)
             else:
                 context = {
                     'isAuthenticated': True,
                     'username': session['name'],
-                    'status': 'warning',
-                    'message': 'Your registration is waiting for approval, at this moment you can not view your profile. Please contact <a href="mailto:admin@hubmapconsortium.org">admin@hubmapconsortium.org</a> if you have any questions.'
+                    'status': 'info',
+                    'message': 'Your registration is waiting for approval, at this moment you can not view your profile.'
                 }
 
-                return render_template('error.html', data = context)
+                return render_template('info.html', data = context)
     else:
         return render_template('login.html')
 
