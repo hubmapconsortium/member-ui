@@ -1,50 +1,79 @@
-# The HuBMAP Registration Portal
+# The HuBMAP User Registration Portal
+
+This repo contains code that handles the HuBMAP user registration and profile management. It's built on top of Python Flask micro-framework.
 
 ## Installation
 
 We use [Pipenv](https://docs.pipenv.org/en/latest/) to manage dependencies for this application. Pipenv is recommended for collaborative projects as it's a higher-level tool that simplifies dependency management for common use cases.
 
-Install [Pipenv](https://docs.pipenv.org/en/latest/)
-
-## activate env
-```pipenv shell```
-
-You may see the following:
+Just follow the Pipenv instructions to install Pipenv. You can also install via `pip install --user pipenv`. After that, clone this repo and create a virtualenv for this project:
 
 ````
-[zhy19@localhost registration]$ pipenv shell
-Warning: Python 3.6 was not found on your system…
-You can specify specific versions of Python with:
-  $ pipenv --python path/to/python
-[zhy19@localhost registration]$ which python3
-/usr/bin/python3
-[zhy19@localhost registration]$ pipenv --python /usr/bin/python3
-Creating a virtualenv for this project…
-Pipfile: /home/zhy19/HuBMAP/registration/Pipfile
-Using /usr/bin/python3 (3.7.3) to create virtualenv…
-⠧ Creating virtual environment...Already using interpreter /usr/bin/python3
-Using base prefix '/usr'
-New python executable in /home/zhy19/.local/share/virtualenvs/registration-q6hMIbP1/bin/python3
-Also creating executable in /home/zhy19/.local/share/virtualenvs/registration-q6hMIbP1/bin/python
-Installing setuptools, pip, wheel...done.
-
-✔ Successfully created virtual environment! 
-Virtualenv location: /home/zhy19/.local/share/virtualenvs/registration-q6hMIbP1
-Warning: Your Pipfile requires python_version 3.6, but you are using 3.7.3 (/home/zhy19/.local/share/v/r/bin/python).
-  $ pipenv --rm and rebuilding the virtual environment may resolve the issue.
-  $ pipenv check will surely fail.
-[zhy19@localhost registration]$ 
+git clone https://github.com/hubmapconsortium/registration.git
+cd registration
+pipenv shell
 ````
 
-Then install all the dependencies:
+Then install all the project dependencies:
 
 ````
 pipenv install
 ````
 
-## run flask development server
+## Configuration
+
+The confiuration file `app.cfg` is located under `instance` folder. You can read more about [Flask Instance Folders](http://flask.pocoo.org/docs/1.0/config/#instance-folders). In this config file, you can specify the following items:
+
+````
+# App name and deployment URI
+FLASK_APP_NAME = 'HuBMAP User Registration'
+# Need the trailing slash /
+FLASK_APP_BASE_URI = 'http://localhost:5000/'
+
+# Flask app session key
+SECRET_KEY = ''
+
+# Globus app client ID and secret
+GLOBUS_APP_ID = ''
+GLOBUS_APP_SECRET = ''
+
+# Google reCAPTCHA v2 ("I'm not a robot" Checkbox) keys
+GOOGLE_RECAPTCHA_SITE_KEY = ''
+GOOGLE_RECAPTCHA_SECRET_KEY = ''
+GOOGLE_RECAPTCHA_VERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify'
+
+# DB connection and settings
+SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://username:password@localhost/wp_dev'
+SQLALCHEMY_TRACK_MODIFICATIONS = False
+UPLOAD_FOLDER = './avatar'
+ALLOWED_EXTENSIONS = set(['jpg', 'jepg', 'png', 'gif'])
+ADMIN_USERNAME = 'wpadmin'
+CONNECTION_IMAGE_PATH = '/home/webadmin/wp-content/uploads/connections-images/'
+CONNECTION_IMAGE_URL = 'https://dev2.hubmapconsortium.org/wp-content/uploads/connections-images/'
+#MAX_CONTENT_PATH = 100000 # Specifies Maximum size of file will be uploaded
+
+# Email settings for Flask-Mail extension
+MAIL_SERVER = 'smtp.gmail.com'
+MAIL_PORT = 587
+MAIL_USE_TLS = True
+MAIL_USERNAME = 'your gmail address'
+MAIL_PASSWORD = 'your gmail password'
+MAIL_DEFAULT_SENDER = ('HuBMAP Registration and Profile', 'your gmail address')
+
+# Admin emails, not part of Flask-Mail configuration
+MAIL_ADMIN_LIST = []
+````
+
+There's an example configuration file named `app.cfg.example` for your quick start.
+
+## Start Flask development server
+
 ```
 export FLASK_APP=app.py
 export FLASK_ENV=development
 flask run
 ```
+
+## Deactivate current Pipenv shell
+
+Simply run `exit`.

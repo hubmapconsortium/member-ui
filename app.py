@@ -28,7 +28,7 @@ from phpserialize import *
 
 # Init app and use the config from instance folder
 app = Flask(__name__, instance_relative_config=True)
-app.config.from_pyfile('config.cfg')
+app.config.from_pyfile('app.cfg')
 
 # Flask-Mail instance
 mail = Mail(app)
@@ -248,6 +248,12 @@ def send_new_user_approval_mail(recipient, data):
     mail.send(msg)
 
 # Routing
+
+# Default
+@app.route("/")
+def hello():
+    return "Welcome to HuBMAP User Registration!"
+
 
 # Redirect users from react app login page to Globus auth login widget then redirect back
 @app.route('/login')
@@ -520,7 +526,7 @@ def profile():
     else:
         if 'isAuthenticated' in session:
             # Fetch user profile data from API service
-            #rspns = requests.get(app.config['WEB_SERVICE_API_BASE_URI'] + "wp_user", params = {'globus_user_id': session['globus_user_id']})
+            #rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "wp_user", params = {'globus_user_id': session['globus_user_id']})
             
             # if rspns.ok:
             #     # Render the user data in profile
