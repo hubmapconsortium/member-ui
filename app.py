@@ -252,7 +252,11 @@ def send_new_user_approval_mail(recipient, data):
 # Default
 @app.route("/")
 def hello():
-    return "Welcome to HuBMAP User Registration!"
+    if 'isAuthenticated' in session:
+        redirect_uri = url_for('register')
+        return redirect(redirect_uri)
+    else:
+        return render_template('login.html')
 
 
 # Redirect users from react app login page to Globus auth login widget then redirect back
