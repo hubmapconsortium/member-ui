@@ -1,4 +1,4 @@
-{% extends "layouts/main.html" %}
+{% extends "layouts/login_layout.html" %}
 {% block content %}
 <div class="alert alert-info" role="alert">
 <h1>Login</h1>
@@ -10,7 +10,7 @@ There you can login with your institutional credentials. Thank you!
 
 <hr />
 
-<a class="btn btn-primary btn-lg" href="http://localhost:5000/login">
+<a class="btn btn-primary btn-lg" href="{{ config['FLASK_APP_BASE_URI'] }}/login">
 Login with your institutional credentials via Globus
 </a>
 </div>

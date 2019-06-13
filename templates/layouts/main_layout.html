@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>HuBMAP User Registration</title>
+
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='bootstrap/css/bootstrap.min.css') }}" />
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/app.css') }}">
+
+<script type="text/javascript" src="{{ url_for('static', filename='js/fontawesome-all.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/popper.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='bootstrap/js/bootstrap.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/bootstrap-confirmation.min.js') }}"></script>
+
+</head>
+
+<body id="body">
+
+<header id="header" class="navbar navbar-light bg-light">
+<nav class="container">
+<a class="navbar-brand" href="/">
+<img src="https://hubmapconsortium.org/wp-content/uploads/2019/01/HuBMAP-Retina-Logo-Color-300x110.png" width="300" height="110" class="d-inline-block align-top"
+alt="HuBMAP logo" /></a>
+<div class="float-right">
+{% if data.isAuthenticated %}
+<span class="username">{{data.username}}</span>
+<a href="{{ config['FLASK_APP_BASE_URI'] }}/logout" class="btn btn btn-outline-danger"> Logout </a>
+{% endif %}
+</div>
+</nav>
+</header>
+
+<div class="page-content">
+<div id="content" class="container">
+{% block content %}{% endblock %}
+</div>
+</div>
+
+</body>
+</html>

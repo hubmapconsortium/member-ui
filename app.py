@@ -259,8 +259,6 @@ def hello():
 @app.route('/login')
 def login():
     redirect_uri = url_for('login', _external=True)
-    #redirect_uri = app.config['FLASK_APP_BASE_URI'] + 'login'
-
     confidential_app_auth_client = ConfidentialAppAuthClient(app.config['GLOBUS_APP_ID'], app.config['GLOBUS_APP_SECRET'])
     confidential_app_auth_client.oauth2_start_flow(redirect_uri)
 
@@ -322,7 +320,7 @@ def logout():
     globus_logout_url = (
         'https://auth.globus.org/v2/web/logout' +
         '?client={}'.format(app.config['GLOBUS_APP_ID']) +
-        '&redirect_uri={}'.format(app.config['FLASK_APP_BASE_URI'] + 'register') +
+        '&redirect_uri={}'.format(app.config['FLASK_APP_BASE_URI']) +
         '&redirect_name={}'.format(app.config['FLASK_APP_NAME']))
 
     # Redirect the user to the Globus Auth logout page
@@ -385,7 +383,7 @@ def construct_user(request):
 
 # Check if the user is already a registered member
 def user_is_member():
-    rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "wp_user", params={'globus_user_id': session['globus_user_id']})
+    rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params={'globus_user_id': session['globus_user_id']})
     pprint(rspns.json())
     if not rspns.ok:
         return False
@@ -401,7 +399,7 @@ def user_is_member():
 
 # Check if the user registration is still pending for approval
 def user_in_pending():
-    rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "stage_user", params={'globus_user_id': session['globus_user_id']})
+    rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/stage_user", params={'globus_user_id': session['globus_user_id']})
 
     if rspns.ok:
         stage_users = rspns.json()[0]
@@ -465,7 +463,7 @@ def register():
                     new_user, img_to_upload = construct_user(request)
 
                     # Send user info to web services API
-                    rspns = requests.post(app.config['FLASK_APP_BASE_URI'] + "stage_user", files = {'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
+                    rspns = requests.post(app.config['FLASK_APP_BASE_URI'] + "/stage_user", files = {'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
                     
                     if rspns.ok:
                         try:
@@ -538,7 +536,7 @@ def profile():
                 wp_user_id = request.POST['wp_user_id']
 
                 # Send user info to web services API for updating
-                # rspns = requests.put(app.config['FLASK_APP_BASE_URI'] + "wp_user/" + wp_user_id, files={'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
+                # rspns = requests.put(app.config['FLASK_APP_BASE_URI'] + "/wp_user/" + wp_user_id, files={'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
                 
                 # if rspns.ok:
                 #     try:
@@ -560,7 +558,7 @@ def profile():
         else:
             if user_is_member():
                             # Fetch user profile data
-                rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "wp_user", params = {'globus_user_id': session['globus_user_id']})
+                rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params = {'globus_user_id': session['globus_user_id']})
                 
                 if rspns.ok:
                     
