@@ -383,6 +383,36 @@ def construct_user(request):
 
     return new_user, img_to_upload
 
+# Check if the user is already a registered member
+def user_is_member():
+    rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "wp_user", params={'globus_user_id': session['globus_user_id']})
+    pprint(rspns.json())
+    if not rspns.ok:
+        return False
+    wp_users = rspns.json()[0]
+    first_wp_user = wp_users[0]
+    meta_capability = next((meta for meta in first_wp_user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
+    if ('meta_value' in meta_capability and 
+            ('member' in meta_capability['meta_value'] or 'administrator' in meta_capability['meta_value'])):
+        return True
+    else:
+        return False
+
+
+# Check if the user registration is still pending for approval
+def user_in_pending():
+    rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "stage_user", params={'globus_user_id': session['globus_user_id']})
+
+    if rspns.ok:
+        stage_users = rspns.json()[0]
+        if len(stage_users) > 0:
+            return True
+        else:
+            return False
+    else:
+        return False
+
+
 def get_pm_selection(form):
     value = form.get('pm', '')
     if value == 'yes':
@@ -400,25 +430,98 @@ def generate_csrf_token(stringLength = 10):
 
 @app.route("/register", methods=['GET', 'POST'])
 def register():
-    if request.method == 'POST':
-        # reCAPTCHA validation
-        # Use request.args.get() instead of request.form[''] since esponse' is not the form
-        recaptcha_response = request.args.get('g-recaptcha-response')
-        values = {
-            'secret': app.config['GOOGLE_RECAPTCHA_SECRET_KEY'],
-            'response': recaptcha_response
-        }
-        data = urllib.parse.urlencode(values).encode()
-        req = urllib.request.Request(app.config['GOOGLE_RECAPTCHA_VERIFY_URL'], data = data)
-        response = urllib.request.urlopen(req)
-        result = json.loads(response.read().decode())
+    if 'isAuthenticated' in session:
+        if request.method == 'POST':
+            # reCAPTCHA validation
+            # Use request.args.get() instead of request.form[''] since esponse' is not the form
+            recaptcha_response = request.args.get('g-recaptcha-response')
+            values = {
+                'secret': app.config['GOOGLE_RECAPTCHA_SECRET_KEY'],
+                'response': recaptcha_response
+            }
+            data = urllib.parse.urlencode(values).encode()
+            req = urllib.request.Request(app.config['GOOGLE_RECAPTCHA_VERIFY_URL'], data = data)
+            response = urllib.request.urlopen(req)
+            result = json.loads(response.read().decode())
 
-        # For testing only
-        result['success'] = True
+            # For testing only
+            result['success'] = True
 
-        # Currently no backend form validation
-        # Only front end validation and reCAPTCHA - Zhou
-        if result['success']:
+            # Currently no backend form validation
+            # Only front end validation and reCAPTCHA - Zhou
+            if result['success']:
+                # CSRF check
+                session_csrf_token = session.pop('csrf_token', None)
+
+                if not session_csrf_token or session_csrf_token != request.form['csrf_token']:
+                    context={
+                        'isAuthenticated': True,
+                        'username': session['name'],
+                        'status': 'danger',
+                        'message': 'Invalid CSRF token!'
+                    }
+                    return render_template('error.html', data = context)
+                else:
+                    new_user, img_to_upload = construct_user(request)
+
+                    # Send user info to web services API
+                    rspns = requests.post(app.config['FLASK_APP_BASE_URI'] + "stage_user", files = {'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
+                    
+                    if rspns.ok:
+                        try:
+                            # Send email to admin for new user approval
+                            send_new_user_registration_mail(new_user)
+                        except Exception as e: 
+                            print(e)
+                            print("send email failed")
+                            pass
+                    context = {
+                        'isAuthenticated': True,
+                        'username': session['name'],
+                        'status': "success",
+                        'message': "Your registration has been submitted for approval. Please contact <a href='mailto:admin@hubmapconsortium.org'>admin@hubmapconsortium.org</a> if you have any questions.",
+                    }
+
+                    return render_template('confirmation.html', data = context)
+            # Show reCAPTCHA error
+            else:
+                context={
+                    'isAuthenticated': True,
+                    'username': session['name'],
+                    'status': 'danger',
+                    'message': 'reCAPTCHA error'
+                }
+                return render_template('error.html', data = context)
+        # Handle GET
+        else:
+            if user_is_member():
+                context = {
+                    'isAuthenticated': True,
+                    'username': session['name'],
+                    'status': 'warning',
+                    'message': 'We have your registration already, no need to reigster again. Please contact <a href="mailto:admin@hubmapconsortium.org">admin@hubmapconsortium.org</a> if you have any questions.'
+                }
+
+                return render_template('error.html', data = context)
+            else:
+                context = {
+                    'isAuthenticated': True,
+                    'username': session['name'],
+                    'csrf_token': generate_csrf_token(),
+                    'first_name': session['name'].split(" ")[0],
+                    'last_name': session['name'].split(" ")[1],
+                    'email': session['email'],
+                    'recaptcha_site_key': app.config['GOOGLE_RECAPTCHA_SITE_KEY']
+                }
+
+                return render_template('register.html', data = context)
+    else:
+        return render_template('login.html')
+
+@app.route("/profile", methods=['GET', 'POST'])
+def profile():
+    if 'isAuthenticated' in session:
+        if request.method == 'POST':
             # CSRF check
             session_csrf_token = session.pop('csrf_token', None)
 
@@ -432,16 +535,15 @@ def register():
                 return render_template('error.html', data = context)
             else:
                 new_user, img_to_upload = construct_user(request)
-                pprint(new_user)
-                send_new_user_registration_mail(new_user)
+                wp_user_id = request.POST['wp_user_id']
 
-                # # Send user info to web services API
-                # rspns = requests.post(app.config['FLASK_APP_BASE_URI'] + "stage_user", files = {'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
+                # Send user info to web services API for updating
+                # rspns = requests.put(app.config['FLASK_APP_BASE_URI'] + "wp_user/" + wp_user_id, files={'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
                 
                 # if rspns.ok:
                 #     try:
-                #         # Send email to admin for new user approval
-                #         send_new_user_registration_mail(new_user)
+                #         # Send email to admin for user profile update
+                #         send_user_profile_update_mail(new_user)
                 #     except Exception as e: 
                 #         print(e)
                 #         print("send email failed")
@@ -450,158 +552,100 @@ def register():
                     'isAuthenticated': True,
                     'username': session['name'],
                     'status': "success",
-                    'message': "Your registration has been completed and has been sent for approval. Please contact <a href='mailto:admin@hubmapconsortium.org'>admin@hubmapconsortium.org</a> if you have any questions.",
+                    'message': "Your profile information has been updated successfully.",
                 }
 
                 return render_template('confirmation.html', data = context)
-        # Show reCAPTCHA error
+                  
         else:
-            context={
-                'isAuthenticated': True,
-                'username': session['name'],
-                'status': 'danger',
-                'message': 'reCAPTCHA error'
-            }
-            return render_template('error.html', data = context)
-    # Handle GET
+            if user_is_member():
+                            # Fetch user profile data
+                rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "wp_user", params = {'globus_user_id': session['globus_user_id']})
+                
+                if rspns.ok:
+                    
+                    wp_user = rspns.json()[0][0]
+                    pprint(wp_user)
+
+                    # Parsing the json to get initial user profile data
+                    initial_data = {
+                        'first_name': wp_user['connection'][0]['first_name'],
+                        'last_name': wp_user['connection'][0]['last_name'],
+                        'email': wp_user['connection'][0]['email'],
+                        'phone': loads(wp_user['connection'][0]['phone_numbers'].encode())[0][b'number'].decode(),
+                        'component': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'component'), {'meta_value': ''})['meta_value'],
+                        'other_component': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_component'), {'meta_value': ''})['meta_value'],
+                        'organization': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'organization'), {'meta_value': ''})['meta_value'],
+                        'other_organization': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_organization'), {'meta_value': ''})['meta_value'],
+                        'role': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'role'), {'meta_value': ''})['meta_value'],
+                        'other_role': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_role'), {'meta_value': ''})['meta_value'],
+                        'working_group': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'working_group'), {'meta_value': ''})['meta_value'],
+                        'access_requests': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'access_requests'), {'meta_value': ''})['meta_value'],
+                        'google_email': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'google_email'), {'meta_value': ''})['meta_value'],
+                        'github_username': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'github_username'), {'meta_value': ''})['meta_value'],
+                        'slack_username': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'slack_username'), {'meta_value': ''})['meta_value'],
+                        'website': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'website'), {'meta_value': ''})['meta_value'],
+                        'expertise': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'expertise'), {'meta_value': ''})['meta_value'],
+                        'orcid': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'orcid'), {'meta_value': ''})['meta_value'],
+                        'pm': 'Yes' if next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm'), {'meta_value': ''})['meta_value'] == '1' else 'No',
+                        'pm_name': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm_name'), {'meta_value': ''})['meta_value'],
+                        'pm_email': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm_email'), {'meta_value': ''})['meta_value'],
+                    }
+
+                    pprint(initial_data)
+                    # if not initial_data['working_group'].strip() == '':
+                    #     initial_data['working_group'] = ast.literal_eval(initial_data['working_group'])
+                    # if not initial_data['access_requests'].strip() == '':
+                    #     initial_data['access_requests'] = ast.literal_eval(initial_data['access_requests'])
+
+                    context = {
+                        'isAuthenticated': True,
+                        'username': session['name'],
+                        'csrf_token': generate_csrf_token(),
+                        'wp_user_id': wp_user['id']
+                    }
+
+                    d = {**context, **initial_data}
+                    pprint(d)
+                    # Populate the user data in profile
+                    return render_template('profile.html', data = {**context, **initial_data})
+                else:
+                    context = {
+                        'isAuthenticated': True,
+                        'username': session['name'],
+                        'status': 'warning',
+                        'message': 'An unexpected error occurred while trying to load your profile.  Please contact <a href="mailto:admin@hubmapconsortium.org">admin@hubmapconsortium.org</a> for help resolving the problem.'
+                    }
+                    return render_template('error.html', data = context)
+            else:
+                context = {
+                    'isAuthenticated': True,
+                    'username': session['name'],
+                    'status': 'warning',
+                    'message': 'Your registration is waiting for approval, at this moment you can not view your profile. Please contact <a href="mailto:admin@hubmapconsortium.org">admin@hubmapconsortium.org</a> if you have any questions.'
+                }
+
+                return render_template('error.html', data = context)
     else:
-        if 'isAuthenticated' in session:
-            context = {
-                'isAuthenticated': True,
-                'username': session['name'],
-                'csrf_token': generate_csrf_token(),
-                'first_name': session['name'].split(" ")[0],
-                'last_name': session['name'].split(" ")[1],
-                'email': session['email'],
-                'recaptcha_site_key': app.config['GOOGLE_RECAPTCHA_SITE_KEY']
-            }
-
-            return render_template('register.html', data = context)
-        else:
-            context = {
-                'isAuthenticated': False
-            }
-
-            return render_template('register.html', data = context)
-
-
-@app.route("/profile", methods=['GET', 'POST'])
-def profile():
-    if request.method == 'POST':
-        # CSRF check
-        session_csrf_token = session.pop('csrf_token', None)
-
-        if not session_csrf_token or session_csrf_token != request.form['csrf_token']:
-            context={
-                'isAuthenticated': True,
-                'username': session['name'],
-                'status': 'danger',
-                'message': 'Invalid CSRF token!'
-            }
-            return render_template('error.html', data = context)
-        else:
-            new_user, img_to_upload = construct_user(request)
-            wp_user_id = request.POST['wp_user_id']
-
-            # Send user info to web services API for updating
-            # rspns = requests.put(app.config['FLASK_APP_BASE_URI'] + "wp_user/" + wp_user_id, files={'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
-            
-            # if rspns.ok:
-            #     try:
-            #         # Send email to admin for user profile update
-            #         send_user_profile_update_mail(new_user)
-            #     except Exception as e: 
-            #         print(e)
-            #         print("send email failed")
-            #         pass
-            context = {
-                'isAuthenticated': True,
-                'username': session['name'],
-                'status': "success",
-                'message': "Your profile information has been updated successfully.",
-            }
-
-            return render_template('confirmation.html', data = context)
-              
-    else:
-        if 'isAuthenticated' in session:
-            # Fetch user profile data from API service
-            #rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "wp_user", params = {'globus_user_id': session['globus_user_id']})
-            
-            # if rspns.ok:
-            #     # Render the user data in profile
-            #     context = {
-            #         'isAuthenticated': True,
-            #         'username': session['name'],
-            #         'csrf_token': generate_csrf_token()
-            #     }
-
-            #     return render_template('profile.html', data = context)
-            # else:
-            #     context = {
-            #         'isAuthenticated': True,
-            #         'username': session['name'],
-            #         'status': 'warning',
-            #         'message': 'An unexpected error occurred while trying to load your profile.  Please contact <a href="mailto:admin@hubmapconsortium.org">admin@hubmapconsortium.org</a> for help resolving the problem.'
-            #     }
-            #     return render_template('error.html', data = context)
-
-            # for testing only
-            with open('wp_user.json', 'r') as f:
-                wp_user = json.load(f)
-
-            # Parsing the json to get initial user profile data
-            initial_data = {
-                'first_name': wp_user['connection'][0]['first_name'],
-                'last_name': wp_user['connection'][0]['last_name'],
-                'email': wp_user['connection'][0]['email'],
-                'phone': loads(wp_user['connection'][0]['phone_numbers'].encode())[0][b'number'].decode(),
-                'component': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'component'), {'meta_value': ''})['meta_value'],
-                'other_component': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_component'), {'meta_value': ''})['meta_value'],
-                'organization': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'organization'), {'meta_value': ''})['meta_value'],
-                'other_organization': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_organization'), {'meta_value': ''})['meta_value'],
-                'role': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'role'), {'meta_value': ''})['meta_value'],
-                'other_role': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_role'), {'meta_value': ''})['meta_value'],
-                'working_group': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'working_group'), {'meta_value': ''})['meta_value'],
-                'access_requests': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'access_requests'), {'meta_value': ''})['meta_value'],
-                'google_email': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'google_email'), {'meta_value': ''})['meta_value'],
-                'github_username': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'github_username'), {'meta_value': ''})['meta_value'],
-                'slack_username': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'slack_username'), {'meta_value': ''})['meta_value'],
-                'website': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'website'), {'meta_value': ''})['meta_value'],
-                'expertise': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'expertise'), {'meta_value': ''})['meta_value'],
-                'orcid': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'orcid'), {'meta_value': ''})['meta_value'],
-                'pm': 'Yes' if next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm'), {'meta_value': ''})['meta_value'] == '1' else 'No',
-                'pm_name': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm_name'), {'meta_value': ''})['meta_value'],
-                'pm_email': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm_email'), {'meta_value': ''})['meta_value'],
-            }
-
-            pprint(initial_data)
-            # if not initial_data['working_group'].strip() == '':
-            #     initial_data['working_group'] = ast.literal_eval(initial_data['working_group'])
-            # if not initial_data['access_requests'].strip() == '':
-            #     initial_data['access_requests'] = ast.literal_eval(initial_data['access_requests'])
-
-            context = {
-                'isAuthenticated': True,
-                'username': session['name'],
-                'csrf_token': generate_csrf_token(),
-                'wp_user_id': wp_user['id']
-            }
-
-            d = {**context, **initial_data}
-            pprint(d)
-            return render_template('profile.html', data = {**context, **initial_data})
-        else:
-            context = {
-                'isAuthenticated': False
-            }
-
-            return render_template('profile.html', data = context)
+        return render_template('login.html')
 
 
 @app.route("/match_user", methods=['GET', 'POST'])
 def match_user():
-    return render_template("match_user.html")
+    # Only for admin
+    if 'isAuthenticated' in session:
+        if request.method == 'POST':
+            print("POST")
+        else:
+            context={
+                'isAuthenticated': True,
+                'username': session['name'],
+                'status': 'danger',
+                'message': 'The page you are looking for was not found. You need to be logged in as an admin user'
+            }
+            return render_template('error.html', context)
+    else:
+        return render_template('login.html')
 
 # APIs
 @app.route('/stage_user', methods=['GET'])

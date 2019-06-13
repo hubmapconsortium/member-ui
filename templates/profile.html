@@ -3,8 +3,6 @@
 
 <h1>HuBMAP User Profile Update</h1>
 
-{% if data.isAuthenticated %}
-
 <script type="text/javascript">
     $(function() {
     	// Populate the data for these dropdown menus and checkboxes/radio buttons - Zhou
@@ -639,13 +637,5 @@
     </div>
 </div>
 
-
-
-
-{% else %}
-
-    {% include 'login.html' %}
-	
-{% endif %}
 
 {% endblock %}
