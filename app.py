@@ -702,9 +702,14 @@ def update_stage_user(stage_user_id):
         '''create a new wp_user
         '''
         try:
-            new_wp_user = WPUser()
-            assign_wp_user(new_wp_user, stage_user, connection)
-            db.session.add(new_wp_user)
+            usermeta = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == stage_user.globus_user_id).first()
+            if not usermeta or usermeta.user:
+                wp_user = WPUser()
+            else:
+                wp_user = usermeta.user
+            assign_wp_user(wp_user, stage_user, connection)
+            if wp_user.id:
+                db.session.add(new_wp_user)
             db.session.delete(stage_user)
             db.session.commit()
         except Exception as e:
