@@ -708,7 +708,7 @@ def update_stage_user(stage_user_id):
             else:
                 wp_user = usermeta.user
             assign_wp_user(wp_user, stage_user, connection)
-            if wp_user.id:
+            if not wp_user.id:
                 db.session.add(wp_user)
             db.session.delete(stage_user)
             db.session.commit()
