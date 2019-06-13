@@ -709,7 +709,7 @@ def update_stage_user(stage_user_id):
                 wp_user = usermeta.user
             assign_wp_user(wp_user, stage_user, connection)
             if wp_user.id:
-                db.session.add(new_wp_user)
+                db.session.add(wp_user)
             db.session.delete(stage_user)
             db.session.commit()
         except Exception as e:
@@ -720,7 +720,7 @@ def update_stage_user(stage_user_id):
             print("-"*60)
             return Response('Stage user update failed', status=500)
 
-        m_result = wp_user_schema.dump(new_wp_user)
+        m_result = wp_user_schema.dump(wp_user)
         return jsonify(m_result)
 
 @app.route('/wp_user', methods=['POST'])
