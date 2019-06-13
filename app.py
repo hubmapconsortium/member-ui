@@ -401,6 +401,20 @@ def user_is_member():
     else:
         return False
 
+def user_is_admin():
+    rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params={'globus_user_id': session['globus_user_id']})
+    print("===============user_is_admin===============")
+    pprint(rspns.json())
+    if not rspns.ok:
+        return False
+    wp_users = rspns.json()[0]
+    first_wp_user = wp_users[0]
+    meta_capability = next((meta for meta in first_wp_user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
+    if ('meta_value' in meta_capability and 
+            ('administrator' in meta_capability['meta_value'])):
+        return True
+    else:
+        return False
 
 # Check if the user registration is still pending for approval
 def user_in_pending():
@@ -502,22 +516,32 @@ def register():
                     'isAuthenticated': True,
                     'username': session['name'],
                     'status': 'info',
-                    'message': 'We have your registration already, no need to reigster again.'
+                    'message': 'You are alreay a registered member, no need to reigster again.'
                 }
 
                 return render_template('info.html', data = context)
             else:
-                context = {
-                    'isAuthenticated': True,
-                    'username': session['name'],
-                    'csrf_token': generate_csrf_token(),
-                    'first_name': session['name'].split(" ")[0],
-                    'last_name': session['name'].split(" ")[1],
-                    'email': session['email'],
-                    'recaptcha_site_key': app.config['GOOGLE_RECAPTCHA_SITE_KEY']
-                }
+                if user_in_pending():
+                    context = {
+                        'isAuthenticated': True,
+                        'username': session['name'],
+                        'status': 'info',
+                        'message': 'You have already registered. We will notify you once your registration is approved. No need to reigster again.'
+                    }
 
-                return render_template('register.html', data = context)
+                    return render_template('info.html', data = context)
+                else:
+                    context = {
+                        'isAuthenticated': True,
+                        'username': session['name'],
+                        'csrf_token': generate_csrf_token(),
+                        'first_name': session['name'].split(" ")[0],
+                        'last_name': session['name'].split(" ")[1],
+                        'email': session['email'],
+                        'recaptcha_site_key': app.config['GOOGLE_RECAPTCHA_SITE_KEY']
+                    }
+
+                    return render_template('register.html', data = context)
     else:
         return render_template('login.html')
 
@@ -567,14 +591,17 @@ def profile():
                 if rspns.ok:
                     
                     wp_user = rspns.json()[0][0]
+                    pprint("===========wp_user============")
                     pprint(wp_user)
 
                     # Parsing the json to get initial user profile data
                     initial_data = {
                         'first_name': wp_user['connection'][0]['first_name'],
                         'last_name': wp_user['connection'][0]['last_name'],
-                        'email': wp_user['connection'][0]['email'],
-                        'phone': loads(wp_user['connection'][0]['phone_numbers'].encode())[0][b'number'].decode(),
+                        #'email': wp_user['connection'][0]['email'],
+                        'email': wp_user['user_email'],
+                        #'phone': loads(wp_user['connection'][0]['phone_numbers'].encode())[0][b'number'].decode(),
+                        'phone': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'phone'), {'meta_value': ''})['meta_value'],
                         'component': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'component'), {'meta_value': ''})['meta_value'],
                         'other_component': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_component'), {'meta_value': ''})['meta_value'],
                         'organization': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'organization'), {'meta_value': ''})['meta_value'],
@@ -638,27 +665,54 @@ def match_user():
     if 'isAuthenticated' in session:
         if user_is_admin():
             if request.method == 'POST':
+                # TO-DO
                 print("POST")
             else:
                 # This is the globus_user_id in the query string, not the logged in user's globus user id in session
                 globus_user_id = request.args.get('globus_user_id')
-                rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params={'globus_user_id': globus_user_id, 'member': True})
-                # Need to parse the rspns to get user data to render
+                
+                if not globus_user_id:
+                    context = {
+                        'isAuthenticated': True,
+                        'username': session['name'],
+                        'status': 'danger',
+                        'message': 'Incorrect URL query string, missing "globus_user_id"!'
+                    }
+                    return render_template('error.html', data = context)
+                else:
+                    rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params={'globus_user_id': globus_user_id, 'member': True})
+                    # Parse the rspns to get user data to render
+                    wp_users = None
+                    if rspns.ok:
+                        wp_users = json.loads(rspns.text)[0]
+                        if wp_users and len(wp_users) >= 0:
+                            # user is a member already
+                            context = {
+                                'isAuthenticated': True,
+                                'username': session['name'],
+                                'wp_user': wp_users[0],
+                            }
 
-                # Display the user info
-                context={
-                    'isAuthenticated': True,
-                    'username': session['name']
-                }
-                return render_template('match_user.html', context)
+                            return render_template('match_user.html', data = context)
+                        else:
+                            # TO-DO
+                            print("TO-DO")
+                    else:
+                        context = {
+                            'isAuthenticated': True,
+                            'username': session['name'],
+                            'status': 'danger',
+                            'message': 'This stage user does not exist.'
+                        }
+                        return render_template('error.html', data = context)
         else:
-            context={
+            context = {
                 'isAuthenticated': True,
                 'username': session['name'],
                 'status': 'danger',
-                'message': 'You need to be logged in as an admin user to access this page!'
+                'message': 'Access denied! You need to login as an admin user to access this page!'
             }
-            return render_template('error.html', context)
+            return render_template('error.html', data = context)
     else:
         return render_template('login.html')
 
