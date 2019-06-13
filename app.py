@@ -705,6 +705,11 @@ def update_stage_user(stage_user_id):
             usermeta = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == stage_user.globus_user_id).first()
             if usermeta and usermeta.user:
                 wp_user = usermeta.user
+                wp_user.user_login = stage_user.email
+                wp_user.user_pass = generate_password()
+                for meta in wp_user.metas:
+                    if meta.meta_key == "wp_capabilities":
+                        meta.meta_value = "a:1:{s:6:\"member\";b:1;}"
             else:
                 wp_user = WPUser()
             assign_wp_user(wp_user, stage_user, connection)
