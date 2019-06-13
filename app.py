@@ -464,6 +464,9 @@ def register():
                 'isAuthenticated': True,
                 'username': session['name'],
                 'csrf_token': generate_csrf_token(),
+                'first_name': session['name'].split(" ")[0],
+                'last_name': session['name'].split(" ")[1],
+                'email': session['email'],
                 'recaptcha_site_key': app.config['GOOGLE_RECAPTCHA_SITE_KEY']
             }
 
