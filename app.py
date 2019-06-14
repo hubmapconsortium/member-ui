@@ -302,47 +302,6 @@ def construct_user(request):
     return new_user, img_to_upload
 
 
-# Check if the user has the "member" or "administrator" role in wp database
-def user_is_member():
-    rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params={'globus_user_id': session['globus_user_id']})
-    if not rspns.ok:
-        return False
-    wp_users = rspns.json()[0]
-    first_wp_user = wp_users[0]
-    meta_capability = next((meta for meta in first_wp_user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
-    if ('meta_value' in meta_capability and 
-            ('member' in meta_capability['meta_value'] or 'administrator' in meta_capability['meta_value'])):
-        return True
-    else:
-        return False
-
-# Check if user has the "administrator" role in wp database
-def user_is_admin():
-    rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params={'globus_user_id': session['globus_user_id']})
-    if not rspns.ok:
-        return False
-    wp_users = rspns.json()[0]
-    first_wp_user = wp_users[0]
-    meta_capability = next((meta for meta in first_wp_user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
-    if ('meta_value' in meta_capability and 
-            ('administrator' in meta_capability['meta_value'])):
-        return True
-    else:
-        return False
-
-# Check if the user registration is still pending for approval in `stage_user` table
-def user_in_pending():
-    rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/stage_user", params={'globus_user_id': session['globus_user_id']})
-    if rspns.ok:
-        stage_users = rspns.json()[0]
-        if len(stage_users) > 0:
-            return True
-        else:
-            return False
-    else:
-        return False
-
-
 def get_pm_selection(form):
     value = form.get('pm', '')
     if value == 'yes':
@@ -416,6 +375,47 @@ def wp_only_user():
 def connection_only_user():
     return True
 
+# Check if the user has the "member" or "administrator" role in wp database
+def user_is_member():
+    rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params={'globus_user_id': session['globus_user_id']})
+    if not rspns.ok:
+        return False
+    wp_users = rspns.json()[0]
+    first_wp_user = wp_users[0]
+    meta_capability = next((meta for meta in first_wp_user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
+    if ('meta_value' in meta_capability and 
+            ('member' in meta_capability['meta_value'] or 'administrator' in meta_capability['meta_value'])):
+        return True
+    else:
+        return False
+
+# Check if user has the "administrator" role in wp database
+def user_is_admin():
+    rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params={'globus_user_id': session['globus_user_id']})
+    if not rspns.ok:
+        return False
+    wp_users = rspns.json()[0]
+    first_wp_user = wp_users[0]
+    meta_capability = next((meta for meta in first_wp_user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
+    if ('meta_value' in meta_capability and 
+            ('administrator' in meta_capability['meta_value'])):
+        return True
+    else:
+        return False
+
+# Check if the user registration is still pending for approval in `stage_user` table
+def user_in_pending():
+    rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/stage_user", params={'globus_user_id': session['globus_user_id']})
+    if rspns.ok:
+        stage_users = rspns.json()[0]
+        if len(stage_users) > 0:
+            return True
+        else:
+            return False
+    else:
+        return False
+
+
 
 # Routing
 
@@ -425,7 +425,7 @@ def hello():
     if 'isAuthenticated' in session:
         # If user has already registered, show profile page
         # Otherwise only show the registration page
-        if session['isRegistered']:
+        if is_registered_user():
             redirect_uri = url_for('profile')
         else:
             redirect_uri = url_for('register')
@@ -471,12 +471,6 @@ def login():
         session['nexus_token'] = nexus_token
         session['transfer_token'] = transfer_token
       
-        # Also check if the user is registered or not then show the corresponding page
-        if is_registered_user():
-            session['isRegistered'] = True
-        else:
-            session['isRegistered'] = False
-
         # Finally redirect back to the home page default route
         return redirect("/")
 
@@ -514,7 +508,7 @@ def logout():
 def register():
     if 'isAuthenticated' in session:
         # Handle new user registration
-        if not session['isRegistered']:
+        if not is_registered_user():
             if request.method == 'POST':
                 # reCAPTCHA validation
                 # Use request.args.get() instead of request.form[''] since esponse' is not the form
@@ -553,9 +547,6 @@ def register():
                                 print(e)
                                 print("send email failed")
                                 pass
-                            
-                            # change session value
-                            session['isRegistered'] = True
 
                             # Show confirmation
                             return show_confirmation("Your registration has been submitted for approval. You'll get an email once it's approved or denied.")
@@ -596,7 +587,7 @@ def register():
 @app.route("/profile", methods=['GET', 'POST'])
 def profile():
     if 'isAuthenticated' in session:
-        if session['isRegistered']:
+        if is_registered_user():
             # Only show the profile form for approved users (registered user and not in pennding)
             if not user_in_pending():
                 # Handle POST
