@@ -301,13 +301,8 @@ def construct_user(request):
 
     return new_user, img_to_upload
 
-# Check if the user is already registered and has a profile
-# meaning this user is in wp_users, wp_connections, and user_connection tables
-def is_registered_user():
-    return False
 
-
-# Check if the user is already a registered member
+# Check if the user has the "member" or "administrator" role in wp database
 def user_is_member():
     rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params={'globus_user_id': session['globus_user_id']})
     if not rspns.ok:
@@ -321,7 +316,7 @@ def user_is_member():
     else:
         return False
 
-# Check if user is an admin
+# Check if user has the "administrator" role in wp database
 def user_is_admin():
     rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params={'globus_user_id': session['globus_user_id']})
     if not rspns.ok:
@@ -335,7 +330,7 @@ def user_is_admin():
     else:
         return False
 
-# Check if the user registration is still pending for approval
+# Check if the user registration is still pending for approval in `stage_user` table
 def user_in_pending():
     rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/stage_user", params={'globus_user_id': session['globus_user_id']})
     if rspns.ok:
@@ -357,6 +352,7 @@ def get_pm_selection(form):
     else:
         return None
 
+# Generate CSRF tokens for registration form and profile form
 def generate_csrf_token(stringLength = 10):
     if 'csrf_token' not in session:
         letters = string.ascii_lowercase
@@ -402,6 +398,11 @@ def show_info(message):
     }
     return render_template('info.html', data = context)
 
+
+# Check if the user is already registered and has a linked profile
+# meaning this user is in wp_users, wp_connections, and user_connection tables
+def is_registered_user():
+    return False
 
 # A user has no record in WP database
 def fresh_user():
