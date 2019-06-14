@@ -1,5 +1,5 @@
 # App name and deployment URI
-FLASK_APP_NAME = 'HuBMAP User Registration'
+FLASK_APP_NAME = 'HuBMAP User Profile'
 # Need the trailing slash /
 FLASK_APP_BASE_URI = 'http://localhost:5000/'
 
@@ -31,7 +31,7 @@ MAIL_PORT = 587
 MAIL_USE_TLS = True
 MAIL_USERNAME = 'your gmail address'
 MAIL_PASSWORD = 'your gmail password'
-MAIL_DEFAULT_SENDER = ('HuBMAP Registration and Profile', 'your gmail address')
+MAIL_DEFAULT_SENDER = ('HuBMAP User Profile', 'your gmail address')
 
 # Admin emails, not part of Flask-Mail configuration
 MAIL_ADMIN_LIST = []

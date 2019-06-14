@@ -247,7 +247,7 @@ def send_new_user_approval_mail(recipient, data):
     mail.send(msg)
 
 # Get user info from globus with the auth access token
-def get_user_info(token):
+def get_globus_user_info(token):
     auth_client = AuthClient(authorizer=AccessTokenAuthorizer(token))
     return auth_client.oauth2_userinfo()
 
@@ -300,6 +300,12 @@ def construct_user(request):
     img_to_upload = photo_file if photo_file is not None else imgByteArr if imgByteArr is not None else None
 
     return new_user, img_to_upload
+
+# Check if the user is already registered and has a profile
+# meaning this user is in wp_users, wp_connections, and user_connection tables
+def is_registered_user():
+    return False
+
 
 # Check if the user is already a registered member
 def user_is_member():
@@ -358,13 +364,70 @@ def generate_csrf_token(stringLength = 10):
     return session['csrf_token']
 
 
+def show_registration_form():
+    context = {
+        'isAuthenticated': True,
+        'username': session['name'],
+        'csrf_token': generate_csrf_token(),
+        'first_name': session['name'].split(" ")[0],
+        'last_name': session['name'].split(" ")[1],
+        'email': session['email'],
+        'recaptcha_site_key': app.config['GOOGLE_RECAPTCHA_SITE_KEY']
+    }
+
+    return render_template('register.html', data = context)
+
+# Three different types of message for authenticated users
+def show_error(message):
+    context = {
+        'isAuthenticated': True,
+        'username': session['name'],
+        'message': message
+    }
+    return render_template('error.html', data = context)
+
+def show_confirmation(message):
+    context = {
+        'isAuthenticated': True,
+        'username': session['name'],
+        'message': message
+    }
+    return render_template('confirmation.html', data = context)
+
+def show_info(message):
+    context = {
+        'isAuthenticated': True,
+        'username': session['name'],
+        'message': message
+    }
+    return render_template('info.html', data = context)
+
+
+# A user has no record in WP database
+def fresh_user():
+    return True
+
+# A user only has record in `wp_users` table
+def wp_only_user():
+    return True
+
+# A user only has record in `wp_connections` table
+def connection_only_user():
+    return True
+
+
 # Routing
 
 # Default
 @app.route("/")
 def hello():
     if 'isAuthenticated' in session:
-        redirect_uri = url_for('register')
+        # If user has already registered, show profile page
+        # Otherwise only show the registration page
+        if session['isRegistered']:
+            redirect_uri = url_for('profile')
+        else:
+            redirect_uri = url_for('register')
         return redirect(redirect_uri)
     else:
         return render_template('login.html')
@@ -396,9 +459,7 @@ def login():
         transfer_token = token_response.by_resource_server['transfer.api.globus.org']['access_token']
 
         # Also get the user info (sub, email, name, preferred_username) using the AuthClient with the auth token
-        user_info = get_user_info(auth_token)
-
-        print(user_info)
+        user_info = get_globus_user_info(auth_token)
 
         # Store the resulting tokens in server session
         session['isAuthenticated'] = True
@@ -409,8 +470,14 @@ def login():
         session['nexus_token'] = nexus_token
         session['transfer_token'] = transfer_token
       
-        # Finally redirect back to the registeration page
-        return redirect(url_for('register'))
+        # Also check if the user is registered or not then show the corresponding page
+        if is_registered_user():
+            session['isRegistered'] = True
+        else:
+            session['isRegistered'] = False
+
+        # Finally redirect back to the home page default route
+        return redirect("/")
 
 @app.route('/logout')
 def logout():
@@ -441,217 +508,182 @@ def logout():
     # Redirect the user to the Globus Auth logout page
     return redirect(globus_logout_url)
 
-
+# Register is only for authenticated users who never registered
 @app.route("/register", methods=['GET', 'POST'])
 def register():
     if 'isAuthenticated' in session:
-        if request.method == 'POST':
-            # reCAPTCHA validation
-            # Use request.args.get() instead of request.form[''] since esponse' is not the form
-            recaptcha_response = request.args.get('g-recaptcha-response')
-            values = {
-                'secret': app.config['GOOGLE_RECAPTCHA_SECRET_KEY'],
-                'response': recaptcha_response
-            }
-            data = urllib.parse.urlencode(values).encode()
-            req = urllib.request.Request(app.config['GOOGLE_RECAPTCHA_VERIFY_URL'], data = data)
-            response = urllib.request.urlopen(req)
-            result = json.loads(response.read().decode())
-
-            # For testing only
-            result['success'] = True
-
-            # Currently no backend form validation
-            # Only front end validation and reCAPTCHA - Zhou
-            if result['success']:
-                # CSRF check
-                session_csrf_token = session.pop('csrf_token', None)
-
-                if not session_csrf_token or session_csrf_token != request.form['csrf_token']:
-                    context={
-                        'isAuthenticated': True,
-                        'username': session['name'],
-                        'status': 'danger',
-                        'message': 'Invalid CSRF token!'
-                    }
-                    return render_template('error.html', data = context)
-                else:
-                    new_user, img_to_upload = construct_user(request)
-
-                    # Send user info to web services API
-                    rspns = requests.post(app.config['FLASK_APP_BASE_URI'] + "/stage_user", files = {'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
-                    
-                    if rspns.ok:
-                        try:
-                            # Send email to admin for new user approval
-                            send_new_user_registration_mail(new_user)
-                        except Exception as e: 
-                            print(e)
-                            print("send email failed")
-                            pass
-                    context = {
-                        'isAuthenticated': True,
-                        'username': session['name'],
-                        'status': "success",
-                        'message': "Your registration has been submitted for approval.",
-                    }
-
-                    return render_template('confirmation.html', data = context)
-            # Show reCAPTCHA error
-            else:
-                context={
-                    'isAuthenticated': True,
-                    'username': session['name'],
-                    'status': 'danger',
-                    'message': 'reCAPTCHA error'
+        # Handle new user registration
+        if not session['isRegistered']:
+            if request.method == 'POST':
+                # reCAPTCHA validation
+                # Use request.args.get() instead of request.form[''] since esponse' is not the form
+                recaptcha_response = request.args.get('g-recaptcha-response')
+                values = {
+                    'secret': app.config['GOOGLE_RECAPTCHA_SECRET_KEY'],
+                    'response': recaptcha_response
                 }
-                return render_template('error.html', data = context)
-        # Handle GET
+                data = urllib.parse.urlencode(values).encode()
+                req = urllib.request.Request(app.config['GOOGLE_RECAPTCHA_VERIFY_URL'], data = data)
+                response = urllib.request.urlopen(req)
+                result = json.loads(response.read().decode())
+
+                # For testing only
+                result['success'] = True
+
+                # Currently no backend form validation
+                # Only front end validation and reCAPTCHA - Zhou
+                if result['success']:
+                    # CSRF check
+                    session_csrf_token = session.pop('csrf_token', None)
+
+                    if not session_csrf_token or session_csrf_token != request.form['csrf_token']:
+                        return show_error("Oops! Invalid CSRF token!")
+                    else:
+                        new_user, img_to_upload = construct_user(request)
+
+                        # Add user info to `stage_user` table for approval
+                        rspns = requests.post(app.config['FLASK_APP_BASE_URI'] + "/stage_user", files = {'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
+                        
+                        if rspns.ok:
+                            try:
+                                # Send email to admin for new user approval
+                                send_new_user_registration_mail(new_user)
+                            except Exception as e: 
+                                print(e)
+                                print("send email failed")
+                                pass
+                            
+                            # change session value
+                            session['isRegistered'] = True
+
+                            # Show confirmation
+                            return show_confirmation("Your registration has been submitted for approval. You'll get an email once it's approved or denied.")
+                # Show reCAPTCHA error
+                else:
+                    return show_error("Oops! reCAPTCHA error!")
+            # Handle GET
+            else:
+                # Fresh user means the user doesn't have any records in WP database
+                # Just show the registration form
+                if fresh_user():
+                    return show_registration_form()
+                # User only has record in `wp_users` table
+                # meaning this user has no profile info in `wp_connections` table
+                # Admin never added the user profile info there
+                elif wp_only_user():
+                    # Now we check if this user has "member" or "administrator" role
+                    if user_is_member():
+                        # show registration form
+                        return show_registration_form()
+                    else:
+                        # Tell the user that he needs to have a "member" role
+                        # The default role is "subscriber"
+                        return show_error("We found your account but the permission is not setup correctly.")
+                # User only has record in `wp_connections` table
+                # meaning the admin only added user profile info but the user never logged in via WP open ID connect
+                elif connection_only_user():
+                    return show_error("We found your profile but your don't have an account.")
+                # User has record in both `wp_users` and `wp_connections` tables, but not linked
+                else:
+                    return show_error("We found your account and profile but they are not linked.")
         else:
-            if user_is_member():
-                context = {
-                    'isAuthenticated': True,
-                    'username': session['name'],
-                    'status': 'info',
-                    'message': 'You are alreay a registered member, no need to reigster again.'
-                }
-
-                return render_template('info.html', data = context)
-            else:
-                if user_in_pending():
-                    context = {
-                        'isAuthenticated': True,
-                        'username': session['name'],
-                        'status': 'info',
-                        'message': 'You have already registered. We will notify you once your registration is approved. No need to reigster again.'
-                    }
-
-                    return render_template('info.html', data = context)
-                else:
-                    context = {
-                        'isAuthenticated': True,
-                        'username': session['name'],
-                        'csrf_token': generate_csrf_token(),
-                        'first_name': session['name'].split(" ")[0],
-                        'last_name': session['name'].split(" ")[1],
-                        'email': session['email'],
-                        'recaptcha_site_key': app.config['GOOGLE_RECAPTCHA_SITE_KEY']
-                    }
-
-                    return render_template('register.html', data = context)
+            return show_info("You've already submitted your registration, no need to register again.")
     else:
         return render_template('login.html')
 
+# Profile is only for authenticated users who has registered
 @app.route("/profile", methods=['GET', 'POST'])
 def profile():
     if 'isAuthenticated' in session:
-        if request.method == 'POST':
-            # CSRF check
-            session_csrf_token = session.pop('csrf_token', None)
+        if session['isRegistered']:
+            # Only show the profile form for approved users (registered user and not in pennding)
+            if not user_in_pending():
+                # Handle POST
+                if request.method == 'POST':
+                    # CSRF check
+                    session_csrf_token = session.pop('csrf_token', None)
+                    if not session_csrf_token or session_csrf_token != request.form['csrf_token']:
+                        return show_error("Oops! Invalid CSRF token!")
+                    else:
+                        new_user, img_to_upload = construct_user(request)
+                        wp_user_id = request.POST['wp_user_id']
 
-            if not session_csrf_token or session_csrf_token != request.form['csrf_token']:
-                context={
-                    'isAuthenticated': True,
-                    'username': session['name'],
-                    'status': 'danger',
-                    'message': 'Invalid CSRF token!'
-                }
-                return render_template('error.html', data = context)
-            else:
-                new_user, img_to_upload = construct_user(request)
-                wp_user_id = request.POST['wp_user_id']
+                        # Update user profile in database
+                        rspns = requests.put(app.config['FLASK_APP_BASE_URI'] + "/wp_user/" + wp_user_id, files={'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
+                        
+                        if rspns.ok:
+                            try:
+                                # Send email to admin for user profile update
+                                # so the admin can do furtuer changes in globus
+                                send_user_profile_update_mail(new_user)
+                            except Exception as e: 
+                                print(e)
+                                print("send email failed")
+                                pass
 
-                # Send user info to web services API for updating
-                rspns = requests.put(app.config['FLASK_APP_BASE_URI'] + "/wp_user/" + wp_user_id, files={'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
-                
-                if rspns.ok:
-                    try:
-                        # Send email to admin for user profile update
-                        send_user_profile_update_mail(new_user)
-                    except Exception as e: 
-                        print(e)
-                        print("send email failed")
-                        pass
-                context = {
-                    'isAuthenticated': True,
-                    'username': session['name'],
-                    'status': "success",
-                    'message': "Your profile information has been updated successfully.",
-                }
-
-                return render_template('confirmation.html', data = context)
-        else:
-            if user_is_member():
-                # Fetch user profile data
-                rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params = {'globus_user_id': session['globus_user_id']})
-                
-                if rspns.ok:
-                    wp_user = rspns.json()[0][0]
-
-                    # Parsing the json to get initial user profile data
-                    initial_data = {
-                        'first_name': wp_user['connection'][0]['first_name'],
-                        'last_name': wp_user['connection'][0]['last_name'],
-                        #'email': wp_user['connection'][0]['email'],
-                        'email': wp_user['user_email'],
-                        #'phone': loads(wp_user['connection'][0]['phone_numbers'].encode())[0][b'number'].decode(),
-                        'phone': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'phone'), {'meta_value': ''})['meta_value'],
-                        'component': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'component'), {'meta_value': ''})['meta_value'],
-                        'other_component': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_component'), {'meta_value': ''})['meta_value'],
-                        'organization': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'organization'), {'meta_value': ''})['meta_value'],
-                        'other_organization': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_organization'), {'meta_value': ''})['meta_value'],
-                        'role': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'role'), {'meta_value': ''})['meta_value'],
-                        'other_role': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_role'), {'meta_value': ''})['meta_value'],
-                        'working_group': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'working_group'), {'meta_value': ''})['meta_value'],
-                        'access_requests': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'access_requests'), {'meta_value': ''})['meta_value'],
-                        'google_email': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'google_email'), {'meta_value': ''})['meta_value'],
-                        'github_username': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'github_username'), {'meta_value': ''})['meta_value'],
-                        'slack_username': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'slack_username'), {'meta_value': ''})['meta_value'],
-                        'website': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'website'), {'meta_value': ''})['meta_value'],
-                        'expertise': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'expertise'), {'meta_value': ''})['meta_value'],
-                        'orcid': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'orcid'), {'meta_value': ''})['meta_value'],
-                        'pm': 'Yes' if next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm'), {'meta_value': ''})['meta_value'] == '1' else 'No',
-                        'pm_name': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm_name'), {'meta_value': ''})['meta_value'],
-                        'pm_email': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm_email'), {'meta_value': ''})['meta_value'],
-                    }
-
-                    pprint(initial_data)
-
-                    # Something wrong with the code below, error
-
-                    # if not initial_data['working_group'].strip() == '':
-                    #     initial_data['working_group'] = ast.literal_eval(initial_data['working_group'])
-                    # if not initial_data['access_requests'].strip() == '':
-                    #     initial_data['access_requests'] = ast.literal_eval(initial_data['access_requests'])
-
-                    context = {
-                        'isAuthenticated': True,
-                        'username': session['name'],
-                        'csrf_token': generate_csrf_token(),
-                        'wp_user_id': wp_user['id']
-                    }
-
-                    d = {**context, **initial_data}
-                    pprint(d)
-                    # Populate the user data in profile
-                    return render_template('profile.html', data = {**context, **initial_data})
+                            # Also notify the user
+                            return show_confirmation("Your profile information has been updated successfully. The admin will do any additional changes to your account is need.")
+                # Handle GET
                 else:
-                    context = {
-                        'isAuthenticated': True,
-                        'username': session['name'],
-                        'status': 'warning',
-                        'message': 'An unexpected error occurred while trying to load your profile.'
-                    }
-                    return render_template('error.html', data = context)
-            else:
-                context = {
-                    'isAuthenticated': True,
-                    'username': session['name'],
-                    'status': 'info',
-                    'message': 'Your registration is waiting for approval, at this moment you can not view your profile.'
-                }
+                    # Fetch user profile data
+                    rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params = {'globus_user_id': session['globus_user_id']})
+                    
+                    if rspns.ok:
+                        wp_user = rspns.json()[0][0]
 
-                return render_template('info.html', data = context)
+                        # Parsing the json to get initial user profile data
+                        initial_data = {
+                            'first_name': wp_user['connection'][0]['first_name'],
+                            'last_name': wp_user['connection'][0]['last_name'],
+                            #'email': wp_user['connection'][0]['email'],
+                            'email': wp_user['user_email'],
+                            #'phone': loads(wp_user['connection'][0]['phone_numbers'].encode())[0][b'number'].decode(),
+                            'phone': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'phone'), {'meta_value': ''})['meta_value'],
+                            'component': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'component'), {'meta_value': ''})['meta_value'],
+                            'other_component': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_component'), {'meta_value': ''})['meta_value'],
+                            'organization': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'organization'), {'meta_value': ''})['meta_value'],
+                            'other_organization': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_organization'), {'meta_value': ''})['meta_value'],
+                            'role': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'role'), {'meta_value': ''})['meta_value'],
+                            'other_role': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_role'), {'meta_value': ''})['meta_value'],
+                            'working_group': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'working_group'), {'meta_value': ''})['meta_value'],
+                            'access_requests': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'access_requests'), {'meta_value': ''})['meta_value'],
+                            'google_email': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'google_email'), {'meta_value': ''})['meta_value'],
+                            'github_username': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'github_username'), {'meta_value': ''})['meta_value'],
+                            'slack_username': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'slack_username'), {'meta_value': ''})['meta_value'],
+                            'website': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'website'), {'meta_value': ''})['meta_value'],
+                            'expertise': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'expertise'), {'meta_value': ''})['meta_value'],
+                            'orcid': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'orcid'), {'meta_value': ''})['meta_value'],
+                            'pm': 'Yes' if next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm'), {'meta_value': ''})['meta_value'] == '1' else 'No',
+                            'pm_name': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm_name'), {'meta_value': ''})['meta_value'],
+                            'pm_email': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm_email'), {'meta_value': ''})['meta_value'],
+                        }
+
+                        pprint(initial_data)
+
+                        # Something wrong with the code below, error
+
+                        # if not initial_data['working_group'].strip() == '':
+                        #     initial_data['working_group'] = ast.literal_eval(initial_data['working_group'])
+                        # if not initial_data['access_requests'].strip() == '':
+                        #     initial_data['access_requests'] = ast.literal_eval(initial_data['access_requests'])
+
+                        context = {
+                            'isAuthenticated': True,
+                            'username': session['name'],
+                            'csrf_token': generate_csrf_token(),
+                            'wp_user_id': wp_user['id']
+                        }
+
+                        d = {**context, **initial_data}
+                        pprint(d)
+                        # Populate the user data in profile
+                        return render_template('profile.html', data = {**context, **initial_data})
+                    else:
+                        return show_error("Sorry, the system failed to load your profile data.")
+            else:
+                return show_info("Your registration is waiting for approval, at this moment you can not view or update your profile.")
+        else:
+            return show_info("You need to register first before vierwing your profile data.")
     else:
         return render_template('login.html')
 
@@ -669,13 +701,7 @@ def match_user():
                 globus_user_id = request.args.get('globus_user_id')
                 
                 if not globus_user_id:
-                    context = {
-                        'isAuthenticated': True,
-                        'username': session['name'],
-                        'status': 'danger',
-                        'message': 'Incorrect URL query string, missing "globus_user_id"!'
-                    }
-                    return render_template('error.html', data = context)
+                    return show_error('Incorrect URL query string, missing "globus_user_id"!')
                 else:
                     rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params={'globus_user_id': globus_user_id, 'member': True})
                     # Parse the rspns to get user data to render
@@ -695,21 +721,9 @@ def match_user():
                             # TO-DO
                             print("TO-DO")
                     else:
-                        context = {
-                            'isAuthenticated': True,
-                            'username': session['name'],
-                            'status': 'danger',
-                            'message': 'This stage user does not exist.'
-                        }
-                        return render_template('error.html', data = context)
+                        return show_error("This stage user does not exist!")
         else:
-            context = {
-                'isAuthenticated': True,
-                'username': session['name'],
-                'status': 'danger',
-                'message': 'Access denied! You need to login as an admin user to access this page!'
-            }
-            return render_template('error.html', data = context)
+            return show_error("Access denied! You need to login as an admin user to access this page!")
     else:
         return render_template('login.html')
 
