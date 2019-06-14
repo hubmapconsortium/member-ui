@@ -364,14 +364,6 @@ def show_info(message):
 def approved_user():
     return False
 
-# A user has record in `wp_users` table
-def user_in_wp_users():
-    return True
-
-# A user has record in `wp_connections` table
-def user_in_wp_connections():
-    return True
-
 # Check if the user has the "member" or "administrator" role in wp database
 def user_is_member():
     rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params={'globus_user_id': session['globus_user_id']})
@@ -411,7 +403,6 @@ def user_in_pending():
             return False
     else:
         return False
-
 
 
 # Routing
@@ -555,28 +546,7 @@ def register():
                         return show_error("Oops! reCAPTCHA error!")
                 # Handle GET
                 else:
-                    # User only has record in `wp_users` table
-                    # meaning this user has no profile info in `wp_connections` table
-                    # Admin never added the user profile info there
-                    if user_in_wp_users() and not user_in_wp_connections():
-                        # Now we check if this user has "member" or "administrator" role
-                        if user_is_member():
-                            # show registration form
-                            return show_registration_form()
-                        else:
-                            # Tell the user that he needs to have a "member" role
-                            # The default role is "subscriber"
-                            return show_error("We found your user account but the permission is not setup correctly.")
-                    # User only has record in `wp_connections` table
-                    # meaning the admin only added user profile info but the user never logged in via WP open ID connect
-                    elif user_in_wp_connections() and not user_in_wp_users():
-                        return show_error("We found your profile but your don't have an user account setup.")
-                    # User has record in both `wp_users` and `wp_connections` tables, but not linked
-                    elif user_in_wp_users() and user_in_wp_connections():
-                        return show_error("We found your user account and profile but they are not linked.")
-                    # User not in neither tables
-                    else:
-                        return show_registration_form()
+                    return show_registration_form()
         else:
             return show_info("We've already approved your registration, no need to register again.")
     else:
@@ -670,7 +640,10 @@ def profile():
                 else:
                     return show_error("Sorry, the system failed to load your profile data.")
         else:
-            return show_info("You can't view your profile data at this moment.")
+            if user_in_pending():
+                return show_info("Your registration is pending for approval, you can view/update your profile once it's approved.")
+            else:
+                return show_info('You have not registered, please click <a href="/register">here</a> to registeration page.')
     else:
         return render_template('login.html')
 
