@@ -359,14 +359,11 @@ def show_info(message):
     return render_template('info.html', data = context)
 
 
-# Check if the user is already registered and approved
-# meaning this user is in `wp_users`, `wp_connections`, and `user_connection` tables
+# Check if the user is registered and approved
+# meaning this user is in `wp_users`, `wp_connections`, and `user_connection` tables and 
+# the user has the role of "member" or "administrator", the role is assigned when the user is approved
 # A use with a submitted registration but pending is not consodered to be an approved user
-def approved_user():
-    return False
-
-# Check if the user has the "member" or "administrator" role in wp database
-def user_is_member():
+def user_is_approved():
     rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params={'globus_user_id': session['globus_user_id']})
     if not rspns.ok:
         return False
@@ -379,7 +376,7 @@ def user_is_member():
     else:
         return False
 
-# Check if user has the "administrator" role in wp database
+# Check if user has the "administrator" role
 def user_is_admin():
     rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params={'globus_user_id': session['globus_user_id']})
     if not rspns.ok:
@@ -425,10 +422,10 @@ def login_required(f):
 def index():
 	# If user has already registered and approved, show profile page
 	# Otherwise show the registration form(if user has no pending record) or a message (if user in pending)
-	if approved_user():
+	if user_is_approved():
 	    return redirect(url_for('profile'))
 	else:
-	    # If approved_user() returns False, means this user is either a fresh new user or in pending 
+	    # If user_is_approved() returns False, means this user is either a fresh new user or in pending 
 	    return redirect(url_for('register'))
 
 
@@ -506,7 +503,7 @@ def logout():
 @login_required
 def register():
     # A not approved user can be a totally new user or user has a pending registration
-    if not approved_user():
+    if not user_is_approved():
         if user_in_pending():
             return show_confirmation("Your registration has been submitted for approval. You'll get an email once it's approved or denied.")
         else:
@@ -565,7 +562,7 @@ def register():
 @app.route("/profile", methods=['GET', 'POST'])
 @login_required
 def profile():
-    if approved_user():
+    if user_is_approved():
         # Handle POST
         if request.method == 'POST':
             # CSRF check
