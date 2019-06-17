@@ -558,7 +558,7 @@ def register():
             else:
                 return show_registration_form()
     else:
-        return show_info("You've already registered, you can click <a href="/profile">here</a> to view or update your user profile.")
+        return show_info('You have already registered, you can click <a href="/profile">here</a> to view or update your user profile.')
 
 
 # Profile is only for authenticated users who has an approved registration
