@@ -1,4 +1,4 @@
-from flask import Flask, g, request, jsonify, Response, render_template, session, redirect, url_for
+from flask import Flask, request, jsonify, Response, render_template, session, redirect, url_for
 from globus_sdk import AuthClient, AccessTokenAuthorizer, ConfidentialAppAuthClient
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
@@ -558,7 +558,7 @@ def register():
             else:
                 return show_registration_form()
     else:
-        return show_info("We've already approved your registration, no need to register again.")
+        return show_info("You've already registered, you can click <a href="/profile">here</a> to view or update your user profile.")
 
 
 # Profile is only for authenticated users who has an approved registration
@@ -652,7 +652,7 @@ def profile():
         if user_in_pending():
             return show_info("Your registration is pending for approval, you can view/update your profile once it's approved.")
         else:
-            return show_info('You have not registered, please click <a href="/register">here</a> to registeration page.')
+            return show_info('You have not registered, please click <a href="/register">here</a> to register.')
 
 
 # Only for admin
