@@ -390,18 +390,13 @@ def user_is_admin():
     else:
         return False
 
+
 # Check if the user registration is still pending for approval in `stage_user` table
 def user_in_pending():
-    rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/stage_user", params={'globus_user_id': session['globus_user_id']})
-    if rspns.ok:
-        stage_users = rspns.json()[0]
-        if len(stage_users) > 0:
-            return True
-        else:
-            return False
-    else:
-        return False
-
+    stage_user = StageUser.query.filter(StageUser.globus_user_id == session['globus_user_id'])
+    if stage_user.count() == 0:
+    	return False
+    return True
 
 # Login Required Decorator
 # To use the decorator, apply it as innermost decorator to a view function. 
