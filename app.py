@@ -372,7 +372,7 @@ def user_is_approved():
     user = result[0][0]
     pprint(user)
     meta_capability = next((meta for meta in user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
-    if ('meta_value' in meta_capability and ('member' in meta_capability['meta_value'] or 'administrator' in meta_capability['meta_value'])):
+    if (('meta_value' in meta_capability) and ('member' in meta_capability['meta_value'])):
         return True
     else:
         return False
@@ -387,7 +387,7 @@ def user_is_admin():
     user = result[0][0]
     pprint(user)
     meta_capability = next((meta for meta in user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
-    if ('meta_value' in meta_capability and ('administrator' in meta_capability['meta_value'])):
+    if (('meta_value' in meta_capability) and ('administrator' in meta_capability['meta_value'])):
         return True
     else:
         return False
@@ -452,13 +452,16 @@ def login_required(f):
 @app.route("/")
 @login_required
 def index():
-	# If user has already registered and approved, show profile page
-	# Otherwise show the registration form(if user has no pending record) or a message (if user in pending)
-	if user_is_approved():
-	    return redirect(url_for('profile'))
-	else:
-	    # If user_is_approved() returns False, means this user is either a fresh new user or in pending 
-	    return redirect(url_for('register'))
+    if user_is_admin():
+        return redirect(url_for('match_user'))
+    else:
+        # If user has already registered and approved, show profile page
+        # Otherwise show the registration form(if user has no pending record) or a message (if user in pending)
+        if user_is_approved():
+            return redirect(url_for('profile'))
+        else:
+            # If user_is_approved() returns False, means this user is either a fresh new user or in pending 
+            return redirect(url_for('register'))
 
 
 # Redirect users from react app login page to Globus auth login widget then redirect back
