@@ -363,39 +363,39 @@ def show_info(message):
 # meaning this user is in `wp_users`, `wp_connections`, and `user_connection` tables and 
 # the user has the role of "member" or "administrator", the role is assigned when the user is approved
 # A use with a submitted registration but pending is not consodered to be an approved user
-def user_is_approved():
-    user_meta = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == session['globus_user_id']).first()
+def user_is_approved(globus_user_id):
+    user_meta = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == globus_user_id).first()
     if not user_meta:
+        print('No user found with globus_user_id: ' + globus_user_id)
         return False
     users = [user_meta.user]
     result = wp_users_schema.dump(users)
     user = result[0][0]
-    pprint(user)
-    meta_capability = next((meta for meta in user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
-    if (('meta_value' in meta_capability) and ('member' in meta_capability['meta_value'])):
+    capabilities = next((meta for meta in user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
+    if (('meta_value' in capabilities) and ('member' in capabilities['meta_value'])):
         return True
     else:
         return False
 
 # Check if user has the "administrator" role
-def user_is_admin():
-    user_meta = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == session['globus_user_id']).first()
+def user_is_admin(globus_user_id):
+    user_meta = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == globus_user_id).first()
     if not user_meta:
+        print('No user found with globus_user_id: ' + globus_user_id)
         return False
     users = [user_meta.user]
     result = wp_users_schema.dump(users)
     user = result[0][0]
-    pprint(user)
-    meta_capability = next((meta for meta in user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
-    if (('meta_value' in meta_capability) and ('administrator' in meta_capability['meta_value'])):
+    capabilities = next((meta for meta in user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
+    if (('meta_value' in capabilities) and ('administrator' in capabilities['meta_value'])):
         return True
     else:
         return False
 
 
 # Check if the user registration is still pending for approval in `stage_user` table
-def user_in_pending():
-    stage_user = StageUser.query.filter(StageUser.globus_user_id == session['globus_user_id'])
+def user_in_pending(globus_user_id):
+    stage_user = StageUser.query.filter(StageUser.globus_user_id == globus_user_id)
     if stage_user.count() == 0:
     	return False
     return True
@@ -434,6 +434,17 @@ def add_new_stage_user(new_user, img_to_upload):
         except:
             print('Failed to add a new stage user')
 
+# Query the user data to populate into profile form
+def get_user_profile(globus_user_id):
+    user_meta = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == globus_user_id).first()
+    if not user_meta:
+        print('No user found with globus_user_id: ' + globus_user_id)
+        return False
+    users = [user_meta.user]
+    result = wp_users_schema.dump(users)
+    user = result[0][0]
+    
+    return user
 
 # Login Required Decorator
 # To use the decorator, apply it as innermost decorator to a view function. 
@@ -452,12 +463,12 @@ def login_required(f):
 @app.route("/")
 @login_required
 def index():
-    if user_is_admin():
+    if user_is_admin(session['globus_user_id']):
         return redirect(url_for('match_user'))
     else:
         # If user has already registered and approved, show profile page
         # Otherwise show the registration form(if user has no pending record) or a message (if user in pending)
-        if user_is_approved():
+        if user_is_approved(session['globus_user_id']):
             return redirect(url_for('profile'))
         else:
             # If user_is_approved() returns False, means this user is either a fresh new user or in pending 
@@ -538,8 +549,8 @@ def logout():
 @login_required
 def register():
     # A not approved user can be a totally new user or user has a pending registration
-    if not user_is_approved():
-        if user_in_pending():
+    if not user_is_approved(session['globus_user_id']):
+        if user_in_pending(session['globus_user_id']):
             return show_confirmation("Your registration has been submitted for approval. You'll get an email once it's approved or denied.")
         else:
             if request.method == 'POST':
@@ -574,10 +585,7 @@ def register():
                             add_new_stage_user(new_user, img_to_upload)
                         except:
                             print("Failed to add new stage user, something wrong with add_new_stage_user()")
-                        
 
-                        rspns = requests.post(app.config['FLASK_APP_BASE_URI'] + "/stage_user", files = {'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
-                        
                         # Send email to admin for new user approval
                         try:
                             send_new_user_registration_mail(new_user)
@@ -602,7 +610,7 @@ def register():
 @app.route("/profile", methods=['GET', 'POST'])
 @login_required
 def profile():
-    if user_is_approved():
+    if user_is_approved(session['globus_user_id']):
         # Handle POST
         if request.method == 'POST':
             # CSRF check
@@ -631,62 +639,57 @@ def profile():
         # Handle GET
         else:
             # Fetch user profile data
-            rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params = {'globus_user_id': session['globus_user_id']})
-            
-            if rspns.ok:
-                wp_user = rspns.json()[0][0]
+            wp_user = get_user_profile(session['globus_user_id'])
 
-                # Parsing the json to get initial user profile data
-                initial_data = {
-                    'first_name': wp_user['connection'][0]['first_name'],
-                    'last_name': wp_user['connection'][0]['last_name'],
-                    #'email': wp_user['connection'][0]['email'],
-                    'email': wp_user['user_email'],
-                    #'phone': loads(wp_user['connection'][0]['phone_numbers'].encode())[0][b'number'].decode(),
-                    'phone': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'phone'), {'meta_value': ''})['meta_value'],
-                    'component': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'component'), {'meta_value': ''})['meta_value'],
-                    'other_component': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_component'), {'meta_value': ''})['meta_value'],
-                    'organization': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'organization'), {'meta_value': ''})['meta_value'],
-                    'other_organization': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_organization'), {'meta_value': ''})['meta_value'],
-                    'role': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'role'), {'meta_value': ''})['meta_value'],
-                    'other_role': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_role'), {'meta_value': ''})['meta_value'],
-                    'working_group': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'working_group'), {'meta_value': ''})['meta_value'],
-                    'access_requests': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'access_requests'), {'meta_value': ''})['meta_value'],
-                    'google_email': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'google_email'), {'meta_value': ''})['meta_value'],
-                    'github_username': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'github_username'), {'meta_value': ''})['meta_value'],
-                    'slack_username': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'slack_username'), {'meta_value': ''})['meta_value'],
-                    'website': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'website'), {'meta_value': ''})['meta_value'],
-                    'expertise': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'expertise'), {'meta_value': ''})['meta_value'],
-                    'orcid': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'orcid'), {'meta_value': ''})['meta_value'],
-                    'pm': 'Yes' if next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm'), {'meta_value': ''})['meta_value'] == '1' else 'No',
-                    'pm_name': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm_name'), {'meta_value': ''})['meta_value'],
-                    'pm_email': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm_email'), {'meta_value': ''})['meta_value'],
-                }
+            # Parsing the json to get initial user profile data
+            initial_data = {
+                'first_name': wp_user['connection'][0]['first_name'],
+                'last_name': wp_user['connection'][0]['last_name'],
+                #'email': wp_user['connection'][0]['email'],
+                'email': wp_user['user_email'],
+                #'phone': loads(wp_user['connection'][0]['phone_numbers'].encode())[0][b'number'].decode(),
+                'phone': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'phone'), {'meta_value': ''})['meta_value'],
+                'component': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'component'), {'meta_value': ''})['meta_value'],
+                'other_component': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_component'), {'meta_value': ''})['meta_value'],
+                'organization': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'organization'), {'meta_value': ''})['meta_value'],
+                'other_organization': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_organization'), {'meta_value': ''})['meta_value'],
+                'role': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'role'), {'meta_value': ''})['meta_value'],
+                'other_role': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_role'), {'meta_value': ''})['meta_value'],
+                'working_group': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'working_group'), {'meta_value': ''})['meta_value'],
+                'access_requests': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'access_requests'), {'meta_value': ''})['meta_value'],
+                'google_email': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'google_email'), {'meta_value': ''})['meta_value'],
+                'github_username': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'github_username'), {'meta_value': ''})['meta_value'],
+                'slack_username': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'slack_username'), {'meta_value': ''})['meta_value'],
+                'website': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'website'), {'meta_value': ''})['meta_value'],
+                'expertise': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'expertise'), {'meta_value': ''})['meta_value'],
+                'orcid': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'orcid'), {'meta_value': ''})['meta_value'],
+                'pm': 'Yes' if next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm'), {'meta_value': ''})['meta_value'] == '1' else 'No',
+                'pm_name': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm_name'), {'meta_value': ''})['meta_value'],
+                'pm_email': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm_email'), {'meta_value': ''})['meta_value'],
+            }
 
-                pprint(initial_data)
+            pprint(initial_data)
 
-                # Something wrong with the code below, error
+            # Something wrong with the code below, error
 
-                # if not initial_data['working_group'].strip() == '':
-                #     initial_data['working_group'] = ast.literal_eval(initial_data['working_group'])
-                # if not initial_data['access_requests'].strip() == '':
-                #     initial_data['access_requests'] = ast.literal_eval(initial_data['access_requests'])
+            # if not initial_data['working_group'].strip() == '':
+            #     initial_data['working_group'] = ast.literal_eval(initial_data['working_group'])
+            # if not initial_data['access_requests'].strip() == '':
+            #     initial_data['access_requests'] = ast.literal_eval(initial_data['access_requests'])
 
-                context = {
-                    'isAuthenticated': True,
-                    'username': session['name'],
-                    'csrf_token': generate_csrf_token(),
-                    'wp_user_id': wp_user['id']
-                }
+            context = {
+                'isAuthenticated': True,
+                'username': session['name'],
+                'csrf_token': generate_csrf_token(),
+                'wp_user_id': wp_user['id']
+            }
 
-                d = {**context, **initial_data}
-                pprint(d)
-                # Populate the user data in profile
-                return render_template('profile.html', data = {**context, **initial_data})
-            else:
-                return show_error("Sorry, the system failed to load your profile data.")
+            d = {**context, **initial_data}
+            pprint(d)
+            # Populate the user data in profile
+            return render_template('profile.html', data = {**context, **initial_data})
     else:
-        if user_in_pending():
+        if user_in_pending(session['globus_user_id']):
             return show_info("Your registration is pending for approval, you can view/update your profile once it's approved.")
         else:
             return show_info('You have not registered, please click <a href="/register">here</a> to register.')
@@ -696,7 +699,7 @@ def profile():
 @app.route("/match_user", methods=['GET', 'POST'])
 @login_required
 def match_user():
-    if user_is_admin():
+    if user_is_admin(session['globus_user_id']):
         if request.method == 'POST':
             # TO-DO
             print("POST")
