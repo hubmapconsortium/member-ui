@@ -106,7 +106,7 @@ class StageUser(db.Model):
         except e:
             raise e
 
-# StageUser Schema
+# Define output format with marshmallow schema
 class StageUserSchema(ma.Schema):
     class Meta:
         fields = ('id', 'globus_user_id', 'email', 'first_name', 'last_name', 'component', 'other_component', 'organization', 'other_organization',
@@ -364,28 +364,30 @@ def show_info(message):
 # the user has the role of "member" or "administrator", the role is assigned when the user is approved
 # A use with a submitted registration but pending is not consodered to be an approved user
 def user_is_approved():
-    rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params={'globus_user_id': session['globus_user_id']})
-    if not rspns.ok:
+    user_meta = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == session['globus_user_id']).first()
+    if not user_meta:
         return False
-    wp_users = rspns.json()[0]
-    first_wp_user = wp_users[0]
-    meta_capability = next((meta for meta in first_wp_user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
-    if ('meta_value' in meta_capability and 
-            ('member' in meta_capability['meta_value'] or 'administrator' in meta_capability['meta_value'])):
+    users = [user_meta.user]
+    result = wp_users_schema.dump(users)
+    user = result[0][0]
+    pprint(user)
+    meta_capability = next((meta for meta in user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
+    if ('meta_value' in meta_capability and ('member' in meta_capability['meta_value'] or 'administrator' in meta_capability['meta_value'])):
         return True
     else:
         return False
 
 # Check if user has the "administrator" role
 def user_is_admin():
-    rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params={'globus_user_id': session['globus_user_id']})
-    if not rspns.ok:
+    user_meta = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == session['globus_user_id']).first()
+    if not user_meta:
         return False
-    wp_users = rspns.json()[0]
-    first_wp_user = wp_users[0]
-    meta_capability = next((meta for meta in first_wp_user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
-    if ('meta_value' in meta_capability and 
-            ('administrator' in meta_capability['meta_value'])):
+    users = [user_meta.user]
+    result = wp_users_schema.dump(users)
+    user = result[0][0]
+    pprint(user)
+    meta_capability = next((meta for meta in user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
+    if ('meta_value' in meta_capability and ('administrator' in meta_capability['meta_value'])):
         return True
     else:
         return False
@@ -397,6 +399,41 @@ def user_in_pending():
     if stage_user.count() == 0:
     	return False
     return True
+
+# Add new user reigstration to `stage_user` table
+def add_new_stage_user(new_user, img_to_upload):
+    # Add user profile image data
+    if not img_to_upload:
+        BASE = os.path.dirname(os.path.abspath(__file__))
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{new_user['globus_user_id']}.jpg"))
+        copy2(os.path.join(BASE, 'avatar/', 'noname.jpg'), save_path)
+        new_user['photo'] = save_path
+    else:
+        if new_user['photo_url'] != '':
+            response = requests.get(new_user['photo_url'])
+            img_file = Image.open(BytesIO(response.content))
+            extension = img_file.format
+        else:
+            _, extension = img_to_upload.filename.rsplit('.', 1)
+            img_file = img_to_upload
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{new_user['globus_user_id']}.{extension}"))
+        img_file.save(save_path)
+        new_user['photo'] = save_path
+    
+    try:
+        new_stage_user = StageUser(new_user)
+    except:
+        print('User data is not valid')
+    
+    if StageUser.query.filter(StageUser.globus_user_id == new_stage_user.globus_user_id).first():
+        print('The same stage user exists')
+    else:
+        try:
+            db.session.add(new_stage_user)
+            db.session.commit()
+        except:
+            print('Failed to add a new stage user')
+
 
 # Login Required Decorator
 # To use the decorator, apply it as innermost decorator to a view function. 
@@ -530,19 +567,24 @@ def register():
                         new_user, img_to_upload = construct_user(request)
 
                         # Add user info to `stage_user` table for approval
+                        try:
+                            add_new_stage_user(new_user, img_to_upload)
+                        except:
+                            print("Failed to add new stage user, something wrong with add_new_stage_user()")
+                        
+
                         rspns = requests.post(app.config['FLASK_APP_BASE_URI'] + "/stage_user", files = {'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
                         
-                        if rspns.ok:
-                            try:
-                                # Send email to admin for new user approval
-                                send_new_user_registration_mail(new_user)
-                            except Exception as e: 
-                                print(e)
-                                print("send email failed")
-                                pass
+                        # Send email to admin for new user approval
+                        try:
+                            send_new_user_registration_mail(new_user)
+                        except Exception as e: 
+                            print(e)
+                            print("send email failed")
+                            pass
 
-                            # Show confirmation
-                            return show_confirmation("Your registration has been submitted for approval. You'll get an email once it's approved or denied.")
+                        # Show confirmation
+                        return show_confirmation("Your registration has been submitted for approval. You'll get an email once it's approved or denied.")
                 # Show reCAPTCHA error
                 else:
                     return show_error("Oops! reCAPTCHA error!")
