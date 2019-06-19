@@ -19,7 +19,7 @@
   <tbody>
   	{% for stage_user in data.stage_users %}
 	<tr>
-      <th scope="row"><a href="{{ config['FLASK_APP_BASE_URI'] }}/admin/{{ stage_user.globus_user_id }}">{{ loop.index }}</a></th>
+      <th scope="row"><a href="{{ config['FLASK_APP_BASE_URI'] }}/registrations/{{ stage_user.globus_user_id }}">{{ loop.index }}</a></th>
       <td>{{ stage_user.first_name }}</td>
       <td>{{ stage_user.last_name }}</td>
       <td>{{ stage_user.email }}</td>

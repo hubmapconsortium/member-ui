@@ -224,28 +224,30 @@ connections_schema = ConnectionSchema(many=True, strict=True)
 
 
 # Send email confirmation of new user registration to admins
-def send_new_user_registration_mail(data):
+def send_new_user_registered_mail(data):
     msg = Message('New user registration submitted', app.config['MAIL_ADMIN_LIST'])
-    msg.html = render_template('email/new_user_registration_email.html', data = data)
+    msg.html = render_template('email/new_user_registered_email.html', data = data)
     mail.send(msg)
 
 # Send email to admins once user profile updated
-def send_user_profile_update_mail(data):
+def send_user_profile_updated_mail(data):
     msg = Message('User profile updated', app.config['MAIL_ADMIN_LIST'])
-    msg.html = render_template('email/user_profile_update_email.html', data = data)
+    msg.html = render_template('email/user_profile_updated_email.html', data = data)
     mail.send(msg)
 
 # Once admin approves the new user registration, email the new user as well as the admins
-def send_new_user_approval_mail(recipient, data):
+def send_new_user_approved_mail(recipient, data):
     msg = Message('New user registration approved', [recipient] + app.config['MAIL_ADMIN_LIST'])
-    msg.html = render_template('email/new_user_approval_email.html', data = data)
+    msg.html = render_template('email/new_user_approved_email.html', data = data)
     mail.send(msg)
 
 # Send user email once registration is denied
-def send_new_user_approval_mail(recipient, data):
+def send_new_user_denied_mail(recipient, data):
     msg = Message('New user registration denied', [recipient] + app.config['MAIL_ADMIN_LIST'])
     msg.html = render_template('email/new_user_denied_email.html', data = data)
     mail.send(msg)
+
+
 
 # Get user info from globus with the auth access token
 def get_globus_user_info(token):
@@ -534,7 +536,7 @@ def login_required(f):
 @login_required
 def index():
     if user_is_admin(session['globus_user_id']):
-        return redirect(url_for('admin'))
+        return redirect(url_for('registrations'))
     else:
         # If user has already registered and approved, show profile page
         # Otherwise show the registration form(if user has no pending record) or a message (if user in pending)
@@ -658,7 +660,7 @@ def register():
 
                         # Send email to admin for new user approval
                         try:
-                            send_new_user_registration_mail(new_user)
+                            send_new_user_registered_mail(new_user)
                         except Exception as e: 
                             print(e)
                             print("send email failed")
@@ -767,10 +769,10 @@ def profile():
 # Only for admin to see a list of pending new registrations
 # Currently only handle approve and deny actions
 # globus_user_id is optional
-@app.route("/admin", defaults={'globus_user_id': None}, methods=['GET'])
-@app.route("/admin/<globus_user_id>", methods=['GET'])
+@app.route("/registrations/", defaults={'globus_user_id': None}, methods=['GET']) # need the trailing slash
+@app.route("/registrations/<globus_user_id>", methods=['GET'])
 @login_required
-def admin(globus_user_id):
+def registrations(globus_user_id):
     if user_is_admin(session['globus_user_id']):
         # Show a list of pending registrations if globus_user_id not present
         if not globus_user_id:
@@ -798,6 +800,56 @@ def admin(globus_user_id):
                 return render_template('individual_pending_registration.html', data = context)
     else:
         return show_error("Access denied! You need to login as an admin user to access this page!")
+
+# Approve a registration
+@app.route("/approve/<globus_user_id>", methods=['GET'])
+@login_required
+def approve(globus_user_id):
+    if user_is_admin(session['globus_user_id']):
+        # Show the individual pending registration
+        stage_user = get_stage_user(globus_user_id)
+
+        if not stage_user:
+            return show_error("This stage user does not exist!")
+        else:
+            approve_stage_user(globus_user_id)
+            # Send email
+            data = {
+                'first_name': stage_user.first_name,
+                'last_name': stage_user.last_name
+            }
+            send_new_user_approved_mail(stage_user.email, data = data)
+            return show_info("The registration has been approved successfully!")
+    else:
+        return show_error("Access denied! You need to login as an admin user to access this page!")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # APIs, will need to be converted into internal functions later
