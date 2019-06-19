@@ -798,7 +798,7 @@ def registrations(globus_user_id):
 @login_required
 def approve(globus_user_id):
     if user_is_admin(session['globus_user_id']):
-        # Show the individual pending registration
+        # Check if there's a pending registration for the given globus user id
         stage_user = get_stage_user(globus_user_id)
 
         if not stage_user:
@@ -812,6 +812,28 @@ def approve(globus_user_id):
             }
             send_new_user_approved_mail(stage_user.email, data = data)
             return show_info("The registration has been approved successfully!")
+    else:
+        return show_error("Access denied! You need to login as an admin user to access this page!")
+
+# Deny a registration
+@app.route("/deny/<globus_user_id>", methods=['GET'])
+@login_required
+def deny(globus_user_id):
+    if user_is_admin(session['globus_user_id']):
+        # Check if there's a pending registration for the given globus user id
+        stage_user = get_stage_user(globus_user_id)
+
+        if not stage_user:
+            return show_error("This stage user does not exist!")
+        else:
+            deny_stage_user(globus_user_id)
+            # Send email
+            data = {
+                'first_name': stage_user.first_name,
+                'last_name': stage_user.last_name
+            }
+            send_new_user_denied_mail(stage_user.email, data = data)
+            return show_info("The registration has been denied!")
     else:
         return show_error("Access denied! You need to login as an admin user to access this page!")
 
