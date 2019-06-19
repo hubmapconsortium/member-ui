@@ -485,11 +485,10 @@ def update_user_profile(j_user, img, id):
 # also add the ids to the `user_connection` table
 def approve_stage_user(globus_user_id):
     stage_user = get_stage_user(globus_user_id)
-    connection = Connection.query.get(connection_id) if connection_id else None
-
+    pprint(stage_user)
     try:
         new_wp_user = WPUser()
-        assign_wp_user(new_wp_user, stage_user, connection)
+        assign_wp_user(new_wp_user, stage_user, None)
         db.session.add(new_wp_user)
         db.session.delete(stage_user)
         db.session.commit()
@@ -538,14 +537,7 @@ def index():
     if user_is_admin(session['globus_user_id']):
         return redirect(url_for('registrations'))
     else:
-        # If user has already registered and approved, show profile page
-        # Otherwise show the registration form(if user has no pending record) or a message (if user in pending)
-        if user_is_approved(session['globus_user_id']):
-            return redirect(url_for('profile'))
-        else:
-            # If user_is_approved() returns False, means this user is either a fresh new user or in pending 
-            return redirect(url_for('register'))
-
+        return redirect(url_for('register'))
 
 # Redirect users from react app login page to Globus auth login widget then redirect back
 @app.route('/login')
@@ -1091,7 +1083,7 @@ def generate_password():
 
 def assign_wp_user(wp_user, user_obj, connection=None, mode='CREATE'):
     # First get the id of admin user in `wp_usermeta` table
-    admin_id = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == globus_user_id).first().user_id
+    admin_id = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == session['globus_user_id']).first().user_id
 
     wp_user.user_login = user_obj.email
     wp_user.user_email = user_obj.email
@@ -1119,9 +1111,11 @@ def assign_wp_user(wp_user, user_obj, connection=None, mode='CREATE'):
 
     if not user_obj.photo == '':
         photo_file_name = user_obj.photo.split('/')[-1]
-        pathlib.Path(app.config.get('CONNECTION_IMAGE_PATH') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() ).mkdir(parents=True, exist_ok=True)
-        copyfile(user_obj.photo, app.config.get('CONNECTION_IMAGE_PATH') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() + "/" + photo_file_name)
+        # Disable for now
+        #pathlib.Path(app.config.get('CONNECTION_IMAGE_PATH') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() ).mkdir(parents=True, exist_ok=True)
+        #copyfile(user_obj.photo, app.config.get('CONNECTION_IMAGE_PATH') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() + "/" + photo_file_name)
         connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config.get('CONNECTION_IMAGE_PATH') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() + "\\/" + photo_file_name + "\",\"url\": \"" + app.config.get('CONNECTION_IMAGE_URL') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() + "\\/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image\\/jpeg\",\"type\":2}}}}"
+
     connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(user_obj.phone)}:\"{user_obj.phone}\";}}}}"
     
     access_requests = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'access_requests'), '[]') if mode.upper() == 'EDIT' else '[]'
