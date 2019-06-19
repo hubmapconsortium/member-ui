@@ -336,30 +336,54 @@ def show_registration_form():
     return render_template('register.html', data = context)
 
 # Three different types of message for authenticated users
-def show_error(message):
+def show_user_error(message):
     context = {
         'isAuthenticated': True,
         'username': session['name'],
         'message': message
     }
-    return render_template('error.html', data = context)
+    return render_template('user_message/user_error.html', data = context)
 
-def show_confirmation(message):
+def show_user_confirmation(message):
     context = {
         'isAuthenticated': True,
         'username': session['name'],
         'message': message
     }
-    return render_template('confirmation.html', data = context)
+    return render_template('user_message/user_confirmation.html', data = context)
 
-def show_info(message):
+def show_user_info(message):
     context = {
         'isAuthenticated': True,
         'username': session['name'],
         'message': message
     }
-    return render_template('info.html', data = context)
+    return render_template('user_message/user_info.html', data = context)
 
+# Admin messages
+def show_admin_error(message):
+    context = {
+        'isAuthenticated': True,
+        'username': session['name'],
+        'message': message
+    }
+    return render_template('admin_message/admin_error.html', data = context)
+
+def show_admin_confirmation(message):
+    context = {
+        'isAuthenticated': True,
+        'username': session['name'],
+        'message': message
+    }
+    return render_template('admin_message/admin_confirmation.html', data = context)
+
+def show_admin_info(message):
+    context = {
+        'isAuthenticated': True,
+        'username': session['name'],
+        'message': message
+    }
+    return render_template('admin_message/admin_info.html', data = context)
 
 # Check if the user is registered and approved
 # meaning this user is in `wp_users`, `wp_connections`, and `user_connection` tables and 
@@ -791,7 +815,7 @@ def register():
     # A not approved user can be a totally new user or user has a pending registration
     if not user_is_approved(session['globus_user_id']):
         if user_in_pending(session['globus_user_id']):
-            return show_confirmation("Your registration has been submitted for approval. You'll get an email once it's approved or denied.")
+            return show_user_confirmation("Your registration has been submitted for approval. You'll get an email once it's approved or denied.")
         else:
             if request.method == 'POST':
                 # reCAPTCHA validation
@@ -816,7 +840,7 @@ def register():
                     session_csrf_token = session.pop('csrf_token', None)
 
                     if not session_csrf_token or session_csrf_token != request.form['csrf_token']:
-                        return show_error("Oops! Invalid CSRF token!")
+                        return show_user_error("Oops! Invalid CSRF token!")
                     else:
                         new_user, img_to_upload = construct_user(request)
 
@@ -835,15 +859,15 @@ def register():
                             pass
 
                         # Show confirmation
-                        return show_confirmation("Your registration has been submitted for approval. You'll get an email once it's approved or denied.")
+                        return show_user_confirmation("Your registration has been submitted for approval. You'll get an email once it's approved or denied.")
                 # Show reCAPTCHA error
                 else:
-                    return show_error("Oops! reCAPTCHA error!")
+                    return show_user_error("Oops! reCAPTCHA error!")
             # Handle GET
             else:
                 return show_registration_form()
     else:
-        return show_info('You have already registered, you can click <a href="/profile">here</a> to view or update your user profile.')
+        return show_user_info('You have already registered, you can click <a href="/profile">here</a> to view or update your user profile.')
 
 
 # Profile is only for authenticated users who has an approved registration
@@ -856,7 +880,7 @@ def profile():
             # CSRF check
             session_csrf_token = session.pop('csrf_token', None)
             if not session_csrf_token or session_csrf_token != request.form['csrf_token']:
-                return show_error("Oops! Invalid CSRF token!")
+                return show_user_error("Oops! Invalid CSRF token!")
             else:
                 new_user, img_to_upload = construct_user(request)
                 wp_user_id = request.POST['wp_user_id']
@@ -874,7 +898,7 @@ def profile():
                     pass
 
                     # Also notify the user
-                    return show_confirmation("Your profile information has been updated successfully. The admin will do any additional changes to your account is need.")
+                    return show_user_confirmation("Your profile information has been updated successfully. The admin will do any additional changes to your account is need.")
         # Handle GET
         else:
             # Fetch user profile data
@@ -929,9 +953,9 @@ def profile():
             return render_template('profile.html', data = {**context, **initial_data})
     else:
         if user_in_pending(session['globus_user_id']):
-            return show_info("Your registration is pending for approval, you can view/update your profile once it's approved.")
+            return show_user_info("Your registration is pending for approval, you can view/update your profile once it's approved.")
         else:
-            return show_info('You have not registered, please click <a href="/register">here</a> to register.')
+            return show_user_info('You have not registered, please click <a href="/register">here</a> to register.')
 
 
 # Only for admin to see a list of pending new registrations
@@ -957,7 +981,7 @@ def registrations(globus_user_id):
             stage_user = get_stage_user(globus_user_id)
 
             if not stage_user:
-                return show_error("This stage user does not exist!")
+                return show_admin_error("This stage user does not exist!")
             else:
                 context = {
                     'isAuthenticated': True,
@@ -967,7 +991,7 @@ def registrations(globus_user_id):
 
                 return render_template('individual_pending_registration.html', data = context)
     else:
-        return show_error("Access denied! You need to login as an admin user to access this page!")
+        return show_admin_error("Access denied! You need to login as an admin user to access this page!")
 
 # Approve a registration
 @app.route("/approve/<globus_user_id>", methods=['GET'])
@@ -978,7 +1002,7 @@ def approve(globus_user_id):
         stage_user = get_stage_user(globus_user_id)
 
         if not stage_user:
-            return show_error("This stage user does not exist!")
+            return show_admin_error("This stage user does not exist!")
         else:
             approve_stage_user(globus_user_id)
             # Send email
@@ -987,9 +1011,9 @@ def approve(globus_user_id):
                 'last_name': stage_user.last_name
             }
             send_new_user_approved_mail(stage_user.email, data = data)
-            return show_info("This registration has been approved successfully!")
+            return show_admin_info("This registration has been approved successfully!")
     else:
-        return show_error("Access denied! You need to login as an admin user to access this page!")
+        return show_admin_error("Access denied! You need to login as an admin user to access this page!")
 
 # Deny a registration
 @app.route("/deny/<globus_user_id>", methods=['GET'])
@@ -1000,10 +1024,10 @@ def deny(globus_user_id):
         stage_user = get_stage_user(globus_user_id)
 
         if not stage_user:
-            return show_error("This stage user does not exist!")
+            return show_admin_error("This stage user does not exist!")
         else:
             if stage_user.deny:
-                return show_info("This registration has already been denied!")
+                return show_admin_info("This registration has already been denied!")
             else:
                 deny_stage_user(globus_user_id)
                 # Send email
@@ -1012,9 +1036,9 @@ def deny(globus_user_id):
                     'last_name': stage_user.last_name
                 }
                 send_new_user_denied_mail(stage_user.email, data = data)
-                return show_info("This registration has been denied!")
+                return show_admin_info("This registration has been denied!")
     else:
-        return show_error("Access denied! You need to login as an admin user to access this page!")
+        return show_user_error("Access denied! You need to login as an admin user to access this page!")
 
 
 
