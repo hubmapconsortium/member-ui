@@ -446,7 +446,7 @@ def get_user_profile(globus_user_id):
     
     return user
 
-
+# TO-DO
 def update_user_profile(j_user, img, id):
     """
     Match a wp user to a existing user if id present
@@ -479,7 +479,7 @@ def update_user_profile(j_user, img, id):
 
     print('User profile updated successfully')
 
-# Approving  by moving user data from `stage_user` into `wp_user`` and `wp_connections`
+# Approving by moving user data from `stage_user` into `wp_user`` and `wp_connections`
 # also add the ids to the `user_connection` table
 def approve_stage_user(stage_user_id):
     stage_user = StageUser.query.get(stage_user_id)
@@ -507,7 +507,7 @@ def deny_stage_user(stage_user_id):
 
 # Get a list of all the pending registrations
 def get_all_stage_users():
-    stage_users = StageUser.order_by(StageUser.created_at).all()
+    stage_users = StageUser.query.order_by(StageUser.created_at).all()
     return stage_users
 
 # Get a stage user new registration by a given globus_user_id
@@ -534,7 +534,7 @@ def login_required(f):
 @login_required
 def index():
     if user_is_admin(session['globus_user_id']):
-        return redirect(url_for('match_user'))
+        return redirect(url_for('admin'))
     else:
         # If user has already registered and approved, show profile page
         # Otherwise show the registration form(if user has no pending record) or a message (if user in pending)
@@ -766,6 +766,8 @@ def profile():
 
 # Only for admin to see a list of pending new registrations
 # Currently only handle approve and deny actions
+# globus_user_id is optional
+@app.route("/admin", defaults={'globus_user_id': None}, methods=['GET'])
 @app.route("/admin/<globus_user_id>", methods=['GET'])
 @login_required
 def admin(globus_user_id):
@@ -1035,7 +1037,8 @@ def generate_password():
     return "".join(random.sample(s, passlen))
 
 def assign_wp_user(wp_user, user_obj, connection=None, mode='CREATE'):
-    admin_id = WPUser.query.filter(WPUser.user_login == app.config.get('ADMIN_USERNAME')).first().id
+    # First get the id of admin user in `wp_usermeta` table
+    admin_id = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == globus_user_id).first().user_id
 
     wp_user.user_login = user_obj.email
     wp_user.user_email = user_obj.email
