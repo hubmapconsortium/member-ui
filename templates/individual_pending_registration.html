@@ -1,0 +1,16 @@
+{% extends "layouts/main_layout.html" %}
+{% block content %}
+
+<h1>Admin: HuBMAP Pending New Registration For {{ data.globus_user_id }}</h1>
+
+First name: {{ data.stage_user.first_name}}
+<br />
+
+Last name: {{ data.stage_user.last_name }}
+<br />
+
+Organization: {{ data.stage_user.email }}
+<br />
+
+
+{% endblock %}

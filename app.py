@@ -479,6 +479,43 @@ def update_user_profile(j_user, img, id):
 
     print('User profile updated successfully')
 
+# Approving  by moving user data from `stage_user` into `wp_user`` and `wp_connections`
+# also add the ids to the `user_connection` table
+def approve_stage_user(stage_user_id):
+    stage_user = StageUser.query.get(stage_user_id)
+    connection = Connection.query.get(connection_id) if connection_id else None
+
+    try:
+        new_wp_user = WPUser()
+        assign_wp_user(new_wp_user, stage_user, connection)
+        db.session.add(new_wp_user)
+        db.session.delete(stage_user)
+        db.session.commit()
+    except Exception as e:
+        print(e)
+        print("Exception in user code:")
+        print("-"*60)
+        traceback.print_exc(file=sys.stdout)
+        print("-"*60)
+        print('Database opertations failed during approving sage user')
+
+# Deny the new user registration
+def deny_stage_user(stage_user_id):
+    stage_user = StageUser.query.get(stage_user_id)
+    stage_user.deny = True
+    db.session.commit()
+
+# Get a list of all the pending registrations
+def get_all_stage_users():
+    stage_users = StageUser.order_by(StageUser.created_at).all()
+    return stage_users
+
+# Get a stage user new registration by a given globus_user_id
+def get_stage_user(stage_user_id):
+    stage_user = StageUser.query.get(stage_user_id)
+    return stage_user
+
+
 # Login Required Decorator
 # To use the decorator, apply it as innermost decorator to a view function. 
 # When applying further decorators, always remember that the route() decorator is the outermost.
@@ -727,40 +764,35 @@ def profile():
             return show_info('You have not registered, please click <a href="/register">here</a> to register.')
 
 
-# Only for admin
-@app.route("/match_user", methods=['GET', 'POST'])
+# Only for admin to see a list of pending new registrations
+# Currently only handle approve and deny actions
+@app.route("/admin/<globus_user_id>", methods=['GET'])
 @login_required
-def match_user():
+def admin(globus_user_id):
     if user_is_admin(session['globus_user_id']):
-        if request.method == 'POST':
-            # TO-DO
-            print("POST")
-        else:
-            # This is the globus_user_id in the query string, not the logged in user's globus user id in session
-            globus_user_id = request.args.get('globus_user_id')
-            
-            if not globus_user_id:
-                return show_error('Incorrect URL query string, missing "globus_user_id"!')
-            else:
-                rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "/wp_user", params={'globus_user_id': globus_user_id, 'member': True})
-                # Parse the rspns to get user data to render
-                wp_users = None
-                if rspns.ok:
-                    wp_users = json.loads(rspns.text)[0]
-                    if wp_users and len(wp_users) >= 0:
-                        # user is a member already
-                        context = {
-                            'isAuthenticated': True,
-                            'username': session['name'],
-                            'wp_user': wp_users[0],
-                        }
+        # Show a list of pending registrations if globus_user_id not present
+        if not globus_user_id:
+            stage_users = get_all_stage_users()
+            context = {
+                'isAuthenticated': True,
+                'username': session['name'],
+                'stage_users': stage_users
+            }
 
-                        return render_template('match_user.html', data = context)
-                    else:
-                        # TO-DO
-                        print("TO-DO")
-                else:
-                    return show_error("This stage user does not exist!")
+            return render_template('all_pending_registrations.html', data = context)
+        else:
+            stage_user = get_stage_user(globus_user_id)
+
+            if not stage_user:
+                return show_error("This stage user does not exist!")
+            else:
+                context = {
+                    'isAuthenticated': True,
+                    'username': session['name'],
+                    'stage_user': stage_user
+                }
+
+                return render_template('individual_pending_registration.html', data = context)
     else:
         return show_error("Access denied! You need to login as an admin user to access this page!")
 
