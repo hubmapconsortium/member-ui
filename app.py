@@ -481,8 +481,8 @@ def update_user_profile(j_user, img, id):
 
 # Approving by moving user data from `stage_user` into `wp_user`` and `wp_connections`
 # also add the ids to the `user_connection` table
-def approve_stage_user(stage_user_id):
-    stage_user = StageUser.query.get(stage_user_id)
+def approve_stage_user(globus_user_id):
+    stage_user = get_stage_user(globus_user_id)
     connection = Connection.query.get(connection_id) if connection_id else None
 
     try:
@@ -500,8 +500,8 @@ def approve_stage_user(stage_user_id):
         print('Database opertations failed during approving sage user')
 
 # Deny the new user registration
-def deny_stage_user(stage_user_id):
-    stage_user = StageUser.query.get(stage_user_id)
+def deny_stage_user(globus_user_id):
+    stage_user = get_stage_user(globus_user_id)
     stage_user.deny = True
     db.session.commit()
 
@@ -511,8 +511,8 @@ def get_all_stage_users():
     return stage_users
 
 # Get a stage user new registration by a given globus_user_id
-def get_stage_user(stage_user_id):
-    stage_user = StageUser.query.get(stage_user_id)
+def get_stage_user(globus_user_id):
+    stage_user = StageUser.query.filter(StageUser.globus_user_id == globus_user_id).first()
     return stage_user
 
 
@@ -783,6 +783,7 @@ def admin(globus_user_id):
 
             return render_template('all_pending_registrations.html', data = context)
         else:
+            # Show the individual pending registration
             stage_user = get_stage_user(globus_user_id)
 
             if not stage_user:

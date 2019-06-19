@@ -1,16 +1,49 @@
 {% extends "layouts/main_layout.html" %}
 {% block content %}
 
-<h1>Admin: HuBMAP Pending New Registration For {{ data.globus_user_id }}</h1>
+<h1>HuBMAP New Registration: {{ data.stage_user.first_name }} {{ data.stage_user.last_name }}</h1>
 
-First name: {{ data.stage_user.first_name}}
+First name: {{ data.stage_user.first_name }} <br />
+Last name: {{ data.stage_user.last_name }} <br />
+Email: {{ data.stage_user.email }} <br />
+
+Component: {{ data.stage_user.component }} <br />
+Organization: {{ data.stage_user.organization }} <br />
+Role: {{ data.stage_user.role }}<br />
+
+<br />
+Working group(s): <br />
+{{ data.stage_user.working_group }}<br />
+
+<br />
+HuBMAP service(s) access requested:<br />
+{{ data.stage_user.access_requests }}<br />
+
 <br />
 
-Last name: {{ data.stage_user.last_name }}
-<br />
+{% if 'HuBMAP Google Drive Share' in data.stage_user.access_requests %}
+Google account for HuBMAP Google Drive Share: {{ data.stage_user.google_email }} <br />
+{% endif %}
 
-Organization: {{ data.stage_user.email }}
-<br />
+{% if 'HuBMAP GitHub Repository' in data.stage_user.access_requests %}
+Github username: {{ data.stage_user.github_username }} <br />
+{% endif %}
 
+{% if 'HuBMAP Slack Workspace' in data.stage_user.access_requests %}
+Email for HuBMAP Slack Workspace: {{ data.stage_user.slack_username }} <br />
+{% endif %}
+
+<br />
+{% if data.stage_user.pm %}
+The user would like the following project manager to be copied on all communications: <br />
+Name: {{ data.stage_user.pm_name }} <br />
+Email: {{ data.stage_user.pm_email }} <br />
+{% else %}
+No project manager for this user
+{% endif %}
+<br /><br />
+
+<button type="button" class="btn btn-success btn-lg">Approve</button>
+<button type="button" class="btn btn-danger btn-lg">Deny</button>
 
 {% endblock %}
