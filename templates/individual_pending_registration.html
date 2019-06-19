@@ -1,7 +1,14 @@
 {% extends "layouts/main_layout.html" %}
 {% block content %}
 
-<h1>HuBMAP New Registration: {{ data.stage_user.first_name }} {{ data.stage_user.last_name }}</h1>
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ config['FLASK_APP_BASE_URI'] }}/registrations">Registrations</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ 'Denied' if data.stage_user.deny else 'New' }} Registration: {{ data.stage_user.first_name }} {{ data.stage_user.last_name }}</li>
+  </ol>
+</nav>
+
+<h1>{{ 'Denied' if data.stage_user.deny else 'New' }} Registration: {{ data.stage_user.first_name }} {{ data.stage_user.last_name }}</h1>
 
 First name: {{ data.stage_user.first_name }} <br />
 Last name: {{ data.stage_user.last_name }} <br />
@@ -44,6 +51,9 @@ No project manager for this user
 <br /><br />
 
 <a href="{{ config['FLASK_APP_BASE_URI'] }}/approve/{{ data.stage_user.globus_user_id }}" class="btn btn-success btn-lg">Approve</a>
+
+{% if not data.stage_user.deny %}
 <a href="{{ config['FLASK_APP_BASE_URI'] }}/deny/{{ data.stage_user.globus_user_id }}" class="btn btn-danger btn-lg">Deny</a>
+{% endif %}
 
 {% endblock %}
