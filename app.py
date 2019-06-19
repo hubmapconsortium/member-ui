@@ -446,6 +446,39 @@ def get_user_profile(globus_user_id):
     
     return user
 
+
+def update_user_profile(j_user, img, id):
+    """
+    Match a wp user to a existing user if id present
+    Create a new user if id not present
+    """
+    wp_user = WPUser.query.get(id)
+
+    if not j_user['photo_url'] == '':
+        response = requests.get(j_user['photo_url'])
+        img_file = Image.open(BytesIO(response.content))
+        extension = img_file.format
+    else:
+        _, extension = img.filename.rsplit('.', 1)
+        img_file = img
+    save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{j_user['globus_user_id']}.{extension}"))
+    img_file.save(save_path)
+    j_user['photo'] = save_path
+    
+    try:
+        stage_user = StageUser(j_user)
+        assign_wp_user(wp_user, stage_user, wp_user.connection[0], 'EDIT')
+        db.session.commit()
+    except Exception as e:
+        print(e)
+        print("Exception in user code:")
+        print("-"*60)
+        traceback.print_exc(file=sys.stdout)
+        print("-"*60)
+        print('Failed to update user profile')
+
+    print('User profile updated successfully')
+
 # Login Required Decorator
 # To use the decorator, apply it as innermost decorator to a view function. 
 # When applying further decorators, always remember that the route() decorator is the outermost.
@@ -622,17 +655,16 @@ def profile():
                 wp_user_id = request.POST['wp_user_id']
 
                 # Update user profile in database
-                rspns = requests.put(app.config['FLASK_APP_BASE_URI'] + "/wp_user/" + wp_user_id, files={'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
-                
-                if rspns.ok:
-                    try:
-                        # Send email to admin for user profile update
-                        # so the admin can do furtuer changes in globus
-                        send_user_profile_update_mail(new_user)
-                    except Exception as e: 
-                        print(e)
-                        print("send email failed")
-                        pass
+                update_user_profile(new_user, img_to_upload, wp_user_id)
+
+                try:
+                    # Send email to admin for user profile update
+                    # so the admin can do furtuer changes in globus
+                    send_user_profile_update_mail(new_user)
+                except Exception as e: 
+                    print(e)
+                    print("Failed to send user profile update email to admin.")
+                    pass
 
                     # Also notify the user
                     return show_confirmation("Your profile information has been updated successfully. The admin will do any additional changes to your account is need.")
