@@ -43,7 +43,7 @@ No project manager for this user
 {% endif %}
 <br /><br />
 
-<button type="button" class="btn btn-success btn-lg">Approve</button>
-<button type="button" class="btn btn-danger btn-lg">Deny</button>
+<a href="{{ config['FLASK_APP_BASE_URI'] }}/approve/{{ data.stage_user.globus_user_id }}" class="btn btn-success btn-lg">Approve</a>
+<a href="{{ config['FLASK_APP_BASE_URI'] }}/deny/{{ data.stage_user.globus_user_id }}" class="btn btn-danger btn-lg">Deny</a>
 
 {% endblock %}
