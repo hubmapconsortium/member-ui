@@ -985,7 +985,7 @@ def registrations(globus_user_id):
             'stage_users': stage_users
         }
 
-        return render_template('all_pending_registrations.html', data = context)
+        return render_template('all_registrations.html', data = context)
     else:
         # Show the individual pending registration
         stage_user = get_stage_user(globus_user_id)
@@ -999,7 +999,7 @@ def registrations(globus_user_id):
                 'stage_user': stage_user
             }
 
-            return render_template('individual_pending_registration.html', data = context)
+            return render_template('individual_registration.html', data = context)
 
 # Approve a registration
 @app.route("/approve/<globus_user_id>", methods=['GET'])

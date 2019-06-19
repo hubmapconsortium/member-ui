@@ -3,7 +3,7 @@
 
 <nav aria-label="breadcrumb">
   <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="{{ config['FLASK_APP_BASE_URI'] }}/registrations">Registrations</a></li>
+    <li class="breadcrumb-item"><a href="{{ config['FLASK_APP_BASE_URI'] }}/registrations">All Registrations</a></li>
     <li class="breadcrumb-item active" aria-current="page">{{ 'Denied' if data.stage_user.deny else 'New' }} Registration: {{ data.stage_user.first_name }} {{ data.stage_user.last_name }}</li>
   </ol>
 </nav>
