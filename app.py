@@ -584,8 +584,11 @@ def get_matching_profiles(last_name, first_name, email, organization):
             
             # Ditch the profile that has matching score <= first_name_match_score
             if profile.score > first_name_match_score:
+                # Deserialize the email value to a python dict
+                deserilized_email_dict = phpserialize.loads(profile.email.encode('utf-8'), decode_strings=True)
+                # Add another new property for display only
+                profile.deserilized_email = (deserilized_email_dict[0])['address']
                 filtered_profiles.append(profile)
-
 
     print("========after scoring=========")
     pprint(vars(profiles_list[0]))
