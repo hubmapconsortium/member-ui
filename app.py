@@ -549,7 +549,7 @@ def get_matching_profiles(last_name, first_name, organization):
     
     # Now merge the above lists into one big list
     profiles = profiles_by_last_name + profiles_by_first_name + profiles_by_organization
-    
+
     # Return a list of matching profiles or an empty list if no match
     if len(profiles) > 0:
         return profiles
@@ -841,7 +841,13 @@ def register():
     # A not approved user can be a totally new user or user has a pending registration
     if not user_is_approved(session['globus_user_id']):
         if user_in_pending(session['globus_user_id']):
-            return show_user_confirmation("Your registration has been submitted for approval. You'll get an email once it's approved or denied.")
+            # Check if this pening registration has been denied
+            stage_user = get_stage_user(session['globus_user_id'])
+            # Note: stage_user.deny stores 1 or 0 in database
+            if not stage_user.deny:
+                return show_user_info("Your registration has been submitted for approval. You'll get an email once it's approved or denied.")
+            else:
+                return show_user_info("Sorry, your registration has been denied.")
         else:
             if request.method == 'POST':
                 # reCAPTCHA validation
@@ -979,7 +985,12 @@ def profile():
             return render_template('profile.html', data = {**context, **initial_data})
     else:
         if user_in_pending(session['globus_user_id']):
-            return show_user_info("Your registration is pending for approval, you can view/update your profile once it's approved.")
+            # Check if this pening registration has been denied
+            stage_user = get_stage_user(session['globus_user_id'])
+            if not stage_user.deny:
+                return show_user_info("Your registration is pending for approval, you can view/update your profile once it's approved.")
+            else:
+                return show_user_info("Sorry, you don't have a profile because your registration has been denied.")
         else:
             return show_user_info('You have not registered, please click <a href="/register">here</a> to register.')
 
