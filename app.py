@@ -1070,6 +1070,9 @@ def registrations(globus_user_id):
                 'isAuthenticated': True,
                 'username': session['name'],
                 'stage_user': stage_user,
+                # Need to convert string representation of list to Python list
+                'working_group_list': ast.literal_eval(stage_user.working_group),
+                'access_requests_list': ast.literal_eval(stage_user.access_requests),
                 'matching_profiles': matching_profiles
             }
 

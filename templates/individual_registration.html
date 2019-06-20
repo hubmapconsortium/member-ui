@@ -20,11 +20,19 @@ Role: {{ data.stage_user.role }}<br />
 
 <br />
 Working group(s): <br />
-{{ data.stage_user.working_group }}<br />
+<ul>
+{% for grp in data.working_group_list %} 
+<li>{{ grp }} </li>
+{% endfor %}
+</ul>
 
 <br />
-HuBMAP service(s) access requested:<br />
-{{ data.stage_user.access_requests }}<br />
+HuBMAP service(s) access requested: <br />
+<ul>
+{% for req in data.access_requests_list %}
+<li>{{ req }} </li>
+{% endfor %}
+</ul>
 
 <br />
 
