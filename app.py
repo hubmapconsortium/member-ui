@@ -540,7 +540,23 @@ def get_stage_user(globus_user_id):
     stage_user = StageUser.query.filter(StageUser.globus_user_id == globus_user_id).first()
     return stage_user
 
+# Find the matching profiles of a given user from the `wp_connections` table
+def get_matching_profiles(last_name, first_name, organization):
+    # Use user email to search for matching profiles
+    profiles_by_last_name = Connection.query.filter(Connection.email.like(f'%{last_name}%')).all()
+    profiles_by_first_name = Connection.query.filter(Connection.email.like(f'%{first_name}%')).all()
+    profiles_by_organization = Connection.query.filter(Connection.email.like(f'%{organization}%')).all()
+    
+    # Now merge the above lists into one big list
+    profiles = profiles_by_last_name + profiles_by_first_name + profiles_by_organization
+    
+    # Return a list of matching profiles or an empty list if no match
+    if len(profiles) > 0:
+        return profiles
+    else:
+        return list()
 
+    
 def generate_password():
     s = "abcdefghijklmnopqrstuvwxyz01234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()?"
     passlen = 16
@@ -993,10 +1009,14 @@ def registrations(globus_user_id):
         if not stage_user:
             return show_admin_error("This stage user does not exist!")
         else:
+            # Check if there's any matching profiles in the `wp_connections` found
+            matching_profiles = get_matching_profiles(stage_user.last_name, stage_user.first_name, stage_user.organization)
+            pprint(vars(matching_profiles[0]))
             context = {
                 'isAuthenticated': True,
                 'username': session['name'],
-                'stage_user': stage_user
+                'stage_user': stage_user,
+                'matching_profiles': matching_profiles
             }
 
             return render_template('individual_registration.html', data = context)

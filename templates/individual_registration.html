@@ -50,6 +50,36 @@ No project manager for this user
 {% endif %}
 <br /><br />
 
+
+{% if data.matching_profiles|length > 0 %}
+<table class="table table-sm">
+  <thead>
+    <tr>
+      <th scope="col">#</th>
+      <th scope="col">First</th>
+      <th scope="col">Last</th>
+      <th scope="col">Email</th>
+      <th scope="col">Organization</th>
+    </tr>
+  </thead>
+  <tbody>
+	{% for profile in data.matching_profiles %}
+	<tr>
+      <th scope="row">1</th>
+      <td>{{ profile.first_name }}</td>
+      <td>{{ profile.last_name }}</td>
+      <td>{{ profile.email }}</td>
+      <td>{{ profile.organization }}</td>
+    </tr>
+	{% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="alert alert-info" role="alert">
+No matching profiles found from `wp_connections` table.
+</div>
+{% endif %}
+
 <a href="{{ config['FLASK_APP_BASE_URI'] }}/approve/{{ data.stage_user.globus_user_id }}" class="btn btn-success btn-lg">Approve</a>
 
 {% if not data.stage_user.deny %}
