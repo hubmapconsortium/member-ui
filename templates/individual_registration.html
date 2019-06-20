@@ -52,6 +52,18 @@ No project manager for this user
 
 
 {% if data.matching_profiles|length > 0 %}
+<div class="alert alert-info" role="alert">
+Matching profiles found from `wp_connections` table and sorted by the total matching score. Scoring:
+<ul>
+<li>last name match: 6</li>
+<li>first name: 4</li>
+<li>email match: 10</li>
+<li>organization match: 2</li>
+</ul>
+
+The following results only show total score that is greater than the first name match score (4).
+
+</div>
 <table class="table table-sm">
   <thead>
     <tr>
@@ -60,16 +72,18 @@ No project manager for this user
       <th scope="col">Last</th>
       <th scope="col">Email</th>
       <th scope="col">Organization</th>
+      <th scope="col">Match Score</th>
     </tr>
   </thead>
   <tbody>
 	{% for profile in data.matching_profiles %}
 	<tr>
-      <th scope="row">1</th>
+      <th scope="row">{{ loop.index }}</th>
       <td>{{ profile.first_name }}</td>
       <td>{{ profile.last_name }}</td>
       <td>{{ profile.email }}</td>
       <td>{{ profile.organization }}</td>
+      <td>{{ profile.score }}</td>
     </tr>
 	{% endfor %}
   </tbody>

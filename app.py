@@ -3,7 +3,7 @@ from globus_sdk import AuthClient, AccessTokenAuthorizer, ConfidentialAppAuthCli
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from werkzeug import secure_filename
-from phpserialize import dumps
+import phpserialize
 import json
 import os
 import random
@@ -22,9 +22,10 @@ import requests
 import string
 import random
 from flask_mail import Mail, Message
-from pprint import pprint
-from phpserialize import *
 from functools import wraps
+
+# For debugging
+from pprint import pprint
 
 
 # Init app and use the config from instance folder
@@ -541,20 +542,59 @@ def get_stage_user(globus_user_id):
     return stage_user
 
 # Find the matching profiles of a given user from the `wp_connections` table
-def get_matching_profiles(last_name, first_name, organization):
-    # Use user email to search for matching profiles
-    profiles_by_last_name = Connection.query.filter(Connection.email.like(f'%{last_name}%')).all()
-    profiles_by_first_name = Connection.query.filter(Connection.email.like(f'%{first_name}%')).all()
-    profiles_by_organization = Connection.query.filter(Connection.email.like(f'%{organization}%')).all()
-    
-    # Now merge the above lists into one big list
-    profiles = profiles_by_last_name + profiles_by_first_name + profiles_by_organization
+# Scoring: last_name(6), first_name(4), email(10), organization(2)
+def get_matching_profiles(last_name, first_name, email, organization):
+    last_name_match_score = 6
+    first_name_match_score = 4
+    email_match_score = 10
+    organization_match_score = 2
 
-    # Return a list of matching profiles or an empty list if no match
-    if len(profiles) > 0:
-        return profiles
-    else:
-        return list()
+    # Use user email to search for matching profiles
+    profiles_by_last_name = Connection.query.filter(Connection.last_name.like(f'%{last_name}%')).all()
+    profiles_by_first_name = Connection.query.filter(Connection.first_name.like(f'%{first_name}%')).all()
+    profiles_by_email = Connection.query.filter(Connection.email.like(f'%{email}%')).all()
+    profiles_by_organization = Connection.query.filter(Connection.organization.like(f'%{organization}%')).all()
+    
+    # Now merge the above lists into one big list and pass into a set to remove duplicates
+    profiles_set = set(profiles_by_last_name + profiles_by_first_name + profiles_by_email + profiles_by_organization)
+    # convert back to a list for sorting later
+    profiles_list = list(profiles_set)
+    print("========before scoring=========")
+    pprint(vars(profiles_list[0]))
+
+    filtered_profiles = list()
+    if len(profiles_list) > 0:
+        for profile in profiles_list:
+            # Add a new aroperty
+            profile.score = 0
+
+            # See if the target profile can be found in each search resulting list
+            # then add up the corresponding score
+            if profile in profiles_by_last_name:
+                profile.score = profile.score + last_name_match_score
+
+            if profile in profiles_by_first_name:
+                profile.score = profile.score + first_name_match_score
+
+            if profile in profiles_by_email:
+                profile.score = profile.score + email_match_score
+
+            if profile in profiles_by_organization:
+                profile.score = profile.score + organization_match_score
+            
+            # Ditch the profile that has matching score <= first_name_match_score
+            if profile.score > first_name_match_score:
+                filtered_profiles.append(profile)
+
+
+    print("========after scoring=========")
+    pprint(vars(profiles_list[0]))
+
+    # Sort the filtered results by scoring
+    profiles = sorted(filtered_profiles, key=lambda x: x.score, reverse=True)
+    pprint(profiles)
+    # Return a set of sorted matching profiles by score or an empty set if no match
+    return profiles
 
     
 def generate_password():
@@ -942,7 +982,7 @@ def profile():
                 'last_name': wp_user['connection'][0]['last_name'],
                 #'email': wp_user['connection'][0]['email'],
                 'email': wp_user['user_email'],
-                #'phone': loads(wp_user['connection'][0]['phone_numbers'].encode())[0][b'number'].decode(),
+                #'phone': phpserialize.loads(wp_user['connection'][0]['phone_numbers'].encode())[0][b'number'].decode(),
                 'phone': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'phone'), {'meta_value': ''})['meta_value'],
                 'component': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'component'), {'meta_value': ''})['meta_value'],
                 'other_component': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_component'), {'meta_value': ''})['meta_value'],
@@ -1021,8 +1061,8 @@ def registrations(globus_user_id):
             return show_admin_error("This stage user does not exist!")
         else:
             # Check if there's any matching profiles in the `wp_connections` found
-            matching_profiles = get_matching_profiles(stage_user.last_name, stage_user.first_name, stage_user.organization)
-            pprint(vars(matching_profiles[0]))
+            matching_profiles = get_matching_profiles(stage_user.last_name, stage_user.first_name, stage_user.email, stage_user.organization)
+            #pprint(vars(list(matching_profiles)[0]))
             context = {
                 'isAuthenticated': True,
                 'username': session['name'],
