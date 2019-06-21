@@ -133,7 +133,7 @@ The following results only show total score that is greater than the first name 
       <td>{{ profile.deserilized_email }}</td>
       <td>{{ profile.organization }}</td>
       <td>{{ profile.score }}</td>
-      <td><a href="{{ config['FLASK_APP_BASE_URI'] }}/approve/{{ data.stage_user.globus_user_id }}" class="btn btn-success btn-sm">Approve by using this profile</a></td>
+      <td><a href="{{ config['FLASK_APP_BASE_URI'] }}/match/{{ data.stage_user.globus_user_id }}/{{ profile.id }}" class="btn btn-success btn-sm">Approve by using this profile</a></td>
     </tr>
 	{% endfor %}
   </tbody>

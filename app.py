@@ -506,7 +506,7 @@ def update_user_profile(j_user, img, id):
 
     print('User profile updated successfully')
 
-# Approving by moving user data from `stage_user` into `wp_user`` and `wp_connections`
+# Approving by moving user data from `stage_user` into `wp_user` and `wp_connections`
 # also add the ids to the `user_connection` table
 def approve_stage_user(globus_user_id):
     stage_user = get_stage_user(globus_user_id)
@@ -529,6 +529,12 @@ def approve_stage_user(globus_user_id):
 def deny_stage_user(globus_user_id):
     stage_user = get_stage_user(globus_user_id)
     stage_user.deny = True
+    db.session.commit()
+
+# If approved by using an exisiting matching profile, we'll remove the stage user record
+def remove_stage_user(globus_user_id):
+    stage_user = get_stage_user(globus_user_id)
+    db.session.delete(stage_user)
     db.session.commit()
 
 # Get a list of all the pending registrations
@@ -599,6 +605,10 @@ def get_matching_profiles(last_name, first_name, email, organization):
     # Return a set of sorted matching profiles by score or an empty set if no match
     return profiles
 
+# Get profile from `wp_connections` for a given connection ID
+def get_connection_profile(connection_id):
+    connection_profile = Connection.query.filter(Connection.id == connection_id).first()
+    return connection_profile
     
 def generate_password():
     s = "abcdefghijklmnopqrstuvwxyz01234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()?"
@@ -1122,6 +1132,33 @@ def deny(globus_user_id):
             return show_admin_info("This registration has been denied!")
 
 
+# Approve a registration by using an exisiting matching profile
+@app.route("/match/<globus_user_id>/<connection_id>", methods=['GET'])
+@login_required
+@admin_required
+def match(globus_user_id, connection_id):
+    # Check if there's a pending registration for the given globus user id
+    stage_user = get_stage_user(globus_user_id)
+    if not stage_user:
+        return show_admin_error("This stage user does not exist!")
+
+    # Check if there's a connection profile for the given connection id
+    connection_profile = get_connection_profile(connection_id)
+    if not connection_profile:
+        return show_admin_error("This connection profile does not exist!")
+
+    # TO-DO
+    # Will need to link the exisiting profile to wp_user
+
+    # Then remove the stage user record
+    remove_stage_user(globus_user_id)
+    # Send email
+    data = {
+        'first_name': stage_user.first_name,
+        'last_name': stage_user.last_name
+    }
+    send_new_user_approved_mail(stage_user.email, data = data)
+    return show_admin_info("This registration has been approved successfully by using an exisiting mathcing profile!")
 
 
 
