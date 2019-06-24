@@ -506,24 +506,26 @@ def update_user_profile(j_user, img, id):
 
     print('User profile updated successfully')
 
+# This is user approval without using existing mathicng profile
 # Approving by moving user data from `stage_user` into `wp_user` and `wp_connections`
 # also add the ids to the `user_connection` table
 def approve_stage_user(globus_user_id):
     stage_user = get_stage_user(globus_user_id)
     pprint(stage_user)
-    try:
+
+    # Also need to check if there's an exisiting wp_user record with the same globus id
+    wp_user = get_wp_user(globus_user_id)
+
+    if not wp_user:
         new_wp_user = WPUser()
         assign_wp_user(new_wp_user, stage_user, None)
         db.session.add(new_wp_user)
         db.session.delete(stage_user)
         db.session.commit()
-    except Exception as e:
-        print(e)
-        print("Exception in user code:")
-        print("-"*60)
-        traceback.print_exc(file=sys.stdout)
-        print("-"*60)
-        print('Database opertations failed during approving sage user')
+    else:
+        assign_wp_user(wp_user, stage_user, None)
+        db.session.delete(stage_user)
+        db.session.commit()
 
 # Deny the new user registration
 def deny_stage_user(globus_user_id):
@@ -546,6 +548,12 @@ def get_all_stage_users():
 def get_stage_user(globus_user_id):
     stage_user = StageUser.query.filter(StageUser.globus_user_id == globus_user_id).first()
     return stage_user
+
+# Get the exisiting user from `wp_users` table by looking for the globus id in `wp_usermeta` table
+def get_wp_user(globus_user_id):
+    wp_user_meta = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == globus_user_id).first()
+    wp_user = WPUser.query.filter(id == wp_user_meta.user_id).first()
+    return wp_user
 
 # Find the matching profiles of a given user from the `wp_connections` table
 # Scoring: last_name(6), first_name(4), email(10), organization(2)
