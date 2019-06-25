@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, Response, render_template, session, redirect, url_for
+from flask import Flask, request, jsonify, Response, render_template, session, redirect, url_for, escape
 from globus_sdk import AuthClient, AccessTokenAuthorizer, ConfidentialAppAuthClient
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
@@ -285,18 +285,18 @@ def construct_user(request):
         "role": request.form['role'],
         "other_role": request.form['other_role'],
         # multiple checkboxes
-        "working_group": request.form.getlist('working_group'),
+        "working_group": escape(request.form.getlist('working_group')),
         "photo": '',
         "photo_url": request.form['photo_url'],
         # multiple checkboxes
-        "access_requests": ['Collaboration Portal'] + request.form.getlist('access_requests'),
+        "access_requests": ['Collaboration Portal'] + escape(request.form.getlist('access_requests')),
         "google_email": request.form['google_email'],
         "github_username": request.form['github_username'],
         "slack_username": request.form['slack_username'],
         "website": request.form['website'],
-        "expertise": request.form['expertise'],
+        "expertise": escape(request.form['expertise']),
         "orcid": request.form['orcid'],
-        "pm": get_pm_selection(request.form),
+        "pm": get_pm_selection(request.form['pm']),
         "pm_name": request.form['pm_name'],
         "pm_email": request.form['pm_email']
     }
@@ -306,8 +306,9 @@ def construct_user(request):
     return new_user, img_to_upload
 
 
-def get_pm_selection(form):
-    value = form.get('pm', '')
+def get_pm_selection(value):
+    # Make comparison case insensitive
+    value = value.lower()
     if value == 'yes':
         return True
     elif value == 'no':
@@ -1132,7 +1133,7 @@ def profile():
         else:
             # Fetch user profile data
             wp_user = get_user_profile(session['globus_user_id'])
-
+            pprint(wp_user['connection'][0]['metas'] )
             # Parsing the json to get initial user profile data
             initial_data = {
                 'first_name': wp_user['connection'][0]['first_name'],
@@ -1160,12 +1161,9 @@ def profile():
                 'pm_email': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm_email'), {'meta_value': ''})['meta_value'],
             }
 
-            pprint(initial_data)
-
-            # Something wrong with the code below, error
-
-            # if not initial_data['working_group'].strip() == '':
-            #     initial_data['working_group'] = ast.literal_eval(initial_data['working_group'])
+            # Convert string representation to dict
+            if not initial_data['working_group'].strip() == '':
+                initial_data['working_group'] = ast.literal_eval(initial_data['working_group'])
             # if not initial_data['access_requests'].strip() == '':
             #     initial_data['access_requests'] = ast.literal_eval(initial_data['access_requests'])
 
@@ -1175,11 +1173,12 @@ def profile():
                 'csrf_token': generate_csrf_token(),
                 'wp_user_id': wp_user['id']
             }
-
-            d = {**context, **initial_data}
-            pprint(d)
+            
+            # Merge initial_data and context as one dict 
+            data = {**context, **initial_data}
+            pprint(data)
             # Populate the user data in profile
-            return render_template('profile.html', data = {**context, **initial_data})
+            return render_template('profile.html', data = data)
     else:
         if user_in_pending(session['globus_user_id']):
             # Check if this pening registration has been denied
