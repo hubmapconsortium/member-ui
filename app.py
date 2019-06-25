@@ -41,6 +41,15 @@ db = SQLAlchemy(app)
 # Init MA
 ma = Marshmallow(app)
 
+# User Connection mapping table
+class Mapping(db.Model):
+    __tablename__ = 'user_connection'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('wp_users.id'), nullable=False)
+    connection_id = db.Column(db.Integer, db.ForeignKey('wp_connections.id'), nullable=False)
+    
+
 connects = db.Table('user_connection',
         db.Column('user_id', db.Integer, db.ForeignKey('wp_users.id')),
         db.Column('connection_id', db.Integer, db.ForeignKey('wp_connections.id'))
@@ -467,11 +476,10 @@ def get_user_profile(globus_user_id):
     user_meta = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == globus_user_id).first()
     if not user_meta:
         print('No user found with globus_user_id: ' + globus_user_id)
-        return False
+        return None
     users = [user_meta.user]
     result = wp_users_schema.dump(users)
     user = result[0][0]
-    
     return user
 
 # TO-DO
@@ -550,7 +558,13 @@ def approve_stage_user_by_editing_matched(stage_user, connection_profile):
             # Edit profile in `wp_connections`
             edit_matched_connection(stage_user, new_wp_user, connection_profile)
 
+            # Add mapping to `user_connection` table
+            mapping = Mapping()
+            mapping.user_id = new_wp_user.id
+            mapping.connection_id = connection_profile.id
+
             db.session.add(new_wp_user)
+            db.session.add(mapping)
             db.session.delete(stage_user)
             db.session.commit()
         except Exception as e:
@@ -762,9 +776,9 @@ def edit_matched_connection(stage_user, wp_user, connection):
     
     # TO-DO: add new record to `wp_connections_email` and `wp_connections_phone` then get the id and update `wp_connections` email/phone fields
     # Currectly hard-coded id
-    #connection.email = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:2199;s:4:\"type\";s:4:\"work\";s:4:\"name\";s:10:\"Work Email\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:7:\"address\";s:{len(stage_user.email)}:\"{stage_user.email}\";}}}}"
+    connection.email = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:2199;s:4:\"type\";s:4:\"work\";s:4:\"name\";s:10:\"Work Email\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:7:\"address\";s:{len(stage_user.email)}:\"{stage_user.email}\";}}}}"
     # Currectly hard-coded id
-    #connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(stage_user.phone)}:\"{stage_user.phone}\";}}}}"
+    connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(stage_user.phone)}:\"{stage_user.phone}\";}}}}"
     
     connection.first_name = stage_user.first_name
     connection.last_name = stage_user.last_name
@@ -1140,6 +1154,8 @@ def profile():
         else:
             # Fetch user profile data
             wp_user = get_user_profile(session['globus_user_id'])
+
+
             pprint(wp_user['connection'][0]['metas'] )
             # Parsing the json to get initial user profile data
             initial_data = {
