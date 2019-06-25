@@ -554,6 +554,7 @@ def create_new_user(stage_user):
     new_wp_user = WPUser()
     new_wp_user.user_login = stage_user.email
     new_wp_user.user_email = stage_user.email
+    new_wp_user.user_pass = generate_password()
 
     # Create new usermeta for "member" role
     meta_capabilities = WPUserMeta()
@@ -569,8 +570,15 @@ def create_new_user(stage_user):
 
     return new_wp_user
 
+def generate_password():
+    s = "abcdefghijklmnopqrstuvwxyz01234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()?"
+    passlen = 16
+    return "".join(random.sample(s, passlen))
 
 def create_new_connection(stage_user, new_wp_user):
+    # First get the id of admin user in `wp_usermeta` table
+    admin_id = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == session['globus_user_id']).first().user_id
+
     connection = Connection()
     connection.owners.append(new_wp_user)
 
@@ -588,6 +596,9 @@ def create_new_connection(stage_user, new_wp_user):
     # TO-DO: add new record to `wp_connections_email` and `wp_connections_phone` then get the id and update `wp_connections` email/phone fields
     # Currectly hard-coded id
     connection.email = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:2199;s:4:\"type\";s:4:\"work\";s:4:\"name\";s:10:\"Work Email\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:7:\"address\";s:{len(stage_user.email)}:\"{stage_user.email}\";}}}}"
+    # Currectly hard-coded id
+    connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(stage_user.phone)}:\"{stage_user.phone}\";}}}}"
+    
     connection.first_name = stage_user.first_name
     connection.last_name = stage_user.last_name
     connection.organization = stage_user.organization
@@ -595,20 +606,38 @@ def create_new_connection(stage_user, new_wp_user):
     connection.entry_type = 'individual'
     connection.visibility = 'public'
     connection.slug = stage_user.first_name.lower() + '-' + stage_user.last_name.lower()
+    connection.family_name = ''
+    connection.honorific_prefix = ''
+    connection.middle_name = ''
+    connection.honorific_suffix = ''
+    connection.title = stage_user.role
+    connection.department = stage_user.component
+    connection.contact_first_name = ''
+    connection.contact_last_name = ''
+    connection.addresses = 'a:0:{}'
+    connection.im = 'a:0:{}'
+    connection.social = 'a:0:{}'
+    connection.links = 'a:0:{}'
+    connection.dates = 'a:0:{}'
+    connection.birthday = ''
+    connection.anniversary = ''
     connection.bio = stage_user.expertise
+    connection.notes = ''
+    connection.excerpt = ''
     connection.added_by = admin_id
+    connection.edited_by = admin_id
     connection.owner = admin_id
+    connection.user = 0
+    connection.status = 'approved'
 
     if not stage_user.photo == '':
         photo_file_name = stage_user.photo.split('/')[-1]
         # Disable for now
         #pathlib.Path(app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() ).mkdir(parents=True, exist_ok=True)
         #copyfile(stage_user.photo, app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "/" + photo_file_name)
-        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "\\/" + photo_file_name + "\",\"url\": \"" + app.config.get('CONNECTION_IMAGE_URL') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "\\/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image\\/jpeg\",\"type\":2}}}}"
+        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config['CONNECTION_IMAGE_URL'] + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "\\/" + photo_file_name + "\",\"url\": \"" + app.config['CONNECTION_IMAGE_URL'] + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "\\/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image\\/jpeg\",\"type\":2}}}}"
 
-    # Currectly hard-coded id
-    connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(stage_user.phone)}:\"{stage_user.phone}\";}}}}"
-    
+
     google_email = stage_user.google_email
     github_username = stage_user.github_username
     slack_username = stage_user.slack_username
@@ -674,6 +703,7 @@ def create_new_connection(stage_user, new_wp_user):
     connection_meta_website.meta_value = stage_user.website
     connection.metas.append(connection_meta_website)
 
+    # need biosketch?
     connection_meta_biosketch = ConnectionMeta()
     connection_meta_biosketch.meta_key = 'biosketch'
     connection_meta_biosketch.meta_value = stage_user.biosketch
@@ -704,6 +734,7 @@ def create_new_connection(stage_user, new_wp_user):
     connection_meta_pm_email.meta_value = stage_user.pm_email
     connection.metas.append(connection_meta_pm_email)
 
+    # Why return?
     return connection
 
 # Overwrite the existing fields with the ones from user registration
@@ -716,7 +747,10 @@ def edit_matched_connection(stage_user, wp_user, connection_profile):
     
     # TO-DO: add new record to `wp_connections_email` and `wp_connections_phone` then get the id and update `wp_connections` email/phone fields
     # Currectly hard-coded id
-    connection.email = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:2199;s:4:\"type\";s:4:\"work\";s:4:\"name\";s:10:\"Work Email\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:7:\"address\";s:{len(stage_user.email)}:\"{stage_user.email}\";}}}}"
+    #connection.email = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:2199;s:4:\"type\";s:4:\"work\";s:4:\"name\";s:10:\"Work Email\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:7:\"address\";s:{len(stage_user.email)}:\"{stage_user.email}\";}}}}"
+    # Currectly hard-coded id
+    #connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(stage_user.phone)}:\"{stage_user.phone}\";}}}}"
+    
     connection.first_name = stage_user.first_name
     connection.last_name = stage_user.last_name
     connection.organization = stage_user.organization
@@ -729,11 +763,9 @@ def edit_matched_connection(stage_user, wp_user, connection_profile):
         # Disable for now
         #pathlib.Path(app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() ).mkdir(parents=True, exist_ok=True)
         #copyfile(stage_user.photo, app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "/" + photo_file_name)
-        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "\\/" + photo_file_name + "\",\"url\": \"" + app.config.get('CONNECTION_IMAGE_URL') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "\\/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image\\/jpeg\",\"type\":2}}}}"
+        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config['CONNECTION_IMAGE_URL'] + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "\\/" + photo_file_name + "\",\"url\": \"" + app.config['CONNECTION_IMAGE_URL'] + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "\\/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image\\/jpeg\",\"type\":2}}}}"
 
-    # Currectly hard-coded id
-    connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(stage_user.phone)}:\"{stage_user.phone}\";}}}}"
-    
+
     # Update corresponding metas
     connection_meta_component = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'component').first()
     connection_meta_component.meta_value = stage_user.component
@@ -819,7 +851,9 @@ def get_stage_user(globus_user_id):
 # Get the exisiting user from `wp_users` table by looking for the globus id in `wp_usermeta` table
 def get_wp_user(globus_user_id):
     wp_user_meta = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == globus_user_id).first()
-    wp_user = WPUser.query.filter(id == wp_user_meta.user_id).first()
+    if not wp_user_meta:
+        return None
+    wp_user = WPUser.query.filter(WPUser.id == wp_user_meta.user_id).first()
     return wp_user
 
 # Find the matching profiles of a given user from the `wp_connections` table
@@ -1297,10 +1331,7 @@ def match(globus_user_id, connection_id):
 
 ############################################################
 
-def generate_password():
-    s = "abcdefghijklmnopqrstuvwxyz01234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()?"
-    passlen = 16
-    return "".join(random.sample(s, passlen))
+
 
 def assign_wp_user(wp_user, stage_user, connection=None, mode='CREATE'):
     # First get the id of admin user in `wp_usermeta` table
