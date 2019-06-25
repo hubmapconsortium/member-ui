@@ -515,40 +515,56 @@ def approve_stage_user_by_creating_new(stage_user):
     wp_user = get_wp_user(stage_user.globus_user_id)
 
     if not wp_user:
-        # Create new user and meta
-        new_wp_user = create_new_user(stage_user)
+        try:
+            # Create new user and meta
+            new_wp_user = create_new_user(stage_user)
 
-        # Create profile in `wp_connections`
-        create_new_connection(stage_user, new_wp_user)
+            # Create profile in `wp_connections`
+            create_new_connection(stage_user, new_wp_user)
 
-        db.session.add(new_wp_user)
-        db.session.delete(stage_user)
-        db.session.commit()
+            db.session.add(new_wp_user)
+            db.session.delete(stage_user)
+            db.session.commit()
+        except Exception as e:
+            print("approve_stage_user_by_creating_new() failed to create new wp_user and new connection, or delete the stage user record")
+            print(e)
     else:
-        create_new_connection(stage_user, wp_user)
-
-        db.session.delete(stage_user)
-        db.session.commit()
+        try:
+            create_new_connection(stage_user, wp_user)
+            db.session.delete(stage_user)
+            db.session.commit()
+        except Exception as e:
+            print("approve_stage_user_by_creating_new() failed to create new connection or delete the stage user record")
+            print(e)
+        
 
 def approve_stage_user_by_editing_matched(stage_user, connection_profile):
     # First need to check if there's an exisiting wp_user record with the same globus id
     wp_user = get_wp_user(stage_user.globus_user_id)
 
     if not wp_user:
-        # Create new user and meta
-        new_wp_user = create_new_user(stage_user)
+        try:
+            # Create new user and meta
+            new_wp_user = create_new_user(stage_user)
 
-        # Edit profile in `wp_connections`
-        edit_matched_connection(stage_user, new_wp_user, connection_profile)
+            # Edit profile in `wp_connections`
+            edit_matched_connection(stage_user, new_wp_user, connection_profile)
 
-        db.session.add(new_wp_user)
-        db.session.delete(stage_user)
-        db.session.commit()
+            db.session.add(new_wp_user)
+            db.session.delete(stage_user)
+            db.session.commit()
+        except Exception as e:
+            print("approve_stage_user_by_editing_matched() failed to create new wp_user and update the connection, or delete the stage user record")
+            print(e)
     else:
-        edit_matched_connection(stage_user, wp_user, connection_profile)
+        try:
+            edit_matched_connection(stage_user, wp_user, connection_profile)
+            db.session.delete(stage_user)
+            db.session.commit()
+        except Exception as e:
+            print("approve_stage_user_by_editing_matched() failed to update the connection or delete the stage user record")
+            print(e)
 
-        db.session.delete(stage_user)
-        db.session.commit()
 
 def create_new_user(stage_user):
     # Create a new wp_user record
@@ -735,8 +751,6 @@ def create_new_connection(stage_user, new_wp_user):
     connection_meta_pm_email.meta_value = stage_user.pm_email
     connection.metas.append(connection_meta_pm_email)
 
-    # Why return?
-    return connection
 
 # Overwrite the existing fields with the ones from user registration
 def edit_matched_connection(stage_user, wp_user, connection):
@@ -825,7 +839,6 @@ def edit_matched_connection(stage_user, wp_user, connection):
     connection_meta_phone = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'phone').first()
     connection_meta_phone.meta_value = stage_user.phone
 
-    return connection
 
 # Deny the new user registration
 def deny_stage_user(globus_user_id):
