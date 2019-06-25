@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, Response, render_template, session, redirect, url_for, escape
+from flask import Flask, request, jsonify, Response, render_template, session, redirect, url_for
 from globus_sdk import AuthClient, AccessTokenAuthorizer, ConfidentialAppAuthClient
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
@@ -285,16 +285,16 @@ def construct_user(request):
         "role": request.form['role'],
         "other_role": request.form['other_role'],
         # multiple checkboxes
-        "working_group": escape(request.form.getlist('working_group')),
+        "working_group": request.form.getlist('working_group'),
         "photo": '',
         "photo_url": request.form['photo_url'],
         # multiple checkboxes
-        "access_requests": ['Collaboration Portal'] + escape(request.form.getlist('access_requests')),
+        "access_requests": ['Collaboration Portal'] + request.form.getlist('access_requests'),
         "google_email": request.form['google_email'],
         "github_username": request.form['github_username'],
         "slack_username": request.form['slack_username'],
         "website": request.form['website'],
-        "expertise": escape(request.form['expertise']),
+        "expertise": request.form['expertise'],
         "orcid": request.form['orcid'],
         "pm": get_pm_selection(request.form['pm']),
         "pm_name": request.form['pm_name'],
@@ -676,12 +676,12 @@ def create_new_connection(stage_user, new_wp_user):
 
     connection_meta_working_group = ConnectionMeta()
     connection_meta_working_group.meta_key = 'working_group'
-    connection_meta_working_group.meta_value = str(ast.literal_eval(stage_user.working_group)).replace('\'', '"')
+    connection_meta_working_group.meta_value = stage_user.working_group
     connection.metas.append(connection_meta_working_group)
 
     connection_meta_access_requests = ConnectionMeta()
     connection_meta_access_requests.meta_key = 'access_requests'
-    connection_meta_access_requests.meta_value = str(ast.literal_eval(stage_user.access_requests)).replace('\'', '"')
+    connection_meta_access_requests.meta_value = stage_user.access_requests
     connection.metas.append(connection_meta_access_requests)
 
     connection_meta_google_email = ConnectionMeta()
@@ -787,10 +787,10 @@ def edit_matched_connection(stage_user, wp_user, connection_profile):
     connection_meta_other_role.meta_value = stage_user.other_role
 
     connection_meta_working_group = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'working_group').first()
-    connection_meta_working_group.meta_value = str(ast.literal_eval(stage_user.working_group)).replace('\'', '"')
+    connection_meta_working_group.meta_value = stage_user.working_group
 
     connection_meta_access_requests = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'access_requests').first()
-    connection_meta_access_requests.meta_value = str(ast.literal_eval(stage_user.access_requests)).replace('\'', '"')
+    connection_meta_access_requests.meta_value = stage_user.access_requests
 
     connection_meta_google_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'google_email').first()
     connection_meta_google_email.meta_value = google_email
@@ -1164,8 +1164,8 @@ def profile():
             # Convert string representation to dict
             if not initial_data['working_group'].strip() == '':
                 initial_data['working_group'] = ast.literal_eval(initial_data['working_group'])
-            # if not initial_data['access_requests'].strip() == '':
-            #     initial_data['access_requests'] = ast.literal_eval(initial_data['access_requests'])
+            if not initial_data['access_requests'].strip() == '':
+                initial_data['access_requests'] = ast.literal_eval(initial_data['access_requests'])
 
             context = {
                 'isAuthenticated': True,

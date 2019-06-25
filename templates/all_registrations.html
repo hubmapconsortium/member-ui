@@ -26,11 +26,13 @@
       <td>{{ stage_user.last_name }}</td>
       <td>{{ stage_user.email }}</td>
       <td>{{ stage_user.created_at }}</td>
+      <td>
       {% if stage_user.deny %}
-      <td><span class="text-danger">Denied</span>
+      <span class="text-danger">Denied</span>
       {% else %}
       <span class="text-success">New</span>
       {% endif %}
+      </td>
     </tr>
 	{% endfor %}
   </tbody>
