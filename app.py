@@ -509,23 +509,385 @@ def update_user_profile(j_user, img, id):
 # This is user approval without using existing mathicng profile
 # Approving by moving user data from `stage_user` into `wp_user` and `wp_connections`
 # also add the ids to the `user_connection` table
-def approve_stage_user(globus_user_id):
-    stage_user = get_stage_user(globus_user_id)
-    pprint(stage_user)
-
-    # Also need to check if there's an exisiting wp_user record with the same globus id
-    wp_user = get_wp_user(globus_user_id)
+def approve_stage_user_by_creating_new(stage_user):
+    # First need to check if there's an exisiting wp_user record with the same globus id
+    wp_user = get_wp_user(stage_user.globus_user_id)
 
     if not wp_user:
-        new_wp_user = WPUser()
-        assign_wp_user(new_wp_user, stage_user, None)
+        # Create new user and meta
+        new_wp_user = create_new_user(stage_user)
+
+        # Create profile in `wp_connections`
+        create_new_connection(stage_user, new_wp_user)
+
         db.session.add(new_wp_user)
         db.session.delete(stage_user)
         db.session.commit()
     else:
-        assign_wp_user(wp_user, stage_user, None)
+        create_new_connection(stage_user, wp_user)
+
         db.session.delete(stage_user)
         db.session.commit()
+
+def approve_stage_user_by_editing_matched(stage_user, connection_profile):
+    # First need to check if there's an exisiting wp_user record with the same globus id
+    wp_user = get_wp_user(stage_user.globus_user_id)
+
+    if not wp_user:
+        # Create new user and meta
+        new_wp_user = create_new_user(stage_user)
+
+        # Edit profile in `wp_connections`
+        edit_matched_connection(stage_user, new_wp_user, connection_profile)
+
+        db.session.add(new_wp_user)
+        db.session.delete(stage_user)
+        db.session.commit()
+    else:
+        edit_matched_connection(stage_user, wp_user, connection_profile)
+
+        db.session.delete(stage_user)
+        db.session.commit()
+
+def create_new_user(stage_user):
+    # Create a new wp_user record
+    new_wp_user = WPUser()
+    new_wp_user.user_login = stage_user.email
+    new_wp_user.user_email = stage_user.email
+
+    # Create new usermeta for "member" role
+    meta_capabilities = WPUserMeta()
+    meta_capabilities.meta_key = "wp_capabilities"
+    meta_capabilities.meta_value = "a:1:{s:6:\"member\";b:1;}"
+    new_wp_user.metas.append(meta_capabilities)
+    
+    # Create new usermeta for globus id
+    meta_globus_user_id = WPUserMeta()
+    meta_globus_user_id.meta_key = "openid-connect-generic-subject-identity"
+    meta_globus_user_id.meta_value = stage_user.globus_user_id
+    new_wp_user.metas.append(meta_globus_user_id)
+
+    return new_wp_user
+
+def create_new_connection(stage_user, new_wp_user):
+    connection = Connection()
+    connection.owners.append(new_wp_user)
+
+    # Need to handle email and phone metas first
+    connection_meta_email = ConnectionMeta()
+    connection_meta_email.meta_key = 'email'
+    connection_meta_email.meta_value = stage_user.email
+    connection.metas.append(connection_meta_email)
+    
+    connection_meta_phone = ConnectionMeta()
+    connection_meta_phone.meta_key = 'phone'
+    connection_meta_phone.meta_value = stage_user.phone
+    connection.metas.append(connection_meta_phone)
+
+    # TO-DO: add new record to `wp_connections_email` and `wp_connections_phone` then get the id and update `wp_connections` email/phone fields
+    # Currectly hard-coded id
+    connection.email = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:2199;s:4:\"type\";s:4:\"work\";s:4:\"name\";s:10:\"Work Email\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:7:\"address\";s:{len(stage_user.email)}:\"{stage_user.email}\";}}}}"
+    connection.first_name = stage_user.first_name
+    connection.last_name = stage_user.last_name
+    connection.organization = stage_user.organization
+
+    if not stage_user.photo == '':
+        photo_file_name = stage_user.photo.split('/')[-1]
+        # Disable for now
+        #pathlib.Path(app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() ).mkdir(parents=True, exist_ok=True)
+        #copyfile(stage_user.photo, app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "/" + photo_file_name)
+        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "\\/" + photo_file_name + "\",\"url\": \"" + app.config.get('CONNECTION_IMAGE_URL') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "\\/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image\\/jpeg\",\"type\":2}}}}"
+
+    # Currectly hard-coded id
+    connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(stage_user.phone)}:\"{stage_user.phone}\";}}}}"
+    
+    access_requests = '[]'
+    working_group = '[]'
+    google_email = stage_user.google_email
+    github_username = stage_user.github_username
+    slack_username = stage_user.slack_username
+
+    # Other connections metas
+    connection_meta_component = ConnectionMeta()
+    connection_meta_component.meta_key = 'component'
+    connection_meta_component.meta_value = stage_user.component
+    connection.metas.append(connection_meta_component)
+
+    connection_meta_other_component = ConnectionMeta()
+    connection_meta_other_component.meta_key = 'other_component'
+    connection_meta_other_component.meta_value = stage_user.other_component
+    connection.metas.append(connection_meta_other_component)
+
+    connection_meta_organization = ConnectionMeta()
+    connection_meta_organization.meta_key = 'organization'
+    connection_meta_organization.meta_value = stage_user.organization
+    connection.metas.append(connection_meta_organization)
+
+    connection_meta_other_organization = ConnectionMeta()
+    connection_meta_other_organization.meta_key = 'other_organization'
+    connection_meta_other_organization.meta_value = stage_user.other_organization
+    connection.metas.append(connection_meta_other_organization)
+
+    connection_meta_role = ConnectionMeta()
+    connection_meta_role.meta_key = 'role'
+    connection_meta_role.meta_value = stage_user.role
+    connection.metas.append(connection_meta_role)
+
+    connection_meta_other_role = ConnectionMeta()
+    connection_meta_other_role.meta_key = 'other_role'
+    connection_meta_other_role.meta_value = stage_user.other_role
+    connection.metas.append(connection_meta_other_role)
+
+    connection_meta_working_group = ConnectionMeta()
+    connection_meta_working_group.meta_key = 'working_group'
+    connection_meta_working_group.meta_value = str(ast.literal_eval(working_group) + ast.literal_eval(stage_user.working_group)).replace('\'', '"')
+    connection.metas.append(connection_meta_working_group)
+
+    connection_meta_access_requests = ConnectionMeta()
+    connection_meta_access_requests.meta_key = 'access_requests'
+    connection_meta_access_requests.meta_value = str(ast.literal_eval(access_requests) + ast.literal_eval(stage_user.access_requests)).replace('\'', '"')
+    connection.metas.append(connection_meta_access_requests)
+
+    connection_meta_google_email = ConnectionMeta()
+    connection_meta_google_email.meta_key = 'google_email'
+    connection_meta_google_email.meta_value = google_email
+    connection.metas.append(connection_meta_google_email)
+
+    connection_meta_github_username = ConnectionMeta()
+    connection_meta_github_username.meta_key = 'github_username'
+    connection_meta_github_username.meta_value = github_username
+    connection.metas.append(connection_meta_github_username)
+
+    connection_meta_slack_username = ConnectionMeta()
+    connection_meta_slack_username.meta_key = 'slack_username'
+    connection_meta_slack_username.meta_value = slack_username
+    connection.metas.append(connection_meta_slack_username)
+
+    connection_meta_website = ConnectionMeta()
+    connection_meta_website.meta_key = 'website'
+    connection_meta_website.meta_value = stage_user.website
+    connection.metas.append(connection_meta_website)
+
+    connection_meta_biosketch = ConnectionMeta()
+    connection_meta_biosketch.meta_key = 'biosketch'
+    connection_meta_biosketch.meta_value = stage_user.biosketch
+    connection.metas.append(connection_meta_biosketch)
+
+    connection_meta_expertise = ConnectionMeta()
+    connection_meta_expertise.meta_key = 'expertise'
+    connection_meta_expertise.meta_value = stage_user.expertise
+    connection.metas.append(connection_meta_expertise)
+
+    connection_meta_orcid = ConnectionMeta()
+    connection_meta_orcid.meta_key = 'orcid'
+    connection_meta_orcid.meta_value = stage_user.orcid
+    connection.metas.append(connection_meta_orcid)
+
+    connection_meta_pm = ConnectionMeta()
+    connection_meta_pm.meta_key = 'pm'
+    connection_meta_pm.meta_value = stage_user.pm
+    connection.metas.append(connection_meta_pm)
+
+    connection_meta_pm_name = ConnectionMeta()
+    connection_meta_pm_name.meta_key = 'pm_name'
+    connection_meta_pm_name.meta_value = stage_user.pm_name
+    connection.metas.append(connection_meta_pm_name)
+
+    connection_meta_pm_email = ConnectionMeta()
+    connection_meta_pm_email.meta_key = 'pm_email'
+    connection_meta_pm_email.meta_value = stage_user.pm_email
+    connection.metas.append(connection_meta_pm_email)
+
+    
+    # default values
+    connection.date_added = str(datetime.today().timestamp())
+    connection.entry_type = 'individual'
+    connection.visibility = 'public'
+    connection.slug = stage_user.first_name.lower() + '-' + stage_user.last_name.lower()
+    connection.family_name = ''
+    connection.honorific_prefix = ''
+    connection.middle_name = ''
+    connection.honorific_suffix = ''
+    connection.title = stage_user.role
+    connection.department = stage_user.component
+    connection.contact_first_name = ''
+    connection.contact_last_name = ''
+    connection.addresses = 'a:0:{}'
+    connection.im = 'a:0:{}'
+    connection.social = 'a:0:{}'
+    connection.links = 'a:0:{}'
+    connection.dates = 'a:0:{}'
+    connection.birthday = ''
+    connection.anniversary = ''
+    connection.bio = stage_user.expertise
+    connection.notes = ''
+    connection.excerpt = ''
+    connection.added_by = admin_id
+    connection.edited_by = admin_id
+    connection.owner = admin_id
+    connection.user = 0
+    connection.status = 'approved'
+
+    return connection
+
+
+def edit_matched_connection(stage_user, wp_user, connection_profile):
+    # First get the id of admin user in `wp_usermeta` table
+    admin_id = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == session['globus_user_id']).first().user_id
+
+    wp_user.user_login = stage_user.email
+    wp_user.user_email = stage_user.email
+    wp_user.user_pass = generate_password()
+    
+    
+    # TO-DO: add new record to `wp_connections_email` and `wp_connections_phone` then get the id and update `wp_connections` email/phone fields
+    # Currectly hard-coded id
+    connection.email = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:2199;s:4:\"type\";s:4:\"work\";s:4:\"name\";s:10:\"Work Email\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:7:\"address\";s:{len(stage_user.email)}:\"{stage_user.email}\";}}}}"
+    connection.first_name = stage_user.first_name
+    connection.last_name = stage_user.last_name
+    connection.organization = stage_user.organization
+
+    if not stage_user.photo == '':
+        photo_file_name = stage_user.photo.split('/')[-1]
+        # Disable for now
+        #pathlib.Path(app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() ).mkdir(parents=True, exist_ok=True)
+        #copyfile(stage_user.photo, app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "/" + photo_file_name)
+        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "\\/" + photo_file_name + "\",\"url\": \"" + app.config.get('CONNECTION_IMAGE_URL') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "\\/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image\\/jpeg\",\"type\":2}}}}"
+
+    # Currectly hard-coded id
+    connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(stage_user.phone)}:\"{stage_user.phone}\";}}}}"
+    
+    access_requests = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'access_requests'), '[]')
+    working_group = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'working_group'), '[]')
+    if stage_user.google_email == '':
+        google_email = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'google_email'), '')
+    else:
+        google_email = stage_user.google_email
+        
+    if stage_user.github_username == '':
+        github_username = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'github_username'), '')
+    else:
+        github_username = stage_user.github_username
+
+    if stage_user.slack_username == '':
+        slack_username = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'slack_username'), '')
+    else:
+        slack_username = stage_user.slack_username
+
+    [db.session.delete(meta) for meta in connection.metas]
+
+    connection_meta_component = ConnectionMeta()
+    connection_meta_component.meta_key = 'component'
+    connection_meta_component.meta_value = stage_user.component
+    connection.metas.append(connection_meta_component)
+    connection_meta_other_component = ConnectionMeta()
+    connection_meta_other_component.meta_key = 'other_component'
+    connection_meta_other_component.meta_value = stage_user.other_component
+    connection.metas.append(connection_meta_other_component)
+    connection_meta_organization = ConnectionMeta()
+    connection_meta_organization.meta_key = 'organization'
+    connection_meta_organization.meta_value = stage_user.organization
+    connection.metas.append(connection_meta_organization)
+    connection_meta_other_organization = ConnectionMeta()
+    connection_meta_other_organization.meta_key = 'other_organization'
+    connection_meta_other_organization.meta_value = stage_user.other_organization
+    connection.metas.append(connection_meta_other_organization)
+    connection_meta_role = ConnectionMeta()
+    connection_meta_role.meta_key = 'role'
+    connection_meta_role.meta_value = stage_user.role
+    connection.metas.append(connection_meta_role)
+    connection_meta_other_role = ConnectionMeta()
+    connection_meta_other_role.meta_key = 'other_role'
+    connection_meta_other_role.meta_value = stage_user.other_role
+    connection.metas.append(connection_meta_other_role)
+    connection_meta_working_group = ConnectionMeta()
+    connection_meta_working_group.meta_key = 'working_group'
+    connection_meta_working_group.meta_value = str(ast.literal_eval(working_group) + ast.literal_eval(stage_user.working_group)).replace('\'', '"')
+    connection.metas.append(connection_meta_working_group)
+    connection_meta_access_requests = ConnectionMeta()
+    connection_meta_access_requests.meta_key = 'access_requests'
+    connection_meta_access_requests.meta_value = str(ast.literal_eval(access_requests) + ast.literal_eval(stage_user.access_requests)).replace('\'', '"')
+    connection.metas.append(connection_meta_access_requests)
+    connection_meta_google_email = ConnectionMeta()
+    connection_meta_google_email.meta_key = 'google_email'
+    connection_meta_google_email.meta_value = google_email
+    connection.metas.append(connection_meta_google_email)
+    connection_meta_github_username = ConnectionMeta()
+    connection_meta_github_username.meta_key = 'github_username'
+    connection_meta_github_username.meta_value = github_username
+    connection.metas.append(connection_meta_github_username)
+    connection_meta_slack_username = ConnectionMeta()
+    connection_meta_slack_username.meta_key = 'slack_username'
+    connection_meta_slack_username.meta_value = slack_username
+    connection.metas.append(connection_meta_slack_username)
+    connection_meta_website = ConnectionMeta()
+    connection_meta_website.meta_key = 'website'
+    connection_meta_website.meta_value = stage_user.website
+    connection.metas.append(connection_meta_website)
+    connection_meta_biosketch = ConnectionMeta()
+    connection_meta_biosketch.meta_key = 'biosketch'
+    connection_meta_biosketch.meta_value = stage_user.biosketch
+    connection.metas.append(connection_meta_biosketch)
+    connection_meta_expertise = ConnectionMeta()
+    connection_meta_expertise.meta_key = 'expertise'
+    connection_meta_expertise.meta_value = stage_user.expertise
+    connection.metas.append(connection_meta_expertise)
+    connection_meta_orcid = ConnectionMeta()
+    connection_meta_orcid.meta_key = 'orcid'
+    connection_meta_orcid.meta_value = stage_user.orcid
+    connection.metas.append(connection_meta_orcid)
+    connection_meta_pm = ConnectionMeta()
+    connection_meta_pm.meta_key = 'pm'
+    connection_meta_pm.meta_value = stage_user.pm
+    connection.metas.append(connection_meta_pm)
+    connection_meta_pm_name = ConnectionMeta()
+    connection_meta_pm_name.meta_key = 'pm_name'
+    connection_meta_pm_name.meta_value = stage_user.pm_name
+    connection.metas.append(connection_meta_pm_name)
+    connection_meta_pm_email = ConnectionMeta()
+    connection_meta_pm_email.meta_key = 'pm_email'
+    connection_meta_pm_email.meta_value = stage_user.pm_email
+    connection.metas.append(connection_meta_pm_email)
+    connection_meta_email = ConnectionMeta()
+    connection_meta_email.meta_key = 'email'
+    connection_meta_email.meta_value = stage_user.email
+    connection.metas.append(connection_meta_email)
+    connection_meta_phone = ConnectionMeta()
+    connection_meta_phone.meta_key = 'phone'
+    connection_meta_phone.meta_value = stage_user.phone
+    connection.metas.append(connection_meta_phone)
+    
+    
+    ## default value ##
+    connection.date_added = str(datetime.today().timestamp())
+    connection.entry_type = 'individual'
+    connection.visibility = 'public'
+    connection.slug = stage_user.first_name.lower() + '-' + stage_user.last_name.lower()
+    connection.family_name = ''
+    connection.honorific_prefix = ''
+    connection.middle_name = ''
+    connection.honorific_suffix = ''
+    connection.title = stage_user.role
+    connection.department = stage_user.component
+    connection.contact_first_name = ''
+    connection.contact_last_name = ''
+    connection.addresses = 'a:0:{}'
+    connection.im = 'a:0:{}'
+    connection.social = 'a:0:{}'
+    connection.links = 'a:0:{}'
+    connection.dates = 'a:0:{}'
+    connection.birthday = ''
+    connection.anniversary = ''
+    connection.bio = stage_user.expertise
+    connection.notes = ''
+    connection.excerpt = ''
+    connection.added_by = admin_id
+    connection.edited_by = admin_id
+    connection.owner = admin_id
+    connection.user = 0
+    connection.status = 'approved'
+
+    return connection
 
 # Deny the new user registration
 def deny_stage_user(globus_user_id):
@@ -623,178 +985,13 @@ def generate_password():
     passlen = 16
     return "".join(random.sample(s, passlen))
 
-def assign_wp_user(wp_user, user_obj, connection=None, mode='CREATE'):
-    # First get the id of admin user in `wp_usermeta` table
-    admin_id = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == session['globus_user_id']).first().user_id
 
-    wp_user.user_login = user_obj.email
-    wp_user.user_email = user_obj.email
-    wp_user.user_pass = generate_password()
-    if not wp_user.id:
-        meta_capabilities = WPUserMeta()
-        meta_capabilities.meta_key = "wp_capabilities"
-        meta_capabilities.meta_value = "a:1:{s:6:\"member\";b:1;}"
-        wp_user.metas.append(meta_capabilities)
-        meta_globus_user_id = WPUserMeta()
-        meta_globus_user_id.meta_key = "openid-connect-generic-subject-identity"
-        meta_globus_user_id.meta_value = user_obj.globus_user_id
-        wp_user.metas.append(meta_globus_user_id)
 
-    if not connection:
-        connection = Connection()
-    
-    if connection.owners.count() == 0: 
-        connection.owners.append(wp_user)
-    
-    # TO-DO: add new record to `wp_connections_email` and `wp_connections_phone` then get the id and update `wp_connections` email/phone fields
-    # Currectly hard-coded id
-    connection.email = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:2199;s:4:\"type\";s:4:\"work\";s:4:\"name\";s:10:\"Work Email\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:7:\"address\";s:{len(user_obj.email)}:\"{user_obj.email}\";}}}}"
-    connection.first_name = user_obj.first_name
-    connection.last_name = user_obj.last_name
-    connection.organization = user_obj.organization
 
-    if not user_obj.photo == '':
-        photo_file_name = user_obj.photo.split('/')[-1]
-        # Disable for now
-        #pathlib.Path(app.config.get('CONNECTION_IMAGE_PATH') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() ).mkdir(parents=True, exist_ok=True)
-        #copyfile(user_obj.photo, app.config.get('CONNECTION_IMAGE_PATH') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() + "/" + photo_file_name)
-        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config.get('CONNECTION_IMAGE_PATH') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() + "\\/" + photo_file_name + "\",\"url\": \"" + app.config.get('CONNECTION_IMAGE_URL') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() + "\\/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image\\/jpeg\",\"type\":2}}}}"
-    else:
-        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config.get('CONNECTION_IMAGE_PATH') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() + "\\/" + photo_file_name + "\",\"url\": \"" + app.config.get('CONNECTION_IMAGE_URL') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() + "\\/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image\\/jpeg\",\"type\":2}}}}"
 
-    # Currectly hard-coded id
-    connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(user_obj.phone)}:\"{user_obj.phone}\";}}}}"
-    
-    access_requests = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'access_requests'), '[]') if mode.upper() == 'EDIT' else '[]'
-    working_group = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'working_group'), '[]') if mode.upper() == 'EDIT' else '[]'
-    if mode.upper() == 'EDIT' and user_obj.google_email == '':
-        google_email = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'google_email'), '')
-    else:
-        google_email = user_obj.google_email
-        
-    if mode.upper() == 'EDIT' and user_obj.github_username == '':
-        github_username = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'github_username'), '')
-    else:
-        github_username = user_obj.github_username
 
-    if mode.upper() == 'EDIT' and user_obj.slack_username == '':
-        slack_username = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'slack_username'), '')
-    else:
-        slack_username = user_obj.slack_username
 
-    [db.session.delete(meta) for meta in connection.metas]
-    connection_meta_component = ConnectionMeta()
-    connection_meta_component.meta_key = 'component'
-    connection_meta_component.meta_value = user_obj.component
-    connection.metas.append(connection_meta_component)
-    connection_meta_other_component = ConnectionMeta()
-    connection_meta_other_component.meta_key = 'other_component'
-    connection_meta_other_component.meta_value = user_obj.other_component
-    connection.metas.append(connection_meta_other_component)
-    connection_meta_organization = ConnectionMeta()
-    connection_meta_organization.meta_key = 'organization'
-    connection_meta_organization.meta_value = user_obj.organization
-    connection.metas.append(connection_meta_organization)
-    connection_meta_other_organization = ConnectionMeta()
-    connection_meta_other_organization.meta_key = 'other_organization'
-    connection_meta_other_organization.meta_value = user_obj.other_organization
-    connection.metas.append(connection_meta_other_organization)
-    connection_meta_role = ConnectionMeta()
-    connection_meta_role.meta_key = 'role'
-    connection_meta_role.meta_value = user_obj.role
-    connection.metas.append(connection_meta_role)
-    connection_meta_other_role = ConnectionMeta()
-    connection_meta_other_role.meta_key = 'other_role'
-    connection_meta_other_role.meta_value = user_obj.other_role
-    connection.metas.append(connection_meta_other_role)
-    connection_meta_working_group = ConnectionMeta()
-    connection_meta_working_group.meta_key = 'working_group'
-    connection_meta_working_group.meta_value = str(ast.literal_eval(working_group) + ast.literal_eval(user_obj.working_group)).replace('\'', '"')
-    connection.metas.append(connection_meta_working_group)
-    connection_meta_access_requests = ConnectionMeta()
-    connection_meta_access_requests.meta_key = 'access_requests'
-    connection_meta_access_requests.meta_value = str(ast.literal_eval(access_requests) + ast.literal_eval(user_obj.access_requests)).replace('\'', '"')
-    connection.metas.append(connection_meta_access_requests)
-    connection_meta_google_email = ConnectionMeta()
-    connection_meta_google_email.meta_key = 'google_email'
-    connection_meta_google_email.meta_value = google_email
-    connection.metas.append(connection_meta_google_email)
-    connection_meta_github_username = ConnectionMeta()
-    connection_meta_github_username.meta_key = 'github_username'
-    connection_meta_github_username.meta_value = github_username
-    connection.metas.append(connection_meta_github_username)
-    connection_meta_slack_username = ConnectionMeta()
-    connection_meta_slack_username.meta_key = 'slack_username'
-    connection_meta_slack_username.meta_value = slack_username
-    connection.metas.append(connection_meta_slack_username)
-    connection_meta_website = ConnectionMeta()
-    connection_meta_website.meta_key = 'website'
-    connection_meta_website.meta_value = user_obj.website
-    connection.metas.append(connection_meta_website)
-    connection_meta_biosketch = ConnectionMeta()
-    connection_meta_biosketch.meta_key = 'biosketch'
-    connection_meta_biosketch.meta_value = user_obj.biosketch
-    connection.metas.append(connection_meta_biosketch)
-    connection_meta_expertise = ConnectionMeta()
-    connection_meta_expertise.meta_key = 'expertise'
-    connection_meta_expertise.meta_value = user_obj.expertise
-    connection.metas.append(connection_meta_expertise)
-    connection_meta_orcid = ConnectionMeta()
-    connection_meta_orcid.meta_key = 'orcid'
-    connection_meta_orcid.meta_value = user_obj.orcid
-    connection.metas.append(connection_meta_orcid)
-    connection_meta_pm = ConnectionMeta()
-    connection_meta_pm.meta_key = 'pm'
-    connection_meta_pm.meta_value = user_obj.pm
-    connection.metas.append(connection_meta_pm)
-    connection_meta_pm_name = ConnectionMeta()
-    connection_meta_pm_name.meta_key = 'pm_name'
-    connection_meta_pm_name.meta_value = user_obj.pm_name
-    connection.metas.append(connection_meta_pm_name)
-    connection_meta_pm_email = ConnectionMeta()
-    connection_meta_pm_email.meta_key = 'pm_email'
-    connection_meta_pm_email.meta_value = user_obj.pm_email
-    connection.metas.append(connection_meta_pm_email)
-    connection_meta_email = ConnectionMeta()
-    connection_meta_email.meta_key = 'email'
-    connection_meta_email.meta_value = user_obj.email
-    connection.metas.append(connection_meta_email)
-    connection_meta_phone = ConnectionMeta()
-    connection_meta_phone.meta_key = 'phone'
-    connection_meta_phone.meta_value = user_obj.phone
-    connection.metas.append(connection_meta_phone)
-    
-    
-    ## default value ##
-    connection.date_added = str(datetime.today().timestamp())
-    connection.entry_type = 'individual'
-    connection.visibility = 'public'
-    connection.slug = user_obj.first_name.lower() + '-' + user_obj.last_name.lower()
-    connection.family_name = ''
-    connection.honorific_prefix = ''
-    connection.middle_name = ''
-    connection.honorific_suffix = ''
-    connection.title = user_obj.role
-    connection.department = user_obj.component
-    connection.contact_first_name = ''
-    connection.contact_last_name = ''
-    connection.addresses = 'a:0:{}'
-    connection.im = 'a:0:{}'
-    connection.social = 'a:0:{}'
-    connection.links = 'a:0:{}'
-    connection.dates = 'a:0:{}'
-    connection.birthday = ''
-    connection.anniversary = ''
-    connection.bio = user_obj.expertise
-    connection.notes = ''
-    connection.excerpt = ''
-    connection.added_by = admin_id
-    connection.edited_by = admin_id
-    connection.owner = admin_id
-    connection.user = 0
-    connection.status = 'approved'
 
-    return connection
 
 
 # Login Required Decorator
@@ -1110,7 +1307,7 @@ def approve(globus_user_id):
     if not stage_user:
         return show_admin_error("This stage user does not exist!")
     else:
-        approve_stage_user(globus_user_id)
+        approve_stage_user_by_creating_new(stage_user)
         # Send email
         data = {
             'first_name': stage_user.first_name,
@@ -1158,8 +1355,8 @@ def match(globus_user_id, connection_id):
     if not connection_profile:
         return show_admin_error("This connection profile does not exist!")
 
-    # TO-DO
-    # Will need to link the exisiting profile to wp_user
+    # Will need to link and edit the exisiting profile 
+    approve_stage_user_by_editing_match(stage_user, connection_profile)
 
     # Then remove the stage user record
     remove_stage_user(globus_user_id)
@@ -1196,7 +1393,182 @@ def match(globus_user_id, connection_id):
 
 
 
+############################################################
 
+
+
+def assign_wp_user(wp_user, stage_user, connection=None, mode='CREATE'):
+    # First get the id of admin user in `wp_usermeta` table
+    admin_id = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == session['globus_user_id']).first().user_id
+
+    wp_user.user_login = stage_user.email
+    wp_user.user_email = stage_user.email
+    wp_user.user_pass = generate_password()
+    if not wp_user.id:
+        meta_capabilities = WPUserMeta()
+        meta_capabilities.meta_key = "wp_capabilities"
+        meta_capabilities.meta_value = "a:1:{s:6:\"member\";b:1;}"
+        wp_user.metas.append(meta_capabilities)
+        meta_globus_user_id = WPUserMeta()
+        meta_globus_user_id.meta_key = "openid-connect-generic-subject-identity"
+        meta_globus_user_id.meta_value = stage_user.globus_user_id
+        wp_user.metas.append(meta_globus_user_id)
+
+    if not connection:
+        connection = Connection()
+    
+    if connection.owners.count() == 0: 
+        connection.owners.append(wp_user)
+    
+    # TO-DO: add new record to `wp_connections_email` and `wp_connections_phone` then get the id and update `wp_connections` email/phone fields
+    # Currectly hard-coded id
+    connection.email = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:2199;s:4:\"type\";s:4:\"work\";s:4:\"name\";s:10:\"Work Email\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:7:\"address\";s:{len(stage_user.email)}:\"{stage_user.email}\";}}}}"
+    connection.first_name = stage_user.first_name
+    connection.last_name = stage_user.last_name
+    connection.organization = stage_user.organization
+
+    if not stage_user.photo == '':
+        photo_file_name = stage_user.photo.split('/')[-1]
+        # Disable for now
+        #pathlib.Path(app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() ).mkdir(parents=True, exist_ok=True)
+        #copyfile(stage_user.photo, app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "/" + photo_file_name)
+        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "\\/" + photo_file_name + "\",\"url\": \"" + app.config.get('CONNECTION_IMAGE_URL') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "\\/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image\\/jpeg\",\"type\":2}}}}"
+    else:
+        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "\\/" + photo_file_name + "\",\"url\": \"" + app.config.get('CONNECTION_IMAGE_URL') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "\\/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image\\/jpeg\",\"type\":2}}}}"
+
+    # Currectly hard-coded id
+    connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(stage_user.phone)}:\"{stage_user.phone}\";}}}}"
+    
+    access_requests = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'access_requests'), '[]') if mode.upper() == 'EDIT' else '[]'
+    working_group = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'working_group'), '[]') if mode.upper() == 'EDIT' else '[]'
+    if mode.upper() == 'EDIT' and stage_user.google_email == '':
+        google_email = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'google_email'), '')
+    else:
+        google_email = stage_user.google_email
+        
+    if mode.upper() == 'EDIT' and stage_user.github_username == '':
+        github_username = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'github_username'), '')
+    else:
+        github_username = stage_user.github_username
+
+    if mode.upper() == 'EDIT' and stage_user.slack_username == '':
+        slack_username = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'slack_username'), '')
+    else:
+        slack_username = stage_user.slack_username
+
+    [db.session.delete(meta) for meta in connection.metas]
+    connection_meta_component = ConnectionMeta()
+    connection_meta_component.meta_key = 'component'
+    connection_meta_component.meta_value = stage_user.component
+    connection.metas.append(connection_meta_component)
+    connection_meta_other_component = ConnectionMeta()
+    connection_meta_other_component.meta_key = 'other_component'
+    connection_meta_other_component.meta_value = stage_user.other_component
+    connection.metas.append(connection_meta_other_component)
+    connection_meta_organization = ConnectionMeta()
+    connection_meta_organization.meta_key = 'organization'
+    connection_meta_organization.meta_value = stage_user.organization
+    connection.metas.append(connection_meta_organization)
+    connection_meta_other_organization = ConnectionMeta()
+    connection_meta_other_organization.meta_key = 'other_organization'
+    connection_meta_other_organization.meta_value = stage_user.other_organization
+    connection.metas.append(connection_meta_other_organization)
+    connection_meta_role = ConnectionMeta()
+    connection_meta_role.meta_key = 'role'
+    connection_meta_role.meta_value = stage_user.role
+    connection.metas.append(connection_meta_role)
+    connection_meta_other_role = ConnectionMeta()
+    connection_meta_other_role.meta_key = 'other_role'
+    connection_meta_other_role.meta_value = stage_user.other_role
+    connection.metas.append(connection_meta_other_role)
+    connection_meta_working_group = ConnectionMeta()
+    connection_meta_working_group.meta_key = 'working_group'
+    connection_meta_working_group.meta_value = str(ast.literal_eval(working_group) + ast.literal_eval(stage_user.working_group)).replace('\'', '"')
+    connection.metas.append(connection_meta_working_group)
+    connection_meta_access_requests = ConnectionMeta()
+    connection_meta_access_requests.meta_key = 'access_requests'
+    connection_meta_access_requests.meta_value = str(ast.literal_eval(access_requests) + ast.literal_eval(stage_user.access_requests)).replace('\'', '"')
+    connection.metas.append(connection_meta_access_requests)
+    connection_meta_google_email = ConnectionMeta()
+    connection_meta_google_email.meta_key = 'google_email'
+    connection_meta_google_email.meta_value = google_email
+    connection.metas.append(connection_meta_google_email)
+    connection_meta_github_username = ConnectionMeta()
+    connection_meta_github_username.meta_key = 'github_username'
+    connection_meta_github_username.meta_value = github_username
+    connection.metas.append(connection_meta_github_username)
+    connection_meta_slack_username = ConnectionMeta()
+    connection_meta_slack_username.meta_key = 'slack_username'
+    connection_meta_slack_username.meta_value = slack_username
+    connection.metas.append(connection_meta_slack_username)
+    connection_meta_website = ConnectionMeta()
+    connection_meta_website.meta_key = 'website'
+    connection_meta_website.meta_value = stage_user.website
+    connection.metas.append(connection_meta_website)
+    connection_meta_biosketch = ConnectionMeta()
+    connection_meta_biosketch.meta_key = 'biosketch'
+    connection_meta_biosketch.meta_value = stage_user.biosketch
+    connection.metas.append(connection_meta_biosketch)
+    connection_meta_expertise = ConnectionMeta()
+    connection_meta_expertise.meta_key = 'expertise'
+    connection_meta_expertise.meta_value = stage_user.expertise
+    connection.metas.append(connection_meta_expertise)
+    connection_meta_orcid = ConnectionMeta()
+    connection_meta_orcid.meta_key = 'orcid'
+    connection_meta_orcid.meta_value = stage_user.orcid
+    connection.metas.append(connection_meta_orcid)
+    connection_meta_pm = ConnectionMeta()
+    connection_meta_pm.meta_key = 'pm'
+    connection_meta_pm.meta_value = stage_user.pm
+    connection.metas.append(connection_meta_pm)
+    connection_meta_pm_name = ConnectionMeta()
+    connection_meta_pm_name.meta_key = 'pm_name'
+    connection_meta_pm_name.meta_value = stage_user.pm_name
+    connection.metas.append(connection_meta_pm_name)
+    connection_meta_pm_email = ConnectionMeta()
+    connection_meta_pm_email.meta_key = 'pm_email'
+    connection_meta_pm_email.meta_value = stage_user.pm_email
+    connection.metas.append(connection_meta_pm_email)
+    connection_meta_email = ConnectionMeta()
+    connection_meta_email.meta_key = 'email'
+    connection_meta_email.meta_value = stage_user.email
+    connection.metas.append(connection_meta_email)
+    connection_meta_phone = ConnectionMeta()
+    connection_meta_phone.meta_key = 'phone'
+    connection_meta_phone.meta_value = stage_user.phone
+    connection.metas.append(connection_meta_phone)
+    
+    
+    ## default value ##
+    connection.date_added = str(datetime.today().timestamp())
+    connection.entry_type = 'individual'
+    connection.visibility = 'public'
+    connection.slug = stage_user.first_name.lower() + '-' + stage_user.last_name.lower()
+    connection.family_name = ''
+    connection.honorific_prefix = ''
+    connection.middle_name = ''
+    connection.honorific_suffix = ''
+    connection.title = stage_user.role
+    connection.department = stage_user.component
+    connection.contact_first_name = ''
+    connection.contact_last_name = ''
+    connection.addresses = 'a:0:{}'
+    connection.im = 'a:0:{}'
+    connection.social = 'a:0:{}'
+    connection.links = 'a:0:{}'
+    connection.dates = 'a:0:{}'
+    connection.birthday = ''
+    connection.anniversary = ''
+    connection.bio = stage_user.expertise
+    connection.notes = ''
+    connection.excerpt = ''
+    connection.added_by = admin_id
+    connection.edited_by = admin_id
+    connection.owner = admin_id
+    connection.user = 0
+    connection.status = 'approved'
+
+    return connection
 
 
 # APIs, will need to be converted into internal functions later
