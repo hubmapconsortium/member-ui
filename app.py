@@ -739,7 +739,7 @@ def create_new_connection(stage_user, new_wp_user):
     return connection
 
 # Overwrite the existing fields with the ones from user registration
-def edit_matched_connection(stage_user, wp_user, connection_profile):
+def edit_matched_connection(stage_user, wp_user, connection):
     # First get the id of admin user in `wp_usermeta` table
     admin_id = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == session['globus_user_id']).first().user_id
 
@@ -793,13 +793,13 @@ def edit_matched_connection(stage_user, wp_user, connection_profile):
     connection_meta_access_requests.meta_value = stage_user.access_requests
 
     connection_meta_google_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'google_email').first()
-    connection_meta_google_email.meta_value = google_email
+    connection_meta_google_email.meta_value = stage_user.google_email
 
     connection_meta_github_username = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'github_username').first()
-    connection_meta_github_username.meta_value = github_username
+    connection_meta_github_username.meta_value = stage_user.github_username
 
     connection_meta_slack_username = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'slack_username').first()
-    connection_meta_slack_username.meta_value = slack_username
+    connection_meta_slack_username.meta_value = stage_user.slack_username
 
     connection_meta_website = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'website').first()
     connection_meta_website.meta_value = stage_user.website
@@ -831,12 +831,6 @@ def edit_matched_connection(stage_user, wp_user, connection_profile):
 def deny_stage_user(globus_user_id):
     stage_user = get_stage_user(globus_user_id)
     stage_user.deny = True
-    db.session.commit()
-
-# If approved by using an exisiting matching profile, we'll remove the stage user record
-def remove_stage_user(globus_user_id):
-    stage_user = get_stage_user(globus_user_id)
-    db.session.delete(stage_user)
     db.session.commit()
 
 # Get a list of all the pending registrations
@@ -1291,10 +1285,8 @@ def match(globus_user_id, connection_id):
         return show_admin_error("This connection profile does not exist!")
 
     # Will need to link and edit the exisiting profile 
-    approve_stage_user_by_editing_match(stage_user, connection_profile)
+    approve_stage_user_by_editing_matched(stage_user, connection_profile)
 
-    # Then remove the stage user record
-    remove_stage_user(globus_user_id)
     # Send email
     data = {
         'first_name': stage_user.first_name,
