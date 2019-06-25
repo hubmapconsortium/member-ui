@@ -569,6 +569,7 @@ def create_new_user(stage_user):
 
     return new_wp_user
 
+
 def create_new_connection(stage_user, new_wp_user):
     connection = Connection()
     connection.owners.append(new_wp_user)
@@ -590,6 +591,13 @@ def create_new_connection(stage_user, new_wp_user):
     connection.first_name = stage_user.first_name
     connection.last_name = stage_user.last_name
     connection.organization = stage_user.organization
+    connection.date_added = str(datetime.today().timestamp())
+    connection.entry_type = 'individual'
+    connection.visibility = 'public'
+    connection.slug = stage_user.first_name.lower() + '-' + stage_user.last_name.lower()
+    connection.bio = stage_user.expertise
+    connection.added_by = admin_id
+    connection.owner = admin_id
 
     if not stage_user.photo == '':
         photo_file_name = stage_user.photo.split('/')[-1]
@@ -601,8 +609,6 @@ def create_new_connection(stage_user, new_wp_user):
     # Currectly hard-coded id
     connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(stage_user.phone)}:\"{stage_user.phone}\";}}}}"
     
-    access_requests = '[]'
-    working_group = '[]'
     google_email = stage_user.google_email
     github_username = stage_user.github_username
     slack_username = stage_user.slack_username
@@ -640,12 +646,12 @@ def create_new_connection(stage_user, new_wp_user):
 
     connection_meta_working_group = ConnectionMeta()
     connection_meta_working_group.meta_key = 'working_group'
-    connection_meta_working_group.meta_value = str(ast.literal_eval(working_group) + ast.literal_eval(stage_user.working_group)).replace('\'', '"')
+    connection_meta_working_group.meta_value = str(ast.literal_eval(stage_user.working_group)).replace('\'', '"')
     connection.metas.append(connection_meta_working_group)
 
     connection_meta_access_requests = ConnectionMeta()
     connection_meta_access_requests.meta_key = 'access_requests'
-    connection_meta_access_requests.meta_value = str(ast.literal_eval(access_requests) + ast.literal_eval(stage_user.access_requests)).replace('\'', '"')
+    connection_meta_access_requests.meta_value = str(ast.literal_eval(stage_user.access_requests)).replace('\'', '"')
     connection.metas.append(connection_meta_access_requests)
 
     connection_meta_google_email = ConnectionMeta()
@@ -698,47 +704,15 @@ def create_new_connection(stage_user, new_wp_user):
     connection_meta_pm_email.meta_value = stage_user.pm_email
     connection.metas.append(connection_meta_pm_email)
 
-    
-    # default values
-    connection.date_added = str(datetime.today().timestamp())
-    connection.entry_type = 'individual'
-    connection.visibility = 'public'
-    connection.slug = stage_user.first_name.lower() + '-' + stage_user.last_name.lower()
-    connection.family_name = ''
-    connection.honorific_prefix = ''
-    connection.middle_name = ''
-    connection.honorific_suffix = ''
-    connection.title = stage_user.role
-    connection.department = stage_user.component
-    connection.contact_first_name = ''
-    connection.contact_last_name = ''
-    connection.addresses = 'a:0:{}'
-    connection.im = 'a:0:{}'
-    connection.social = 'a:0:{}'
-    connection.links = 'a:0:{}'
-    connection.dates = 'a:0:{}'
-    connection.birthday = ''
-    connection.anniversary = ''
-    connection.bio = stage_user.expertise
-    connection.notes = ''
-    connection.excerpt = ''
-    connection.added_by = admin_id
-    connection.edited_by = admin_id
-    connection.owner = admin_id
-    connection.user = 0
-    connection.status = 'approved'
-
     return connection
 
-
+# Overwrite the existing fields with the ones from user registration
 def edit_matched_connection(stage_user, wp_user, connection_profile):
     # First get the id of admin user in `wp_usermeta` table
     admin_id = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == session['globus_user_id']).first().user_id
 
     wp_user.user_login = stage_user.email
     wp_user.user_email = stage_user.email
-    wp_user.user_pass = generate_password()
-    
     
     # TO-DO: add new record to `wp_connections_email` and `wp_connections_phone` then get the id and update `wp_connections` email/phone fields
     # Currectly hard-coded id
@@ -746,6 +720,9 @@ def edit_matched_connection(stage_user, wp_user, connection_profile):
     connection.first_name = stage_user.first_name
     connection.last_name = stage_user.last_name
     connection.organization = stage_user.organization
+    connection.slug = stage_user.first_name.lower() + '-' + stage_user.last_name.lower()
+    connection.bio = stage_user.expertise
+    connection.edited_by = admin_id
 
     if not stage_user.photo == '':
         photo_file_name = stage_user.photo.split('/')[-1]
@@ -757,135 +734,63 @@ def edit_matched_connection(stage_user, wp_user, connection_profile):
     # Currectly hard-coded id
     connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(stage_user.phone)}:\"{stage_user.phone}\";}}}}"
     
-    access_requests = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'access_requests'), '[]')
-    working_group = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'working_group'), '[]')
-    if stage_user.google_email == '':
-        google_email = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'google_email'), '')
-    else:
-        google_email = stage_user.google_email
-        
-    if stage_user.github_username == '':
-        github_username = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'github_username'), '')
-    else:
-        github_username = stage_user.github_username
-
-    if stage_user.slack_username == '':
-        slack_username = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'slack_username'), '')
-    else:
-        slack_username = stage_user.slack_username
-
-    [db.session.delete(meta) for meta in connection.metas]
-
-    connection_meta_component = ConnectionMeta()
-    connection_meta_component.meta_key = 'component'
+    # Update corresponding metas
+    connection_meta_component = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'component').first()
     connection_meta_component.meta_value = stage_user.component
-    connection.metas.append(connection_meta_component)
-    connection_meta_other_component = ConnectionMeta()
-    connection_meta_other_component.meta_key = 'other_component'
+
+    connection_meta_other_component = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'other_component').first()
     connection_meta_other_component.meta_value = stage_user.other_component
-    connection.metas.append(connection_meta_other_component)
-    connection_meta_organization = ConnectionMeta()
-    connection_meta_organization.meta_key = 'organization'
+
+    connection_meta_organization = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'organization').first()
     connection_meta_organization.meta_value = stage_user.organization
-    connection.metas.append(connection_meta_organization)
-    connection_meta_other_organization = ConnectionMeta()
-    connection_meta_other_organization.meta_key = 'other_organization'
+
+    connection_meta_other_organization = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'other_organization').first()
     connection_meta_other_organization.meta_value = stage_user.other_organization
-    connection.metas.append(connection_meta_other_organization)
-    connection_meta_role = ConnectionMeta()
-    connection_meta_role.meta_key = 'role'
+
+    connection_meta_role = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'role').first()
     connection_meta_role.meta_value = stage_user.role
-    connection.metas.append(connection_meta_role)
-    connection_meta_other_role = ConnectionMeta()
-    connection_meta_other_role.meta_key = 'other_role'
+
+    connection_meta_other_role = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'other_role').first()
     connection_meta_other_role.meta_value = stage_user.other_role
-    connection.metas.append(connection_meta_other_role)
-    connection_meta_working_group = ConnectionMeta()
-    connection_meta_working_group.meta_key = 'working_group'
-    connection_meta_working_group.meta_value = str(ast.literal_eval(working_group) + ast.literal_eval(stage_user.working_group)).replace('\'', '"')
-    connection.metas.append(connection_meta_working_group)
-    connection_meta_access_requests = ConnectionMeta()
-    connection_meta_access_requests.meta_key = 'access_requests'
-    connection_meta_access_requests.meta_value = str(ast.literal_eval(access_requests) + ast.literal_eval(stage_user.access_requests)).replace('\'', '"')
-    connection.metas.append(connection_meta_access_requests)
-    connection_meta_google_email = ConnectionMeta()
-    connection_meta_google_email.meta_key = 'google_email'
+
+    connection_meta_working_group = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'working_group').first()
+    connection_meta_working_group.meta_value = str(ast.literal_eval(stage_user.working_group)).replace('\'', '"')
+
+    connection_meta_access_requests = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'access_requests').first()
+    connection_meta_access_requests.meta_value = str(ast.literal_eval(stage_user.access_requests)).replace('\'', '"')
+
+    connection_meta_google_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'google_email').first()
     connection_meta_google_email.meta_value = google_email
-    connection.metas.append(connection_meta_google_email)
-    connection_meta_github_username = ConnectionMeta()
-    connection_meta_github_username.meta_key = 'github_username'
+
+    connection_meta_github_username = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'github_username').first()
     connection_meta_github_username.meta_value = github_username
-    connection.metas.append(connection_meta_github_username)
-    connection_meta_slack_username = ConnectionMeta()
-    connection_meta_slack_username.meta_key = 'slack_username'
+
+    connection_meta_slack_username = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'slack_username').first()
     connection_meta_slack_username.meta_value = slack_username
-    connection.metas.append(connection_meta_slack_username)
-    connection_meta_website = ConnectionMeta()
-    connection_meta_website.meta_key = 'website'
+
+    connection_meta_website = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'website').first()
     connection_meta_website.meta_value = stage_user.website
-    connection.metas.append(connection_meta_website)
-    connection_meta_biosketch = ConnectionMeta()
-    connection_meta_biosketch.meta_key = 'biosketch'
-    connection_meta_biosketch.meta_value = stage_user.biosketch
-    connection.metas.append(connection_meta_biosketch)
-    connection_meta_expertise = ConnectionMeta()
-    connection_meta_expertise.meta_key = 'expertise'
+
+    connection_meta_expertise = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'expertise').first()
     connection_meta_expertise.meta_value = stage_user.expertise
-    connection.metas.append(connection_meta_expertise)
-    connection_meta_orcid = ConnectionMeta()
-    connection_meta_orcid.meta_key = 'orcid'
+
+    connection_meta_orcid = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'orcid').first()
     connection_meta_orcid.meta_value = stage_user.orcid
-    connection.metas.append(connection_meta_orcid)
-    connection_meta_pm = ConnectionMeta()
-    connection_meta_pm.meta_key = 'pm'
+
+    connection_meta_pm = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'pm').first()
     connection_meta_pm.meta_value = stage_user.pm
-    connection.metas.append(connection_meta_pm)
-    connection_meta_pm_name = ConnectionMeta()
-    connection_meta_pm_name.meta_key = 'pm_name'
+
+    connection_meta_pm_name = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'pm_name').first()
     connection_meta_pm_name.meta_value = stage_user.pm_name
-    connection.metas.append(connection_meta_pm_name)
-    connection_meta_pm_email = ConnectionMeta()
-    connection_meta_pm_email.meta_key = 'pm_email'
+
+    connection_meta_pm_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'pm_email').first()
     connection_meta_pm_email.meta_value = stage_user.pm_email
-    connection.metas.append(connection_meta_pm_email)
-    connection_meta_email = ConnectionMeta()
-    connection_meta_email.meta_key = 'email'
+
+    connection_meta_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'email').first()
     connection_meta_email.meta_value = stage_user.email
-    connection.metas.append(connection_meta_email)
-    connection_meta_phone = ConnectionMeta()
-    connection_meta_phone.meta_key = 'phone'
+
+    connection_meta_phone = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'phone').first()
     connection_meta_phone.meta_value = stage_user.phone
-    connection.metas.append(connection_meta_phone)
-    
-    
-    ## default value ##
-    connection.date_added = str(datetime.today().timestamp())
-    connection.entry_type = 'individual'
-    connection.visibility = 'public'
-    connection.slug = stage_user.first_name.lower() + '-' + stage_user.last_name.lower()
-    connection.family_name = ''
-    connection.honorific_prefix = ''
-    connection.middle_name = ''
-    connection.honorific_suffix = ''
-    connection.title = stage_user.role
-    connection.department = stage_user.component
-    connection.contact_first_name = ''
-    connection.contact_last_name = ''
-    connection.addresses = 'a:0:{}'
-    connection.im = 'a:0:{}'
-    connection.social = 'a:0:{}'
-    connection.links = 'a:0:{}'
-    connection.dates = 'a:0:{}'
-    connection.birthday = ''
-    connection.anniversary = ''
-    connection.bio = stage_user.expertise
-    connection.notes = ''
-    connection.excerpt = ''
-    connection.added_by = admin_id
-    connection.edited_by = admin_id
-    connection.owner = admin_id
-    connection.user = 0
-    connection.status = 'approved'
 
     return connection
 
@@ -980,10 +885,7 @@ def get_connection_profile(connection_id):
     connection_profile = Connection.query.filter(Connection.id == connection_id).first()
     return connection_profile
     
-def generate_password():
-    s = "abcdefghijklmnopqrstuvwxyz01234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()?"
-    passlen = 16
-    return "".join(random.sample(s, passlen))
+
 
 
 
@@ -1395,7 +1297,10 @@ def match(globus_user_id, connection_id):
 
 ############################################################
 
-
+def generate_password():
+    s = "abcdefghijklmnopqrstuvwxyz01234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()?"
+    passlen = 16
+    return "".join(random.sample(s, passlen))
 
 def assign_wp_user(wp_user, stage_user, connection=None, mode='CREATE'):
     # First get the id of admin user in `wp_usermeta` table
