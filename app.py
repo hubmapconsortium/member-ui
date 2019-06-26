@@ -487,7 +487,7 @@ def handle_user_profile_pic(user_info, profile_pic_option, img_to_upload):
             save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{user_info['globus_user_id']}.{extension}"))
             img_file.save(save_path)
         elif profile_pic_option == 'url':
-            response = requests.get(new_user['photo_url'])
+            response = requests.get(user_info['photo_url'])
             img_file = Image.open(BytesIO(response.content))
             extension = img_file.format
 
@@ -515,7 +515,7 @@ def update_user_profile(user_info, profile_pic_option, img_to_upload, user_id):
     # if user doesn't want to use the exisiting image
     if profile_pic_option != "existing":
         user_info['photo'] = handle_user_profile_pic(user_info, profile_pic_option, img_to_upload)
-        
+
     try:
         # will this stage_user be added to database?
         stage_user = StageUser(user_info)
@@ -792,7 +792,9 @@ def edit_connection(stage_user, wp_user, connection):
     connection.bio = stage_user.expertise
     connection.edited_by = admin_id
 
-    if not stage_user.photo == '':
+    if stage_user.photo != '':
+        print("======stage_user.photo=======")
+        pprint(stage_user.photo)
         photo_file_name = stage_user.photo.split('/')[-1]
         # Disable for now
         #pathlib.Path(app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() ).mkdir(parents=True, exist_ok=True)
@@ -1154,7 +1156,7 @@ def profile():
                 try:
                     # Send email to admin for user profile update
                     # so the admin can do furtuer changes in globus
-                    send_user_profile_update_mail(stage_user_info)
+                    send_user_profile_updated_mail(stage_user_info)
                 except Exception as e: 
                     print("Failed to send user profile update email to admin.")
                     print(e)
