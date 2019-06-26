@@ -1,14 +1,20 @@
+{% extends "layouts/login_layout.html" %}
+{% block content %}
 <div class="alert alert-info" role="alert">
-<h1>Login</h1>
+<h1>HuBMAP User Profile Login</h1>
 <p>
-User authendication is required for accessing this page, please
-click the button and you will be redirected to the Globus login page.
+User authendication is required. 
+</p>
+
+<p>
+Please click the button below and you will be redirected to the Globus login page.
 There you can login with your institutional credentials. Thank you!
 </p>
 
 <hr />
 
-<a class="btn btn-primary btn-lg" href="http://localhost:5000/login">
+<a class="btn btn-primary btn-lg" href="{{ config['FLASK_APP_BASE_URI'] }}/login">
 Login with your institutional credentials via Globus
 </a>
 </div>
+{% endblock %}

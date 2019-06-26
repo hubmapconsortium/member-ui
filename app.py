@@ -3,7 +3,7 @@ from globus_sdk import AuthClient, AccessTokenAuthorizer, ConfidentialAppAuthCli
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from werkzeug import secure_filename
-from phpserialize import dumps
+import phpserialize
 import json
 import os
 import random
@@ -22,8 +22,10 @@ import requests
 import string
 import random
 from flask_mail import Mail, Message
+from functools import wraps
+
+# For debugging
 from pprint import pprint
-from phpserialize import *
 
 
 # Init app and use the config from instance folder
@@ -106,7 +108,7 @@ class StageUser(db.Model):
         except e:
             raise e
 
-# StageUser Schema
+# Define output format with marshmallow schema
 class StageUserSchema(ma.Schema):
     class Meta:
         fields = ('id', 'globus_user_id', 'email', 'first_name', 'last_name', 'component', 'other_component', 'organization', 'other_organization',
@@ -224,112 +226,33 @@ connections_schema = ConnectionSchema(many=True, strict=True)
 
 
 # Send email confirmation of new user registration to admins
-def send_new_user_registration_mail(data):
+def send_new_user_registered_mail(data):
     msg = Message('New user registration submitted', app.config['MAIL_ADMIN_LIST'])
-    msg.html = render_template('email/new_user_registration_email.html', data = data)
+    msg.html = render_template('email/new_user_registered_email.html', data = data)
     mail.send(msg)
 
 # Send email to admins once user profile updated
-def send_user_profile_update_mail(data):
+def send_user_profile_updated_mail(data):
     msg = Message('User profile updated', app.config['MAIL_ADMIN_LIST'])
-    msg.html = render_template('email/user_profile_update_email.html', data = data)
+    msg.html = render_template('email/user_profile_updated_email.html', data = data)
     mail.send(msg)
 
 # Once admin approves the new user registration, email the new user as well as the admins
-def send_new_user_approval_mail(recipient, data):
+def send_new_user_approved_mail(recipient, data):
     msg = Message('New user registration approved', [recipient] + app.config['MAIL_ADMIN_LIST'])
-    msg.html = render_template('email/new_user_approval_email.html', data = data)
+    msg.html = render_template('email/new_user_approved_email.html', data = data)
     mail.send(msg)
 
 # Send user email once registration is denied
-def send_new_user_approval_mail(recipient, data):
+def send_new_user_denied_mail(recipient, data):
     msg = Message('New user registration denied', [recipient] + app.config['MAIL_ADMIN_LIST'])
     msg.html = render_template('email/new_user_denied_email.html', data = data)
     mail.send(msg)
 
-# Routing
-
-# Default
-@app.route("/")
-def hello():
-    return "Welcome to HuBMAP User Registration!"
 
 
-# Redirect users from react app login page to Globus auth login widget then redirect back
-@app.route('/login')
-def login():
-    redirect_uri = url_for('login', _external=True)
-    #redirect_uri = app.config['FLASK_APP_BASE_URI'] + 'login'
-
-    confidential_app_auth_client = ConfidentialAppAuthClient(app.config['GLOBUS_APP_ID'], app.config['GLOBUS_APP_SECRET'])
-    confidential_app_auth_client.oauth2_start_flow(redirect_uri)
-
-    # If there's no "code" query string parameter, we're in this route
-    # starting a Globus Auth login flow.
-    # Redirect out to Globus Auth
-    if 'code' not in request.args:                                        
-        auth_uri = confidential_app_auth_client.oauth2_get_authorize_url(additional_params={"scope": "openid profile email urn:globus:auth:scope:transfer.api.globus.org:all urn:globus:auth:scope:auth.globus.org:view_identities urn:globus:auth:scope:nexus.api.globus.org:groups" })
-        return redirect(auth_uri)
-    # If we do have a "code" param, we're coming back from Globus Auth
-    # and can start the process of exchanging an auth code for a token.
-    else:
-        auth_code = request.args.get('code')
-
-        token_response = confidential_app_auth_client.oauth2_exchange_code_for_tokens(auth_code)
-        
-        # Get all Bearer tokens
-        auth_token = token_response.by_resource_server['auth.globus.org']['access_token']
-        nexus_token = token_response.by_resource_server['nexus.api.globus.org']['access_token']
-        transfer_token = token_response.by_resource_server['transfer.api.globus.org']['access_token']
-
-        # Also get the user info (sub, email, name, preferred_username) using the AuthClient with the auth token
-        user_info = get_user_info(auth_token)
-
-        print(user_info)
-
-        # Store the resulting tokens in server session
-        session['isAuthenticated'] = True
-        session['globus_user_id'] = user_info['sub']
-        session['name'] = user_info['name']
-        session['email'] = user_info['email']
-        session['auth_token'] = auth_token
-        session['nexus_token'] = nexus_token
-        session['transfer_token'] = transfer_token
-      
-        # Finally redirect back to the registeration page
-        return redirect(url_for('register'))
-
-@app.route('/logout')
-def logout():
-    """
-    - Revoke the tokens with Globus Auth.
-    - Destroy the session state.
-    - Redirect the user to the Globus Auth logout page.
-    """
-    confidential_app_auth_client = ConfidentialAppAuthClient(app.config['GLOBUS_APP_ID'], app.config['GLOBUS_APP_SECRET'])
-
-    # Revoke the tokens with Globus Auth
-    if 'tokens' in session:    
-        for token in (token_info['access_token']
-            for token_info in session['tokens'].values()):
-                confidential_app_auth_client.oauth2_revoke_token(token)
-
-    # Destroy the session state
-    session.clear()
-
-    # build the logout URI with query params
-    # there is no tool to help build this (yet!)
-    globus_logout_url = (
-        'https://auth.globus.org/v2/web/logout' +
-        '?client={}'.format(app.config['GLOBUS_APP_ID']) +
-        '&redirect_uri={}'.format(app.config['FLASK_APP_BASE_URI'] + 'register') +
-        '&redirect_name={}'.format(app.config['FLASK_APP_NAME']))
-
-    # Redirect the user to the Globus Auth logout page
-    return redirect(globus_logout_url)
-
-
-def get_user_info(token):
+# Get user info from globus with the auth access token
+def get_globus_user_info(token):
     auth_client = AuthClient(authorizer=AccessTokenAuthorizer(token))
     return auth_client.oauth2_userinfo()
 
@@ -374,7 +297,7 @@ def construct_user(request):
         "website": request.form['website'],
         "expertise": request.form['expertise'],
         "orcid": request.form['orcid'],
-        "pm": get_pm_selection(request.form),
+        "pm": get_pm_selection(request.form['pm']),
         "pm_name": request.form['pm_name'],
         "pm_email": request.form['pm_email']
     }
@@ -383,8 +306,10 @@ def construct_user(request):
 
     return new_user, img_to_upload
 
-def get_pm_selection(form):
-    value = form.get('pm', '')
+
+def get_pm_selection(value):
+    # Make comparison case insensitive
+    value = value.lower()
     if value == 'yes':
         return True
     elif value == 'no':
@@ -392,170 +317,842 @@ def get_pm_selection(form):
     else:
         return None
 
+# Generate CSRF tokens for registration form and profile form
 def generate_csrf_token(stringLength = 10):
     if 'csrf_token' not in session:
         letters = string.ascii_lowercase
         session['csrf_token'] = ''.join(random.choice(letters) for i in range(stringLength))
     return session['csrf_token']
 
+
+def show_registration_form():
+    context = {
+        'isAuthenticated': True,
+        'username': session['name'],
+        'csrf_token': generate_csrf_token(),
+        'first_name': session['name'].split(" ")[0],
+        'last_name': session['name'].split(" ")[1],
+        'email': session['email'],
+        'recaptcha_site_key': app.config['GOOGLE_RECAPTCHA_SITE_KEY']
+    }
+
+    return render_template('register.html', data = context)
+
+# Three different types of message for authenticated users
+def show_user_error(message):
+    context = {
+        'isAuthenticated': True,
+        'username': session['name'],
+        'message': message
+    }
+    return render_template('user_message/user_error.html', data = context)
+
+def show_user_confirmation(message):
+    context = {
+        'isAuthenticated': True,
+        'username': session['name'],
+        'message': message
+    }
+    return render_template('user_message/user_confirmation.html', data = context)
+
+def show_user_info(message):
+    context = {
+        'isAuthenticated': True,
+        'username': session['name'],
+        'message': message
+    }
+    return render_template('user_message/user_info.html', data = context)
+
+# Admin messages
+def show_admin_error(message):
+    context = {
+        'isAuthenticated': True,
+        'username': session['name'],
+        'message': message
+    }
+    return render_template('admin_message/admin_error.html', data = context)
+
+def show_admin_confirmation(message):
+    context = {
+        'isAuthenticated': True,
+        'username': session['name'],
+        'message': message
+    }
+    return render_template('admin_message/admin_confirmation.html', data = context)
+
+def show_admin_info(message):
+    context = {
+        'isAuthenticated': True,
+        'username': session['name'],
+        'message': message
+    }
+    return render_template('admin_message/admin_info.html', data = context)
+
+# Check if the user is registered and approved
+# meaning this user is in `wp_users`, `wp_connections`, and `user_connection` tables and 
+# the user has the role of "member" or "administrator", the role is assigned when the user is approved
+# A use with a submitted registration but pending is not consodered to be an approved user
+def user_is_approved(globus_user_id):
+    user_meta = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == globus_user_id).first()
+    if not user_meta:
+        print('No user found with globus_user_id: ' + globus_user_id)
+        return False
+    users = [user_meta.user]
+    result = wp_users_schema.dump(users)
+    user = result[0][0]
+    capabilities = next((meta for meta in user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
+    if (('meta_value' in capabilities) and ('member' in capabilities['meta_value'])):
+        return True
+    else:
+        return False
+
+# Check if user has the "administrator" role
+def user_is_admin(globus_user_id):
+    user_meta = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == globus_user_id).first()
+    if not user_meta:
+        print('No user found with globus_user_id: ' + globus_user_id)
+        return False
+    users = [user_meta.user]
+    result = wp_users_schema.dump(users)
+    user = result[0][0]
+    capabilities = next((meta for meta in user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
+    if (('meta_value' in capabilities) and ('administrator' in capabilities['meta_value'])):
+        return True
+    else:
+        return False
+
+
+# Check if the user registration is still pending for approval in `stage_user` table
+def user_in_pending(globus_user_id):
+    stage_user = StageUser.query.filter(StageUser.globus_user_id == globus_user_id)
+    if stage_user.count() == 0:
+    	return False
+    return True
+
+# Add new user reigstration to `stage_user` table
+def add_new_stage_user(new_user, img_to_upload):
+    # Add user profile image data
+    if not img_to_upload:
+        BASE = os.path.dirname(os.path.abspath(__file__))
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{new_user['globus_user_id']}.jpg"))
+        copy2(os.path.join(BASE, 'avatar/', 'noname.jpg'), save_path)
+        new_user['photo'] = save_path
+    else:
+        if new_user['photo_url'] != '':
+            response = requests.get(new_user['photo_url'])
+            img_file = Image.open(BytesIO(response.content))
+            extension = img_file.format
+        else:
+            _, extension = img_to_upload.filename.rsplit('.', 1)
+            img_file = img_to_upload
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{new_user['globus_user_id']}.{extension}"))
+        img_file.save(save_path)
+        new_user['photo'] = save_path
+    
+    try:
+        new_stage_user = StageUser(new_user)
+    except:
+        print('User data is not valid')
+    
+    if StageUser.query.filter(StageUser.globus_user_id == new_stage_user.globus_user_id).first():
+        print('The same stage user exists')
+    else:
+        try:
+            db.session.add(new_stage_user)
+            db.session.commit()
+        except:
+            print('Failed to add a new stage user')
+
+# Query the user data to populate into profile form
+def get_user_profile(globus_user_id):
+    user_meta = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == globus_user_id).first()
+    if not user_meta:
+        print('No user found with globus_user_id: ' + globus_user_id)
+        return None
+    users = [user_meta.user]
+    result = wp_users_schema.dump(users)
+    user = result[0][0]
+    return user
+
+# Update user profile with user-provided information 
+def update_user_profile(stage_user_info, img, user_id):
+    wp_user = WPUser.query.get(user_id)
+    
+    img_file = None
+    extension = None
+
+    # Get the photo from URL if provided
+    if stage_user_info['photo_url'] != '':
+        response = requests.get(stage_user_info['photo_url'])
+        img_file = Image.open(BytesIO(response.content))
+        extension = img_file.format
+    
+    if img:
+        img_file = img
+        _, extension = img.filename.rsplit('.', 1)
+        
+    if extension:
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{stage_user_info['globus_user_id']}.{extension}"))
+        img_file.save(save_path)
+        stage_user_info['photo'] = save_path
+    
+    try:
+        # will this stage_user be added to database?
+        stage_user = StageUser(stage_user_info)
+        edit_connection(stage_user, wp_user, wp_user.connection[0])
+        db.session.commit()
+    except Exception as e:
+        print("Failed to update the user profile")
+        print(e)
+
+
+# This is user approval without using existing mathicng profile
+# Approving by moving user data from `stage_user` into `wp_user` and `wp_connections`
+# also add the ids to the `user_connection` table
+def approve_stage_user_by_creating_new(stage_user):
+    # First need to check if there's an exisiting wp_user record with the same globus id
+    wp_user = get_wp_user(stage_user.globus_user_id)
+
+    if not wp_user:
+        try:
+            # Create new user and meta
+            new_wp_user = create_new_user(stage_user)
+
+            # Create profile in `wp_connections`
+            create_new_connection(stage_user, new_wp_user)
+
+            db.session.add(new_wp_user)
+            db.session.delete(stage_user)
+            db.session.commit()
+        except Exception as e:
+            print("approve_stage_user_by_creating_new() failed to create new wp_user and new connection, or delete the stage user record")
+            print(e)
+    else:
+        try:
+            create_new_connection(stage_user, wp_user)
+            db.session.delete(stage_user)
+            db.session.commit()
+        except Exception as e:
+            print("approve_stage_user_by_creating_new() failed to create new connection or delete the stage user record")
+            print(e)
+        
+
+def approve_stage_user_by_editing_matched(stage_user, connection_profile):
+    # First need to check if there's an exisiting wp_user record with the same globus id
+    wp_user = get_wp_user(stage_user.globus_user_id)
+
+    if not wp_user:
+        try:
+            # Create new user and meta
+            new_wp_user = create_new_user(stage_user)
+
+            # Edit profile in `wp_connections`
+            edit_connection(stage_user, new_wp_user, connection_profile)
+
+            db.session.add(new_wp_user)
+            db.session.delete(stage_user)
+            db.session.commit()
+        except Exception as e:
+            print("approve_stage_user_by_editing_matched() failed to create new wp_user and update the connection, or delete the stage user record")
+            print(e)
+    else:
+        try:
+            edit_connection(stage_user, wp_user, connection_profile)
+            db.session.delete(stage_user)
+            db.session.commit()
+        except Exception as e:
+            print("approve_stage_user_by_editing_matched() failed to update the connection or delete the stage user record")
+            print(e)
+
+
+def create_new_user(stage_user):
+    # Create a new wp_user record
+    new_wp_user = WPUser()
+    new_wp_user.user_login = stage_user.email
+    new_wp_user.user_email = stage_user.email
+    new_wp_user.user_pass = generate_password()
+
+    # Create new usermeta for "member" role
+    meta_capabilities = WPUserMeta()
+    meta_capabilities.meta_key = "wp_capabilities"
+    meta_capabilities.meta_value = "a:1:{s:6:\"member\";b:1;}"
+    new_wp_user.metas.append(meta_capabilities)
+    
+    # Create new usermeta for globus id
+    meta_globus_user_id = WPUserMeta()
+    meta_globus_user_id.meta_key = "openid-connect-generic-subject-identity"
+    meta_globus_user_id.meta_value = stage_user.globus_user_id
+    new_wp_user.metas.append(meta_globus_user_id)
+
+    return new_wp_user
+
+def generate_password():
+    s = "abcdefghijklmnopqrstuvwxyz01234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()?"
+    passlen = 16
+    return "".join(random.sample(s, passlen))
+
+def create_new_connection(stage_user, new_wp_user):
+    # First get the id of admin user in `wp_usermeta` table
+    admin_id = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == session['globus_user_id']).first().user_id
+
+    connection = Connection()
+    connection.owners.append(new_wp_user)
+
+    # Need to handle email and phone metas first
+    connection_meta_email = ConnectionMeta()
+    connection_meta_email.meta_key = 'email'
+    connection_meta_email.meta_value = stage_user.email
+    connection.metas.append(connection_meta_email)
+    
+    connection_meta_phone = ConnectionMeta()
+    connection_meta_phone.meta_key = 'phone'
+    connection_meta_phone.meta_value = stage_user.phone
+    connection.metas.append(connection_meta_phone)
+
+    # TO-DO: add new record to `wp_connections_email` and `wp_connections_phone` then get the id and update `wp_connections` email/phone fields
+    # Currectly hard-coded id
+    connection.email = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:2199;s:4:\"type\";s:4:\"work\";s:4:\"name\";s:10:\"Work Email\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:7:\"address\";s:{len(stage_user.email)}:\"{stage_user.email}\";}}}}"
+    # Currectly hard-coded id
+    connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(stage_user.phone)}:\"{stage_user.phone}\";}}}}"
+    
+    connection.first_name = stage_user.first_name
+    connection.last_name = stage_user.last_name
+    connection.organization = stage_user.organization
+    connection.date_added = str(datetime.today().timestamp())
+    connection.entry_type = 'individual'
+    connection.visibility = 'public'
+    connection.slug = stage_user.first_name.lower() + '-' + stage_user.last_name.lower()
+    connection.family_name = ''
+    connection.honorific_prefix = ''
+    connection.middle_name = ''
+    connection.honorific_suffix = ''
+    connection.title = stage_user.role
+    connection.department = stage_user.component
+    connection.contact_first_name = ''
+    connection.contact_last_name = ''
+    connection.addresses = 'a:0:{}'
+    connection.im = 'a:0:{}'
+    connection.social = 'a:0:{}'
+    connection.links = 'a:0:{}'
+    connection.dates = 'a:0:{}'
+    connection.birthday = ''
+    connection.anniversary = ''
+    connection.bio = stage_user.expertise
+    connection.notes = ''
+    connection.excerpt = ''
+    connection.added_by = admin_id
+    connection.edited_by = admin_id
+    connection.owner = admin_id
+    connection.user = 0
+    connection.status = 'approved'
+
+    if not stage_user.photo == '':
+        photo_file_name = stage_user.photo.split('/')[-1]
+        # Disable for now
+        #pathlib.Path(app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() ).mkdir(parents=True, exist_ok=True)
+        #copyfile(stage_user.photo, app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "/" + photo_file_name)
+        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config['CONNECTION_IMAGE_URL'] + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "\\/" + photo_file_name + "\",\"url\": \"" + app.config['CONNECTION_IMAGE_URL'] + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "\\/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image\\/jpeg\",\"type\":2}}}}"
+
+
+    google_email = stage_user.google_email
+    github_username = stage_user.github_username
+    slack_username = stage_user.slack_username
+
+    # Other connections metas
+    connection_meta_component = ConnectionMeta()
+    connection_meta_component.meta_key = 'component'
+    connection_meta_component.meta_value = stage_user.component
+    connection.metas.append(connection_meta_component)
+
+    connection_meta_other_component = ConnectionMeta()
+    connection_meta_other_component.meta_key = 'other_component'
+    connection_meta_other_component.meta_value = stage_user.other_component
+    connection.metas.append(connection_meta_other_component)
+
+    connection_meta_organization = ConnectionMeta()
+    connection_meta_organization.meta_key = 'organization'
+    connection_meta_organization.meta_value = stage_user.organization
+    connection.metas.append(connection_meta_organization)
+
+    connection_meta_other_organization = ConnectionMeta()
+    connection_meta_other_organization.meta_key = 'other_organization'
+    connection_meta_other_organization.meta_value = stage_user.other_organization
+    connection.metas.append(connection_meta_other_organization)
+
+    connection_meta_role = ConnectionMeta()
+    connection_meta_role.meta_key = 'role'
+    connection_meta_role.meta_value = stage_user.role
+    connection.metas.append(connection_meta_role)
+
+    connection_meta_other_role = ConnectionMeta()
+    connection_meta_other_role.meta_key = 'other_role'
+    connection_meta_other_role.meta_value = stage_user.other_role
+    connection.metas.append(connection_meta_other_role)
+
+    connection_meta_working_group = ConnectionMeta()
+    connection_meta_working_group.meta_key = 'working_group'
+    connection_meta_working_group.meta_value = stage_user.working_group
+    connection.metas.append(connection_meta_working_group)
+
+    connection_meta_access_requests = ConnectionMeta()
+    connection_meta_access_requests.meta_key = 'access_requests'
+    connection_meta_access_requests.meta_value = stage_user.access_requests
+    connection.metas.append(connection_meta_access_requests)
+
+    connection_meta_google_email = ConnectionMeta()
+    connection_meta_google_email.meta_key = 'google_email'
+    connection_meta_google_email.meta_value = google_email
+    connection.metas.append(connection_meta_google_email)
+
+    connection_meta_github_username = ConnectionMeta()
+    connection_meta_github_username.meta_key = 'github_username'
+    connection_meta_github_username.meta_value = github_username
+    connection.metas.append(connection_meta_github_username)
+
+    connection_meta_slack_username = ConnectionMeta()
+    connection_meta_slack_username.meta_key = 'slack_username'
+    connection_meta_slack_username.meta_value = slack_username
+    connection.metas.append(connection_meta_slack_username)
+
+    connection_meta_website = ConnectionMeta()
+    connection_meta_website.meta_key = 'website'
+    connection_meta_website.meta_value = stage_user.website
+    connection.metas.append(connection_meta_website)
+
+    # need biosketch?
+    connection_meta_biosketch = ConnectionMeta()
+    connection_meta_biosketch.meta_key = 'biosketch'
+    connection_meta_biosketch.meta_value = stage_user.biosketch
+    connection.metas.append(connection_meta_biosketch)
+
+    connection_meta_expertise = ConnectionMeta()
+    connection_meta_expertise.meta_key = 'expertise'
+    connection_meta_expertise.meta_value = stage_user.expertise
+    connection.metas.append(connection_meta_expertise)
+
+    connection_meta_orcid = ConnectionMeta()
+    connection_meta_orcid.meta_key = 'orcid'
+    connection_meta_orcid.meta_value = stage_user.orcid
+    connection.metas.append(connection_meta_orcid)
+
+    connection_meta_pm = ConnectionMeta()
+    connection_meta_pm.meta_key = 'pm'
+    connection_meta_pm.meta_value = stage_user.pm
+    connection.metas.append(connection_meta_pm)
+
+    connection_meta_pm_name = ConnectionMeta()
+    connection_meta_pm_name.meta_key = 'pm_name'
+    connection_meta_pm_name.meta_value = stage_user.pm_name
+    connection.metas.append(connection_meta_pm_name)
+
+    connection_meta_pm_email = ConnectionMeta()
+    connection_meta_pm_email.meta_key = 'pm_email'
+    connection_meta_pm_email.meta_value = stage_user.pm_email
+    connection.metas.append(connection_meta_pm_email)
+
+
+# Overwrite the existing fields with the ones from user registration or profile update
+def edit_connection(stage_user, wp_user, connection):
+    # First get the id of admin user in `wp_usermeta` table
+    admin_id = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == session['globus_user_id']).first().user_id
+
+    wp_user.user_login = stage_user.email
+    wp_user.user_email = stage_user.email
+    
+    # TO-DO: add new record to `wp_connections_email` and `wp_connections_phone` then get the id and update `wp_connections` email/phone fields
+    # Currectly hard-coded id
+    connection.email = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:2199;s:4:\"type\";s:4:\"work\";s:4:\"name\";s:10:\"Work Email\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:7:\"address\";s:{len(stage_user.email)}:\"{stage_user.email}\";}}}}"
+    # Currectly hard-coded id
+    connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(stage_user.phone)}:\"{stage_user.phone}\";}}}}"
+    
+    connection.first_name = stage_user.first_name
+    connection.last_name = stage_user.last_name
+    connection.organization = stage_user.organization
+    connection.slug = stage_user.first_name.lower() + '-' + stage_user.last_name.lower()
+    connection.bio = stage_user.expertise
+    connection.edited_by = admin_id
+
+    if not stage_user.photo == '':
+        photo_file_name = stage_user.photo.split('/')[-1]
+        # Disable for now
+        #pathlib.Path(app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() ).mkdir(parents=True, exist_ok=True)
+        #copyfile(stage_user.photo, app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "/" + photo_file_name)
+        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config['CONNECTION_IMAGE_URL'] + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "\\/" + photo_file_name + "\",\"url\": \"" + app.config['CONNECTION_IMAGE_URL'] + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "\\/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image\\/jpeg\",\"type\":2}}}}"
+
+
+    # Update corresponding metas
+    connection_meta_component = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'component').first()
+    connection_meta_component.meta_value = stage_user.component
+
+    connection_meta_other_component = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'other_component').first()
+    connection_meta_other_component.meta_value = stage_user.other_component
+
+    connection_meta_organization = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'organization').first()
+    connection_meta_organization.meta_value = stage_user.organization
+
+    connection_meta_other_organization = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'other_organization').first()
+    connection_meta_other_organization.meta_value = stage_user.other_organization
+
+    connection_meta_role = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'role').first()
+    connection_meta_role.meta_value = stage_user.role
+
+    connection_meta_other_role = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'other_role').first()
+    connection_meta_other_role.meta_value = stage_user.other_role
+
+    connection_meta_working_group = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'working_group').first()
+    connection_meta_working_group.meta_value = stage_user.working_group
+
+    connection_meta_access_requests = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'access_requests').first()
+    connection_meta_access_requests.meta_value = stage_user.access_requests
+
+    connection_meta_google_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'google_email').first()
+    connection_meta_google_email.meta_value = stage_user.google_email
+
+    connection_meta_github_username = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'github_username').first()
+    connection_meta_github_username.meta_value = stage_user.github_username
+
+    connection_meta_slack_username = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'slack_username').first()
+    connection_meta_slack_username.meta_value = stage_user.slack_username
+
+    connection_meta_website = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'website').first()
+    connection_meta_website.meta_value = stage_user.website
+
+    connection_meta_expertise = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'expertise').first()
+    connection_meta_expertise.meta_value = stage_user.expertise
+
+    connection_meta_orcid = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'orcid').first()
+    connection_meta_orcid.meta_value = stage_user.orcid
+
+    connection_meta_pm = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'pm').first()
+    connection_meta_pm.meta_value = stage_user.pm
+
+    connection_meta_pm_name = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'pm_name').first()
+    connection_meta_pm_name.meta_value = stage_user.pm_name
+
+    connection_meta_pm_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'pm_email').first()
+    connection_meta_pm_email.meta_value = stage_user.pm_email
+
+    connection_meta_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'email').first()
+    connection_meta_email.meta_value = stage_user.email
+
+    connection_meta_phone = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'phone').first()
+    connection_meta_phone.meta_value = stage_user.phone
+
+
+# Deny the new user registration
+def deny_stage_user(globus_user_id):
+    stage_user = get_stage_user(globus_user_id)
+    stage_user.deny = True
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        print("deny_stage_user() failed to update the database")
+        print(e)
+
+# Get a list of all the pending registrations
+def get_all_stage_users():
+    stage_users = StageUser.query.order_by(StageUser.created_at).all()
+    return stage_users
+
+# Get a stage user new registration by a given globus_user_id
+def get_stage_user(globus_user_id):
+    stage_user = StageUser.query.filter(StageUser.globus_user_id == globus_user_id).first()
+    return stage_user
+
+# Get the exisiting user from `wp_users` table by looking for the globus id in `wp_usermeta` table
+def get_wp_user(globus_user_id):
+    wp_user_meta = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == globus_user_id).first()
+    if not wp_user_meta:
+        return None
+    wp_user = WPUser.query.filter(WPUser.id == wp_user_meta.user_id).first()
+    return wp_user
+
+# Find the matching profiles of a given user from the `wp_connections` table
+# Scoring: last_name(6), first_name(4), email(10), organization(2)
+def get_matching_profiles(last_name, first_name, email, organization):
+    last_name_match_score = 6
+    first_name_match_score = 4
+    email_match_score = 10
+    organization_match_score = 2
+
+    # Use user email to search for matching profiles
+    profiles_by_last_name = Connection.query.filter(Connection.last_name.like(f'%{last_name}%')).all()
+    profiles_by_first_name = Connection.query.filter(Connection.first_name.like(f'%{first_name}%')).all()
+    profiles_by_email = Connection.query.filter(Connection.email.like(f'%{email}%')).all()
+    profiles_by_organization = Connection.query.filter(Connection.organization.like(f'%{organization}%')).all()
+    
+    # Now merge the above lists into one big list and pass into a set to remove duplicates
+    profiles_set = set(profiles_by_last_name + profiles_by_first_name + profiles_by_email + profiles_by_organization)
+    # convert back to a list for sorting later
+    profiles_list = list(profiles_set)
+    print("========before scoring=========")
+    pprint(vars(profiles_list[0]))
+
+    filtered_profiles = list()
+    if len(profiles_list) > 0:
+        for profile in profiles_list:
+            # Add a new aroperty
+            profile.score = 0
+
+            # See if the target profile can be found in each search resulting list
+            # then add up the corresponding score
+            if profile in profiles_by_last_name:
+                profile.score = profile.score + last_name_match_score
+
+            if profile in profiles_by_first_name:
+                profile.score = profile.score + first_name_match_score
+
+            if profile in profiles_by_email:
+                profile.score = profile.score + email_match_score
+
+            if profile in profiles_by_organization:
+                profile.score = profile.score + organization_match_score
+            
+            # Ditch the profile that has matching score <= first_name_match_score
+            if profile.score > first_name_match_score:
+                # Deserialize the email value to a python dict
+                deserilized_email_dict = phpserialize.loads(profile.email.encode('utf-8'), decode_strings=True)
+                # Add another new property for display only
+                profile.deserilized_email = (deserilized_email_dict[0])['address']
+                filtered_profiles.append(profile)
+
+    print("========after scoring=========")
+    pprint(vars(profiles_list[0]))
+
+    # Sort the filtered results by scoring
+    profiles = sorted(filtered_profiles, key=lambda x: x.score, reverse=True)
+    pprint(profiles)
+    # Return a set of sorted matching profiles by score or an empty set if no match
+    return profiles
+
+# Get profile from `wp_connections` for a given connection ID
+def get_connection_profile(connection_id):
+    connection_profile = Connection.query.filter(Connection.id == connection_id).first()
+    return connection_profile
+    
+
+
+
+
+
+
+
+
+
+
+
+# Login Required Decorator
+# To use the decorator, apply it as innermost decorator to a view function. 
+# When applying further decorators, always remember that the route() decorator is the outermost.
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'isAuthenticated' not in session:
+            return render_template('login.html')
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Admin Required Decorator
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not user_is_admin(session['globus_user_id']):
+            return show_user_error("Access denied! You need to login as an admin user to access this page!")
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+# Routing
+
+# Default
+@app.route("/")
+@login_required
+def index():
+    if user_is_admin(session['globus_user_id']):
+        return redirect(url_for('registrations'))
+    else:
+        return redirect(url_for('register'))
+
+# Redirect users from react app login page to Globus auth login widget then redirect back
+@app.route('/login')
+def login():
+    redirect_uri = url_for('login', _external=True)
+    confidential_app_auth_client = ConfidentialAppAuthClient(app.config['GLOBUS_APP_ID'], app.config['GLOBUS_APP_SECRET'])
+    confidential_app_auth_client.oauth2_start_flow(redirect_uri)
+
+    # If there's no "code" query string parameter, we're in this route
+    # starting a Globus Auth login flow.
+    # Redirect out to Globus Auth
+    if 'code' not in request.args:                                        
+        auth_uri = confidential_app_auth_client.oauth2_get_authorize_url(additional_params={"scope": "openid profile email urn:globus:auth:scope:transfer.api.globus.org:all urn:globus:auth:scope:auth.globus.org:view_identities urn:globus:auth:scope:nexus.api.globus.org:groups" })
+        return redirect(auth_uri)
+    # If we do have a "code" param, we're coming back from Globus Auth
+    # and can start the process of exchanging an auth code for a token.
+    else:
+        auth_code = request.args.get('code')
+
+        token_response = confidential_app_auth_client.oauth2_exchange_code_for_tokens(auth_code)
+        
+        # Get all Bearer tokens
+        auth_token = token_response.by_resource_server['auth.globus.org']['access_token']
+        nexus_token = token_response.by_resource_server['nexus.api.globus.org']['access_token']
+        transfer_token = token_response.by_resource_server['transfer.api.globus.org']['access_token']
+
+        # Also get the user info (sub, email, name, preferred_username) using the AuthClient with the auth token
+        user_info = get_globus_user_info(auth_token)
+
+        # Store the resulting tokens in server session
+        session['isAuthenticated'] = True
+        session['globus_user_id'] = user_info['sub']
+        session['name'] = user_info['name']
+        session['email'] = user_info['email']
+        session['auth_token'] = auth_token
+        session['nexus_token'] = nexus_token
+        session['transfer_token'] = transfer_token
+      
+        # Finally redirect back to the home page default route
+        return redirect("/")
+
+@app.route('/logout')
+def logout():
+    """
+    - Revoke the tokens with Globus Auth.
+    - Destroy the session state.
+    - Redirect the user to the Globus Auth logout page.
+    """
+    confidential_app_auth_client = ConfidentialAppAuthClient(app.config['GLOBUS_APP_ID'], app.config['GLOBUS_APP_SECRET'])
+
+    # Revoke the tokens with Globus Auth
+    if 'tokens' in session:    
+        for token in (token_info['access_token']
+            for token_info in session['tokens'].values()):
+                confidential_app_auth_client.oauth2_revoke_token(token)
+
+    # Destroy the session state
+    session.clear()
+
+    # build the logout URI with query params
+    # there is no tool to help build this (yet!)
+    globus_logout_url = (
+        'https://auth.globus.org/v2/web/logout' +
+        '?client={}'.format(app.config['GLOBUS_APP_ID']) +
+        '&redirect_uri={}'.format(app.config['FLASK_APP_BASE_URI']) +
+        '&redirect_name={}'.format(app.config['FLASK_APP_NAME']))
+
+    # Redirect the user to the Globus Auth logout page
+    return redirect(globus_logout_url)
+
+# Register is only for authenticated users who never registered
 @app.route("/register", methods=['GET', 'POST'])
+@login_required
 def register():
-    if request.method == 'POST':
-        # reCAPTCHA validation
-        # Use request.args.get() instead of request.form[''] since esponse' is not the form
-        recaptcha_response = request.args.get('g-recaptcha-response')
-        values = {
-            'secret': app.config['GOOGLE_RECAPTCHA_SECRET_KEY'],
-            'response': recaptcha_response
-        }
-        data = urllib.parse.urlencode(values).encode()
-        req = urllib.request.Request(app.config['GOOGLE_RECAPTCHA_VERIFY_URL'], data = data)
-        response = urllib.request.urlopen(req)
-        result = json.loads(response.read().decode())
+    # A not approved user can be a totally new user or user has a pending registration
+    if not user_is_approved(session['globus_user_id']):
+        if user_in_pending(session['globus_user_id']):
+            # Check if this pening registration has been denied
+            stage_user = get_stage_user(session['globus_user_id'])
+            # Note: stage_user.deny stores 1 or 0 in database
+            if not stage_user.deny:
+                return show_user_info("Your registration has been submitted for approval. You'll get an email once it's approved or denied.")
+            else:
+                return show_user_info("Sorry, your registration has been denied.")
+        else:
+            if request.method == 'POST':
+                # reCAPTCHA validation
+                # Use request.args.get() instead of request.form[''] since esponse' is not the form
+                recaptcha_response = request.args.get('g-recaptcha-response')
+                values = {
+                    'secret': app.config['GOOGLE_RECAPTCHA_SECRET_KEY'],
+                    'response': recaptcha_response
+                }
+                data = urllib.parse.urlencode(values).encode()
+                req = urllib.request.Request(app.config['GOOGLE_RECAPTCHA_VERIFY_URL'], data = data)
+                response = urllib.request.urlopen(req)
+                result = json.loads(response.read().decode())
 
-        # For testing only
-        result['success'] = True
+                # For testing only
+                result['success'] = True
 
-        # Currently no backend form validation
-        # Only front end validation and reCAPTCHA - Zhou
-        if result['success']:
+                # Currently no backend form validation
+                # Only front end validation and reCAPTCHA - Zhou
+                if result['success']:
+                    # CSRF check
+                    session_csrf_token = session.pop('csrf_token', None)
+
+                    if not session_csrf_token or session_csrf_token != request.form['csrf_token']:
+                        return show_user_error("Oops! Invalid CSRF token!")
+                    else:
+                        new_user, img_to_upload = construct_user(request)
+
+                        # Add user info to `stage_user` table for approval
+                        try:
+                            add_new_stage_user(new_user, img_to_upload)
+                        except:
+                            print("Failed to add new stage user, something wrong with add_new_stage_user()")
+
+                        # Send email to admin for new user approval
+                        try:
+                            send_new_user_registered_mail(new_user)
+                        except Exception as e: 
+                            print(e)
+                            print("send email failed")
+                            pass
+
+                        # Show confirmation
+                        return show_user_confirmation("Your registration has been submitted for approval. You'll get an email once it's approved or denied.")
+                # Show reCAPTCHA error
+                else:
+                    return show_user_error("Oops! reCAPTCHA error!")
+            # Handle GET
+            else:
+                return show_registration_form()
+    else:
+        return show_user_info('You have already registered, you can click <a href="/profile">here</a> to view or update your user profile.')
+
+
+# Profile is only for authenticated users who has an approved registration
+@app.route("/profile", methods=['GET', 'POST'])
+@login_required
+def profile():
+    if user_is_approved(session['globus_user_id']):
+        # Handle POST
+        if request.method == 'POST':
             # CSRF check
             session_csrf_token = session.pop('csrf_token', None)
-
             if not session_csrf_token or session_csrf_token != request.form['csrf_token']:
-                context={
-                    'isAuthenticated': True,
-                    'username': session['name'],
-                    'status': 'danger',
-                    'message': 'Invalid CSRF token!'
-                }
-                return render_template('error.html', data = context)
+                return show_user_error("Oops! Invalid CSRF token!")
             else:
-                new_user, img_to_upload = construct_user(request)
-                pprint(new_user)
-                send_new_user_registration_mail(new_user)
+                stage_user_info, img_to_upload = construct_user(request)
+                wp_user_id = request.form['wp_user_id']
 
-                # # Send user info to web services API
-                # rspns = requests.post(app.config['FLASK_APP_BASE_URI'] + "stage_user", files = {'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
-                
-                # if rspns.ok:
-                #     try:
-                #         # Send email to admin for new user approval
-                #         send_new_user_registration_mail(new_user)
-                #     except Exception as e: 
-                #         print(e)
-                #         print("send email failed")
-                #         pass
-                context = {
-                    'isAuthenticated': True,
-                    'username': session['name'],
-                    'status': "success",
-                    'message': "Your registration has been completed and has been sent for approval. Please contact <a href='mailto:admin@hubmapconsortium.org'>admin@hubmapconsortium.org</a> if you have any questions.",
-                }
+                # Update user profile in database
+                update_user_profile(stage_user_info, img_to_upload, wp_user_id)
 
-                return render_template('confirmation.html', data = context)
-        # Show reCAPTCHA error
+                try:
+                    # Send email to admin for user profile update
+                    # so the admin can do furtuer changes in globus
+                    send_user_profile_update_mail(stage_user_info)
+                except Exception as e: 
+                    print("Failed to send user profile update email to admin.")
+                    print(e)
+
+                # Also notify the user
+                return show_user_confirmation("Your profile information has been updated successfully. The admin will do any additional changes to your account is need.")
+        # Handle GET
         else:
-            context={
-                'isAuthenticated': True,
-                'username': session['name'],
-                'status': 'danger',
-                'message': 'reCAPTCHA error'
-            }
-            return render_template('error.html', data = context)
-    # Handle GET
-    else:
-        if 'isAuthenticated' in session:
-            context = {
-                'isAuthenticated': True,
-                'username': session['name'],
-                'csrf_token': generate_csrf_token(),
-                'first_name': session['name'].split(" ")[0],
-                'last_name': session['name'].split(" ")[1],
-                'email': session['email'],
-                'recaptcha_site_key': app.config['GOOGLE_RECAPTCHA_SITE_KEY']
-            }
+            # Fetch user profile data
+            wp_user = get_user_profile(session['globus_user_id'])
 
-            return render_template('register.html', data = context)
-        else:
-            context = {
-                'isAuthenticated': False
-            }
-
-            return render_template('register.html', data = context)
-
-
-@app.route("/profile", methods=['GET', 'POST'])
-def profile():
-    if request.method == 'POST':
-        # CSRF check
-        session_csrf_token = session.pop('csrf_token', None)
-
-        if not session_csrf_token or session_csrf_token != request.form['csrf_token']:
-            context={
-                'isAuthenticated': True,
-                'username': session['name'],
-                'status': 'danger',
-                'message': 'Invalid CSRF token!'
-            }
-            return render_template('error.html', data = context)
-        else:
-            new_user, img_to_upload = construct_user(request)
-            wp_user_id = request.POST['wp_user_id']
-
-            # Send user info to web services API for updating
-            # rspns = requests.put(app.config['FLASK_APP_BASE_URI'] + "wp_user/" + wp_user_id, files={'json': (None, json.dumps(new_user), 'application/json'), 'img': img_to_upload})
-            
-            # if rspns.ok:
-            #     try:
-            #         # Send email to admin for user profile update
-            #         send_user_profile_update_mail(new_user)
-            #     except Exception as e: 
-            #         print(e)
-            #         print("send email failed")
-            #         pass
-            context = {
-                'isAuthenticated': True,
-                'username': session['name'],
-                'status': "success",
-                'message': "Your profile information has been updated successfully.",
-            }
-
-            return render_template('confirmation.html', data = context)
-              
-    else:
-        if 'isAuthenticated' in session:
-            # Fetch user profile data from API service
-            #rspns = requests.get(app.config['FLASK_APP_BASE_URI'] + "wp_user", params = {'globus_user_id': session['globus_user_id']})
-            
-            # if rspns.ok:
-            #     # Render the user data in profile
-            #     context = {
-            #         'isAuthenticated': True,
-            #         'username': session['name'],
-            #         'csrf_token': generate_csrf_token()
-            #     }
-
-            #     return render_template('profile.html', data = context)
-            # else:
-            #     context = {
-            #         'isAuthenticated': True,
-            #         'username': session['name'],
-            #         'status': 'warning',
-            #         'message': 'An unexpected error occurred while trying to load your profile.  Please contact <a href="mailto:admin@hubmapconsortium.org">admin@hubmapconsortium.org</a> for help resolving the problem.'
-            #     }
-            #     return render_template('error.html', data = context)
-
-            # for testing only
-            with open('wp_user.json', 'r') as f:
-                wp_user = json.load(f)
-
+            pprint(wp_user['connection'][0]['metas'] )
             # Parsing the json to get initial user profile data
             initial_data = {
                 'first_name': wp_user['connection'][0]['first_name'],
                 'last_name': wp_user['connection'][0]['last_name'],
-                'email': wp_user['connection'][0]['email'],
-                'phone': loads(wp_user['connection'][0]['phone_numbers'].encode())[0][b'number'].decode(),
+                #'email': wp_user['connection'][0]['email'],
+                'email': wp_user['user_email'],
+                #'phone': phpserialize.loads(wp_user['connection'][0]['phone_numbers'].encode())[0][b'number'].decode(),
+                'phone': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'phone'), {'meta_value': ''})['meta_value'],
                 'component': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'component'), {'meta_value': ''})['meta_value'],
                 'other_component': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_component'), {'meta_value': ''})['meta_value'],
                 'organization': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'organization'), {'meta_value': ''})['meta_value'],
@@ -575,11 +1172,11 @@ def profile():
                 'pm_email': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm_email'), {'meta_value': ''})['meta_value'],
             }
 
-            pprint(initial_data)
-            # if not initial_data['working_group'].strip() == '':
-            #     initial_data['working_group'] = ast.literal_eval(initial_data['working_group'])
-            # if not initial_data['access_requests'].strip() == '':
-            #     initial_data['access_requests'] = ast.literal_eval(initial_data['access_requests'])
+            # Convert string representation to dict
+            if not initial_data['working_group'].strip() == '':
+                initial_data['working_group'] = ast.literal_eval(initial_data['working_group'])
+            if not initial_data['access_requests'].strip() == '':
+                initial_data['access_requests'] = ast.literal_eval(initial_data['access_requests'])
 
             context = {
                 'isAuthenticated': True,
@@ -587,23 +1184,357 @@ def profile():
                 'csrf_token': generate_csrf_token(),
                 'wp_user_id': wp_user['id']
             }
-
-            d = {**context, **initial_data}
-            pprint(d)
-            return render_template('profile.html', data = {**context, **initial_data})
+            
+            # Merge initial_data and context as one dict 
+            data = {**context, **initial_data}
+            pprint(data)
+            # Populate the user data in profile
+            return render_template('profile.html', data = data)
+    else:
+        if user_in_pending(session['globus_user_id']):
+            # Check if this pening registration has been denied
+            stage_user = get_stage_user(session['globus_user_id'])
+            if not stage_user.deny:
+                return show_user_info("Your registration is pending for approval, you can view/update your profile once it's approved.")
+            else:
+                return show_user_info("Sorry, you don't have a profile because your registration has been denied.")
         else:
+            return show_user_info('You have not registered, please click <a href="/register">here</a> to register.')
+
+
+# Only for admin to see a list of pending new registrations
+# Currently only handle approve and deny actions
+# globus_user_id is optional
+@app.route("/registrations/", defaults={'globus_user_id': None}, methods=['GET']) # need the trailing slash
+@app.route("/registrations/<globus_user_id>", methods=['GET'])
+@login_required
+@admin_required
+def registrations(globus_user_id):
+    # Show a list of pending registrations if globus_user_id not present
+    if not globus_user_id:
+        stage_users = get_all_stage_users()
+        context = {
+            'isAuthenticated': True,
+            'username': session['name'],
+            'stage_users': stage_users
+        }
+
+        return render_template('all_registrations.html', data = context)
+    else:
+        # Show the individual pending registration
+        stage_user = get_stage_user(globus_user_id)
+
+        if not stage_user:
+            return show_admin_error("This stage user does not exist!")
+        else:
+            # Check if there's any matching profiles in the `wp_connections` found
+            matching_profiles = get_matching_profiles(stage_user.last_name, stage_user.first_name, stage_user.email, stage_user.organization)
+            #pprint(vars(list(matching_profiles)[0]))
             context = {
-                'isAuthenticated': False
+                'isAuthenticated': True,
+                'username': session['name'],
+                'stage_user': stage_user,
+                # Need to convert string representation of list to Python list
+                'working_group_list': ast.literal_eval(stage_user.working_group),
+                'access_requests_list': ast.literal_eval(stage_user.access_requests),
+                'matching_profiles': matching_profiles
             }
 
-            return render_template('profile.html', data = context)
+            return render_template('individual_registration.html', data = context)
+
+# Approve a registration
+@app.route("/approve/<globus_user_id>", methods=['GET'])
+@login_required
+@admin_required
+def approve(globus_user_id):
+    # Check if there's a pending registration for the given globus user id
+    stage_user = get_stage_user(globus_user_id)
+
+    if not stage_user:
+        return show_admin_error("This stage user does not exist!")
+    else:
+        approve_stage_user_by_creating_new(stage_user)
+        # Send email
+        data = {
+            'first_name': stage_user.first_name,
+            'last_name': stage_user.last_name
+        }
+
+        try:
+            send_new_user_approved_mail(stage_user.email, data = data)
+        except Exception as e: 
+            print("Failed to send user registration approval email.")
+            print(e)
+
+        return show_admin_info("This registration has been approved successfully!")
+
+# Deny a registration
+@app.route("/deny/<globus_user_id>", methods=['GET'])
+@login_required
+@admin_required
+def deny(globus_user_id):
+    # Check if there's a pending registration for the given globus user id
+    stage_user = get_stage_user(globus_user_id)
+
+    if not stage_user:
+        return show_admin_error("This stage user does not exist!")
+    else:
+        if stage_user.deny:
+            return show_admin_info("This registration has already been denied!")
+        else:
+            deny_stage_user(globus_user_id)
+            
+            # Send email
+            data = {
+                'first_name': stage_user.first_name,
+                'last_name': stage_user.last_name
+            }
+
+            try:
+                send_new_user_denied_mail(stage_user.email, data = data)
+            except Exception as e: 
+                print("Failed to send user registration denied email.")
+                print(e)
+
+            return show_admin_info("This registration has been denied!")
 
 
-@app.route("/match_user", methods=['GET', 'POST'])
-def match_user():
-    return render_template("match_user.html")
+# Approve a registration by using an exisiting matching profile
+@app.route("/match/<globus_user_id>/<connection_id>", methods=['GET'])
+@login_required
+@admin_required
+def match(globus_user_id, connection_id):
+    # Check if there's a pending registration for the given globus user id
+    stage_user = get_stage_user(globus_user_id)
+    if not stage_user:
+        return show_admin_error("This stage user does not exist!")
 
-# APIs
+    # Check if there's a connection profile for the given connection id
+    connection_profile = get_connection_profile(connection_id)
+    if not connection_profile:
+        return show_admin_error("This connection profile does not exist!")
+
+    # Will need to link and edit the exisiting profile 
+    approve_stage_user_by_editing_matched(stage_user, connection_profile)
+
+    # Send email
+    data = {
+        'first_name': stage_user.first_name,
+        'last_name': stage_user.last_name
+    }
+
+    try:
+        send_new_user_approved_mail(stage_user.email, data = data)
+    except Exception as e: 
+        print("Failed to send user registration approval email.")
+        print(e)
+
+    return show_admin_info("This registration has been approved successfully by using an exisiting mathcing profile!")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+############################################################
+
+
+
+def assign_wp_user(wp_user, stage_user, connection=None, mode='CREATE'):
+    # First get the id of admin user in `wp_usermeta` table
+    admin_id = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == session['globus_user_id']).first().user_id
+
+    wp_user.user_login = stage_user.email
+    wp_user.user_email = stage_user.email
+    wp_user.user_pass = generate_password()
+    if not wp_user.id:
+        meta_capabilities = WPUserMeta()
+        meta_capabilities.meta_key = "wp_capabilities"
+        meta_capabilities.meta_value = "a:1:{s:6:\"member\";b:1;}"
+        wp_user.metas.append(meta_capabilities)
+        meta_globus_user_id = WPUserMeta()
+        meta_globus_user_id.meta_key = "openid-connect-generic-subject-identity"
+        meta_globus_user_id.meta_value = stage_user.globus_user_id
+        wp_user.metas.append(meta_globus_user_id)
+
+    if not connection:
+        connection = Connection()
+    
+    if connection.owners.count() == 0: 
+        connection.owners.append(wp_user)
+    
+    # TO-DO: add new record to `wp_connections_email` and `wp_connections_phone` then get the id and update `wp_connections` email/phone fields
+    # Currectly hard-coded id
+    connection.email = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:2199;s:4:\"type\";s:4:\"work\";s:4:\"name\";s:10:\"Work Email\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:7:\"address\";s:{len(stage_user.email)}:\"{stage_user.email}\";}}}}"
+    connection.first_name = stage_user.first_name
+    connection.last_name = stage_user.last_name
+    connection.organization = stage_user.organization
+
+    if not stage_user.photo == '':
+        photo_file_name = stage_user.photo.split('/')[-1]
+        # Disable for now
+        #pathlib.Path(app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() ).mkdir(parents=True, exist_ok=True)
+        #copyfile(stage_user.photo, app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "/" + photo_file_name)
+        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "\\/" + photo_file_name + "\",\"url\": \"" + app.config.get('CONNECTION_IMAGE_URL') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "\\/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image\\/jpeg\",\"type\":2}}}}"
+    else:
+        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "\\/" + photo_file_name + "\",\"url\": \"" + app.config.get('CONNECTION_IMAGE_URL') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "\\/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image\\/jpeg\",\"type\":2}}}}"
+
+    # Currectly hard-coded id
+    connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(stage_user.phone)}:\"{stage_user.phone}\";}}}}"
+    
+    access_requests = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'access_requests'), '[]') if mode.upper() == 'EDIT' else '[]'
+    working_group = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'working_group'), '[]') if mode.upper() == 'EDIT' else '[]'
+    if mode.upper() == 'EDIT' and stage_user.google_email == '':
+        google_email = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'google_email'), '')
+    else:
+        google_email = stage_user.google_email
+        
+    if mode.upper() == 'EDIT' and stage_user.github_username == '':
+        github_username = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'github_username'), '')
+    else:
+        github_username = stage_user.github_username
+
+    if mode.upper() == 'EDIT' and stage_user.slack_username == '':
+        slack_username = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'slack_username'), '')
+    else:
+        slack_username = stage_user.slack_username
+
+    [db.session.delete(meta) for meta in connection.metas]
+    connection_meta_component = ConnectionMeta()
+    connection_meta_component.meta_key = 'component'
+    connection_meta_component.meta_value = stage_user.component
+    connection.metas.append(connection_meta_component)
+    connection_meta_other_component = ConnectionMeta()
+    connection_meta_other_component.meta_key = 'other_component'
+    connection_meta_other_component.meta_value = stage_user.other_component
+    connection.metas.append(connection_meta_other_component)
+    connection_meta_organization = ConnectionMeta()
+    connection_meta_organization.meta_key = 'organization'
+    connection_meta_organization.meta_value = stage_user.organization
+    connection.metas.append(connection_meta_organization)
+    connection_meta_other_organization = ConnectionMeta()
+    connection_meta_other_organization.meta_key = 'other_organization'
+    connection_meta_other_organization.meta_value = stage_user.other_organization
+    connection.metas.append(connection_meta_other_organization)
+    connection_meta_role = ConnectionMeta()
+    connection_meta_role.meta_key = 'role'
+    connection_meta_role.meta_value = stage_user.role
+    connection.metas.append(connection_meta_role)
+    connection_meta_other_role = ConnectionMeta()
+    connection_meta_other_role.meta_key = 'other_role'
+    connection_meta_other_role.meta_value = stage_user.other_role
+    connection.metas.append(connection_meta_other_role)
+    connection_meta_working_group = ConnectionMeta()
+    connection_meta_working_group.meta_key = 'working_group'
+    connection_meta_working_group.meta_value = str(ast.literal_eval(working_group) + ast.literal_eval(stage_user.working_group)).replace('\'', '"')
+    connection.metas.append(connection_meta_working_group)
+    connection_meta_access_requests = ConnectionMeta()
+    connection_meta_access_requests.meta_key = 'access_requests'
+    connection_meta_access_requests.meta_value = str(ast.literal_eval(access_requests) + ast.literal_eval(stage_user.access_requests)).replace('\'', '"')
+    connection.metas.append(connection_meta_access_requests)
+    connection_meta_google_email = ConnectionMeta()
+    connection_meta_google_email.meta_key = 'google_email'
+    connection_meta_google_email.meta_value = google_email
+    connection.metas.append(connection_meta_google_email)
+    connection_meta_github_username = ConnectionMeta()
+    connection_meta_github_username.meta_key = 'github_username'
+    connection_meta_github_username.meta_value = github_username
+    connection.metas.append(connection_meta_github_username)
+    connection_meta_slack_username = ConnectionMeta()
+    connection_meta_slack_username.meta_key = 'slack_username'
+    connection_meta_slack_username.meta_value = slack_username
+    connection.metas.append(connection_meta_slack_username)
+    connection_meta_website = ConnectionMeta()
+    connection_meta_website.meta_key = 'website'
+    connection_meta_website.meta_value = stage_user.website
+    connection.metas.append(connection_meta_website)
+    connection_meta_biosketch = ConnectionMeta()
+    connection_meta_biosketch.meta_key = 'biosketch'
+    connection_meta_biosketch.meta_value = stage_user.biosketch
+    connection.metas.append(connection_meta_biosketch)
+    connection_meta_expertise = ConnectionMeta()
+    connection_meta_expertise.meta_key = 'expertise'
+    connection_meta_expertise.meta_value = stage_user.expertise
+    connection.metas.append(connection_meta_expertise)
+    connection_meta_orcid = ConnectionMeta()
+    connection_meta_orcid.meta_key = 'orcid'
+    connection_meta_orcid.meta_value = stage_user.orcid
+    connection.metas.append(connection_meta_orcid)
+    connection_meta_pm = ConnectionMeta()
+    connection_meta_pm.meta_key = 'pm'
+    connection_meta_pm.meta_value = stage_user.pm
+    connection.metas.append(connection_meta_pm)
+    connection_meta_pm_name = ConnectionMeta()
+    connection_meta_pm_name.meta_key = 'pm_name'
+    connection_meta_pm_name.meta_value = stage_user.pm_name
+    connection.metas.append(connection_meta_pm_name)
+    connection_meta_pm_email = ConnectionMeta()
+    connection_meta_pm_email.meta_key = 'pm_email'
+    connection_meta_pm_email.meta_value = stage_user.pm_email
+    connection.metas.append(connection_meta_pm_email)
+    connection_meta_email = ConnectionMeta()
+    connection_meta_email.meta_key = 'email'
+    connection_meta_email.meta_value = stage_user.email
+    connection.metas.append(connection_meta_email)
+    connection_meta_phone = ConnectionMeta()
+    connection_meta_phone.meta_key = 'phone'
+    connection_meta_phone.meta_value = stage_user.phone
+    connection.metas.append(connection_meta_phone)
+    
+    
+    ## default value ##
+    connection.date_added = str(datetime.today().timestamp())
+    connection.entry_type = 'individual'
+    connection.visibility = 'public'
+    connection.slug = stage_user.first_name.lower() + '-' + stage_user.last_name.lower()
+    connection.family_name = ''
+    connection.honorific_prefix = ''
+    connection.middle_name = ''
+    connection.honorific_suffix = ''
+    connection.title = stage_user.role
+    connection.department = stage_user.component
+    connection.contact_first_name = ''
+    connection.contact_last_name = ''
+    connection.addresses = 'a:0:{}'
+    connection.im = 'a:0:{}'
+    connection.social = 'a:0:{}'
+    connection.links = 'a:0:{}'
+    connection.dates = 'a:0:{}'
+    connection.birthday = ''
+    connection.anniversary = ''
+    connection.bio = stage_user.expertise
+    connection.notes = ''
+    connection.excerpt = ''
+    connection.added_by = admin_id
+    connection.edited_by = admin_id
+    connection.owner = admin_id
+    connection.user = 0
+    connection.status = 'approved'
+
+    return connection
+
+
+# APIs, will need to be converted into internal functions later
 @app.route('/stage_user', methods=['GET'])
 def get_stage_users():
     try:
@@ -702,19 +1633,9 @@ def update_stage_user(stage_user_id):
         '''create a new wp_user
         '''
         try:
-            usermeta = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == stage_user.globus_user_id).first()
-            if usermeta and usermeta.user:
-                wp_user = usermeta.user
-                wp_user.user_login = stage_user.email
-                wp_user.user_pass = generate_password()
-                for meta in wp_user.metas:
-                    if meta.meta_key == "wp_capabilities":
-                        meta.meta_value = "a:1:{s:6:\"member\";b:1;}"
-            else:
-                wp_user = WPUser()
-            assign_wp_user(wp_user, stage_user, connection)
-            if not wp_user.id:
-                db.session.add(wp_user)
+            new_wp_user = WPUser()
+            assign_wp_user(new_wp_user, stage_user, connection)
+            db.session.add(new_wp_user)
             db.session.delete(stage_user)
             db.session.commit()
         except Exception as e:
@@ -725,7 +1646,7 @@ def update_stage_user(stage_user_id):
             print("-"*60)
             return Response('Stage user update failed', status=500)
 
-        m_result = wp_user_schema.dump(wp_user)
+        m_result = wp_user_schema.dump(new_wp_user)
         return jsonify(m_result)
 
 @app.route('/wp_user', methods=['POST'])
@@ -845,175 +1766,7 @@ def get_connections():
     result = connections_schema.dump(connections)
     return jsonify(result.data)
 
-def generate_password():
-    s = "abcdefghijklmnopqrstuvwxyz01234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()?"
-    passlen = 16
-    return "".join(random.sample(s, passlen))
 
-def assign_wp_user(wp_user, user_obj, connection=None, mode='CREATE'):
-    admin_id = WPUser.query.filter(WPUser.user_login == app.config.get('ADMIN_USERNAME')).first().id
-
-    wp_user.user_login = user_obj.email
-    wp_user.user_email = user_obj.email
-    wp_user.user_pass = generate_password()
-    if not wp_user.id:
-        meta_capabilities = WPUserMeta()
-        meta_capabilities.meta_key = "wp_capabilities"
-        meta_capabilities.meta_value = "a:1:{s:6:\"member\";b:1;}"
-        wp_user.metas.append(meta_capabilities)
-        meta_globus_user_id = WPUserMeta()
-        meta_globus_user_id.meta_key = "openid-connect-generic-subject-identity"
-        meta_globus_user_id.meta_value = user_obj.globus_user_id
-        wp_user.metas.append(meta_globus_user_id)
-
-    if not connection:
-        connection = Connection()
-    
-    if connection.owners.count() == 0: 
-        connection.owners.append(wp_user)
-    
-    connection.email = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:2199;s:4:\"type\";s:4:\"work\";s:4:\"name\";s:10:\"Work Email\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:7:\"address\";s:{len(user_obj.email)}:\"{user_obj.email}\";}}}}"
-    connection.first_name = user_obj.first_name
-    connection.last_name = user_obj.last_name
-    connection.organization = user_obj.organization
-
-    if not user_obj.photo == '':
-        photo_file_name = user_obj.photo.split('/')[-1]
-        pathlib.Path(app.config.get('CONNECTION_IMAGE_PATH') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() ).mkdir(parents=True, exist_ok=True)
-        copyfile(user_obj.photo, app.config.get('CONNECTION_IMAGE_PATH') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() + "/" + photo_file_name)
-        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config.get('CONNECTION_IMAGE_PATH') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() + "\\/" + photo_file_name + "\",\"url\": \"" + app.config.get('CONNECTION_IMAGE_URL') + user_obj.first_name.lower() + '-' + user_obj.last_name.lower() + "\\/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image\\/jpeg\",\"type\":2}}}}"
-    connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(user_obj.phone)}:\"{user_obj.phone}\";}}}}"
-    
-    access_requests = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'access_requests'), '[]') if mode.upper() == 'EDIT' else '[]'
-    working_group = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'working_group'), '[]') if mode.upper() == 'EDIT' else '[]'
-    if mode.upper() == 'EDIT' and user_obj.google_email == '':
-        google_email = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'google_email'), '')
-    else:
-        google_email = user_obj.google_email
-        
-    if mode.upper() == 'EDIT' and user_obj.github_username == '':
-        github_username = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'github_username'), '')
-    else:
-        github_username = user_obj.github_username
-
-    if mode.upper() == 'EDIT' and user_obj.slack_username == '':
-        slack_username = next((meta.meta_value for meta in connection.metas if meta.meta_key == 'slack_username'), '')
-    else:
-        slack_username = user_obj.slack_username
-
-    [db.session.delete(meta) for meta in connection.metas]
-    connection_meta_component = ConnectionMeta()
-    connection_meta_component.meta_key = 'component'
-    connection_meta_component.meta_value = user_obj.component
-    connection.metas.append(connection_meta_component)
-    connection_meta_other_component = ConnectionMeta()
-    connection_meta_other_component.meta_key = 'other_component'
-    connection_meta_other_component.meta_value = user_obj.other_component
-    connection.metas.append(connection_meta_other_component)
-    connection_meta_organization = ConnectionMeta()
-    connection_meta_organization.meta_key = 'organization'
-    connection_meta_organization.meta_value = user_obj.organization
-    connection.metas.append(connection_meta_organization)
-    connection_meta_other_organization = ConnectionMeta()
-    connection_meta_other_organization.meta_key = 'other_organization'
-    connection_meta_other_organization.meta_value = user_obj.other_organization
-    connection.metas.append(connection_meta_other_organization)
-    connection_meta_role = ConnectionMeta()
-    connection_meta_role.meta_key = 'role'
-    connection_meta_role.meta_value = user_obj.role
-    connection.metas.append(connection_meta_role)
-    connection_meta_other_role = ConnectionMeta()
-    connection_meta_other_role.meta_key = 'other_role'
-    connection_meta_other_role.meta_value = user_obj.other_role
-    connection.metas.append(connection_meta_other_role)
-    connection_meta_working_group = ConnectionMeta()
-    connection_meta_working_group.meta_key = 'working_group'
-    connection_meta_working_group.meta_value = str(ast.literal_eval(working_group) + ast.literal_eval(user_obj.working_group)).replace('\'', '"')
-    connection.metas.append(connection_meta_working_group)
-    connection_meta_access_requests = ConnectionMeta()
-    connection_meta_access_requests.meta_key = 'access_requests'
-    connection_meta_access_requests.meta_value = str(ast.literal_eval(access_requests) + ast.literal_eval(user_obj.access_requests)).replace('\'', '"')
-    connection.metas.append(connection_meta_access_requests)
-    connection_meta_google_email = ConnectionMeta()
-    connection_meta_google_email.meta_key = 'google_email'
-    connection_meta_google_email.meta_value = google_email
-    connection.metas.append(connection_meta_google_email)
-    connection_meta_github_username = ConnectionMeta()
-    connection_meta_github_username.meta_key = 'github_username'
-    connection_meta_github_username.meta_value = github_username
-    connection.metas.append(connection_meta_github_username)
-    connection_meta_slack_username = ConnectionMeta()
-    connection_meta_slack_username.meta_key = 'slack_username'
-    connection_meta_slack_username.meta_value = slack_username
-    connection.metas.append(connection_meta_slack_username)
-    connection_meta_website = ConnectionMeta()
-    connection_meta_website.meta_key = 'website'
-    connection_meta_website.meta_value = user_obj.website
-    connection.metas.append(connection_meta_website)
-    connection_meta_biosketch = ConnectionMeta()
-    connection_meta_biosketch.meta_key = 'biosketch'
-    connection_meta_biosketch.meta_value = user_obj.biosketch
-    connection.metas.append(connection_meta_biosketch)
-    connection_meta_expertise = ConnectionMeta()
-    connection_meta_expertise.meta_key = 'expertise'
-    connection_meta_expertise.meta_value = user_obj.expertise
-    connection.metas.append(connection_meta_expertise)
-    connection_meta_orcid = ConnectionMeta()
-    connection_meta_orcid.meta_key = 'orcid'
-    connection_meta_orcid.meta_value = user_obj.orcid
-    connection.metas.append(connection_meta_orcid)
-    connection_meta_pm = ConnectionMeta()
-    connection_meta_pm.meta_key = 'pm'
-    connection_meta_pm.meta_value = user_obj.pm
-    connection.metas.append(connection_meta_pm)
-    connection_meta_pm_name = ConnectionMeta()
-    connection_meta_pm_name.meta_key = 'pm_name'
-    connection_meta_pm_name.meta_value = user_obj.pm_name
-    connection.metas.append(connection_meta_pm_name)
-    connection_meta_pm_email = ConnectionMeta()
-    connection_meta_pm_email.meta_key = 'pm_email'
-    connection_meta_pm_email.meta_value = user_obj.pm_email
-    connection.metas.append(connection_meta_pm_email)
-    connection_meta_email = ConnectionMeta()
-    connection_meta_email.meta_key = 'email'
-    connection_meta_email.meta_value = user_obj.email
-    connection.metas.append(connection_meta_email)
-    connection_meta_phone = ConnectionMeta()
-    connection_meta_phone.meta_key = 'phone'
-    connection_meta_phone.meta_value = user_obj.phone
-    connection.metas.append(connection_meta_phone)
-    
-    
-    ## default value ##
-    connection.date_added = str(datetime.today().timestamp())
-    connection.entry_type = 'individual'
-    connection.visibility = 'public'
-    connection.slug = user_obj.first_name.lower() + '-' + user_obj.last_name.lower()
-    connection.family_name = ''
-    connection.honorific_prefix = ''
-    connection.middle_name = ''
-    connection.honorific_suffix = ''
-    connection.title = user_obj.role
-    connection.department = user_obj.component
-    connection.contact_first_name = ''
-    connection.contact_last_name = ''
-    connection.addresses = 'a:0:{}'
-    connection.im = 'a:0:{}'
-    connection.social = 'a:0:{}'
-    connection.links = 'a:0:{}'
-    connection.dates = 'a:0:{}'
-    connection.birthday = ''
-    connection.anniversary = ''
-    connection.bio = user_obj.expertise
-    connection.notes = ''
-    connection.excerpt = ''
-    connection.added_by = admin_id
-    connection.edited_by = admin_id
-    connection.owner = admin_id
-    connection.user = 0
-    connection.status = 'approved'
-
-    return connection
 
 # Run Server
 if __name__ == "__main__":

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>HuBMAP User Registration</title>
+
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='bootstrap/css/bootstrap.min.css') }}" />
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/app.css') }}">
+
+</head>
+
+<body id="body">
+
+<header id="header" class="navbar navbar-light bg-light">
+<nav class="container">
+<a class="navbar-brand" href="/">
+<img src="https://hubmapconsortium.org/wp-content/uploads/2019/01/HuBMAP-Retina-Logo-Color-300x110.png" width="300" height="110" class="d-inline-block align-top"
+alt="HuBMAP logo" /></a>
+<div class="float-right">
+<a href="{{ config['FLASK_APP_BASE_URI'] }}/login" class="btn btn btn-outline-primary">Login</a>
+</div>
+</nav>
+</header>
+
+<div class="page-content">
+<div id="content" class="container">
+{% block content %}{% endblock %}
+</div>
+</div>
+
+</body>
+</html>

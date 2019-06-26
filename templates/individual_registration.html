@@ -1,0 +1,152 @@
+{% extends "layouts/main_layout.html" %}
+{% block content %}
+
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ config['FLASK_APP_BASE_URI'] }}/registrations">All Registrations</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ 'Denied' if data.stage_user.deny else 'New' }} Registration: {{ data.stage_user.first_name }} {{ data.stage_user.last_name }}</li>
+  </ol>
+</nav>
+
+<h1>{{ 'Denied' if data.stage_user.deny else 'New' }} Registration: {{ data.stage_user.first_name }} {{ data.stage_user.last_name }}</h1>
+
+<div class="card">
+  <h5 class="card-header">Registration Detail</h5>
+  <div class="card-body">
+    
+First name: {{ data.stage_user.first_name }} <br />
+Last name: {{ data.stage_user.last_name }} <br />
+Email: {{ data.stage_user.email }} <br />
+
+Component: {{ data.stage_user.component }} <br />
+Organization: {{ data.stage_user.organization }} <br />
+Role: {{ data.stage_user.role }}<br />
+
+<br />
+Working group(s): <br />
+<ul>
+{% for grp in data.working_group_list %} 
+<li>{{ grp }} </li>
+{% endfor %}
+</ul>
+
+<br />
+HuBMAP service(s) access requested: <br />
+<ul>
+{% for req in data.access_requests_list %}
+<li>{{ req }} </li>
+{% endfor %}
+</ul>
+
+<br />
+
+{% if 'HuBMAP Google Drive Share' in data.stage_user.access_requests %}
+Google account for HuBMAP Google Drive Share: {{ data.stage_user.google_email }} <br />
+{% endif %}
+
+{% if 'HuBMAP GitHub Repository' in data.stage_user.access_requests %}
+Github username: {{ data.stage_user.github_username }} <br />
+{% endif %}
+
+{% if 'HuBMAP Slack Workspace' in data.stage_user.access_requests %}
+Email for HuBMAP Slack Workspace: {{ data.stage_user.slack_username }} <br />
+{% endif %}
+
+<br />
+{% if data.stage_user.pm %}
+The user would like the following project manager to be copied on all communications: <br />
+Name: {{ data.stage_user.pm_name }} <br />
+Email: {{ data.stage_user.pm_email }} <br />
+{% else %}
+No project manager for this user
+{% endif %}
+<br /><br />
+
+   <a href="{{ config['FLASK_APP_BASE_URI'] }}/approve/{{ data.stage_user.globus_user_id }}" class="btn btn-success btn-lg">Approve</a>
+
+{% if not data.stage_user.deny %}
+<a href="{{ config['FLASK_APP_BASE_URI'] }}/deny/{{ data.stage_user.globus_user_id }}" class="btn btn-danger btn-lg">Deny</a>
+{% endif %}
+
+  </div>
+</div>
+
+
+<div class="card mt-4">
+  <h5 class="card-header">Matching Profile</h5>
+  <div class="card-body">
+    
+
+{% if data.matching_profiles|length > 0 %}
+<div class="alert alert-info" role="alert">
+Matching profiles found from `wp_connections` table and sorted by the total matching score. Scoring:
+
+<table class="table table-sm">
+  <thead>
+    <tr>
+      <th scope="col">Last name match</th>
+      <th scope="col">First name match</th>
+      <th scope="col">Email match</th>
+      <th scope="col">Organization match</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>6</td>
+      <td>4</td>
+      <td>10</td>
+      <td>2</td>
+    </tr>
+  </tbody>
+</table>
+
+{#
+<ul>
+<li>Last name match: 6</li>
+<li>First name match: 4</li>
+<li>Email match: 10</li>
+<li>Organization match: 2</li>
+</ul>
+#}
+
+The following results only show total score that is greater than the first name match score (4).
+
+</div>
+<table class="table table-sm">
+  <thead>
+    <tr>
+      <th scope="col">#</th>
+      <th scope="col">First Name</th>
+      <th scope="col">Last Name</th>
+      <th scope="col">Email</th>
+      <th scope="col">Organization</th>
+      <th scope="col">Match Score</th>
+      <th scope="col">Action</th>
+    </tr>
+  </thead>
+  <tbody>
+	{% for profile in data.matching_profiles %}
+	<tr>
+      <th scope="row">{{ loop.index }}</th>
+      <td>{{ profile.first_name }}</td>
+      <td>{{ profile.last_name }}</td>
+      <td>{{ profile.deserilized_email }}</td>
+      <td>{{ profile.organization }}</td>
+      <td>{{ profile.score }}</td>
+      <td><a href="{{ config['FLASK_APP_BASE_URI'] }}/match/{{ data.stage_user.globus_user_id }}/{{ profile.id }}" class="btn btn-success btn-sm">Approve by using this profile</a></td>
+    </tr>
+	{% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="alert alert-info" role="alert">
+No matching profiles found from `wp_connections` table.
+</div>
+{% endif %}
+  </div>
+</div>
+
+
+
+
+{% endblock %}
