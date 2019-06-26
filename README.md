@@ -27,8 +27,8 @@ The confiuration file `app.cfg` is located under `instance` folder. You can read
 ````
 # App name and deployment URI
 FLASK_APP_NAME = 'HuBMAP User Profile'
-# Need the trailing slash /
-FLASK_APP_BASE_URI = 'http://localhost:5000/'
+# No need the trailing slash /
+FLASK_APP_BASE_URI = 'http://localhost:5000'
 
 # Flask app session key
 SECRET_KEY = ''
@@ -45,7 +45,7 @@ GOOGLE_RECAPTCHA_VERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify'
 # DB connection and settings
 SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://username:password@localhost/wp_dev'
 SQLALCHEMY_TRACK_MODIFICATIONS = False
-UPLOAD_FOLDER = './avatar'
+UPLOAD_FOLDER = ''
 ALLOWED_EXTENSIONS = set(['jpg', 'jepg', 'png', 'gif'])
 ADMIN_USERNAME = 'wpadmin'
 CONNECTION_IMAGE_PATH = '/home/webadmin/wp-content/uploads/connections-images/'
