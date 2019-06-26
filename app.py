@@ -274,7 +274,7 @@ def construct_user(request):
     elif profile_pic_option == 'url':
         photo_url = request.form['photo_url']
         if photo_url:
-            response = requests(photo_url)
+            response = requests.get(photo_url)
             img = Image.open(BytesIO(response.content))
             imgByteArr = BytesIO()
             img.save(imgByteArr, format=img.format)
@@ -515,7 +515,7 @@ def update_user_profile(user_info, profile_pic_option, img_to_upload, user_id):
     # if user doesn't want to use the exisiting image
     if profile_pic_option != "existing":
         user_info['photo'] = handle_user_profile_pic(user_info, profile_pic_option, img_to_upload)
-
+        
     try:
         # will this stage_user be added to database?
         stage_user = StageUser(user_info)
