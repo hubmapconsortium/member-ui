@@ -32,6 +32,9 @@ from pprint import pprint
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_pyfile('app.cfg')
 
+# Remove trailing slash / from URL base to avoid "//" caused by config with trailing slash
+app.config['FLASK_APP_BASE_URI'] = app.config['FLASK_APP_BASE_URI'].strip('/')
+
 # Flask-Mail instance
 mail = Mail(app)
 
