@@ -843,7 +843,12 @@ def edit_connection(stage_user, wp_user, connection):
 def deny_stage_user(globus_user_id):
     stage_user = get_stage_user(globus_user_id)
     stage_user.deny = True
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        print("deny_stage_user() failed to update the database")
+        print(e)
 
 # Get a list of all the pending registrations
 def get_all_stage_users():
@@ -1129,17 +1134,15 @@ def profile():
                     # so the admin can do furtuer changes in globus
                     send_user_profile_update_mail(stage_user_info)
                 except Exception as e: 
-                    print(e)
                     print("Failed to send user profile update email to admin.")
-                    pass
+                    print(e)
 
-                    # Also notify the user
-                    return show_user_confirmation("Your profile information has been updated successfully. The admin will do any additional changes to your account is need.")
+                # Also notify the user
+                return show_user_confirmation("Your profile information has been updated successfully. The admin will do any additional changes to your account is need.")
         # Handle GET
         else:
             # Fetch user profile data
             wp_user = get_user_profile(session['globus_user_id'])
-
 
             pprint(wp_user['connection'][0]['metas'] )
             # Parsing the json to get initial user profile data
@@ -1256,7 +1259,13 @@ def approve(globus_user_id):
             'first_name': stage_user.first_name,
             'last_name': stage_user.last_name
         }
-        send_new_user_approved_mail(stage_user.email, data = data)
+
+        try:
+            send_new_user_approved_mail(stage_user.email, data = data)
+        except Exception as e: 
+            print("Failed to send user registration approval email.")
+            print(e)
+
         return show_admin_info("This registration has been approved successfully!")
 
 # Deny a registration
@@ -1274,12 +1283,19 @@ def deny(globus_user_id):
             return show_admin_info("This registration has already been denied!")
         else:
             deny_stage_user(globus_user_id)
+            
             # Send email
             data = {
                 'first_name': stage_user.first_name,
                 'last_name': stage_user.last_name
             }
-            send_new_user_denied_mail(stage_user.email, data = data)
+
+            try:
+                send_new_user_denied_mail(stage_user.email, data = data)
+            except Exception as e: 
+                print("Failed to send user registration denied email.")
+                print(e)
+
             return show_admin_info("This registration has been denied!")
 
 
@@ -1306,7 +1322,13 @@ def match(globus_user_id, connection_id):
         'first_name': stage_user.first_name,
         'last_name': stage_user.last_name
     }
-    send_new_user_approved_mail(stage_user.email, data = data)
+
+    try:
+        send_new_user_approved_mail(stage_user.email, data = data)
+    except Exception as e: 
+        print("Failed to send user registration approval email.")
+        print(e)
+
     return show_admin_info("This registration has been approved successfully by using an exisiting mathcing profile!")
 
 
