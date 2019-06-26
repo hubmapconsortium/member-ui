@@ -626,8 +626,8 @@ def create_new_connection(stage_user, new_wp_user):
     connection.honorific_prefix = ''
     connection.middle_name = ''
     connection.honorific_suffix = ''
-    connection.title = stage_user.role
-    connection.department = stage_user.component
+    connection.title = ''
+    connection.department = ''
     connection.contact_first_name = ''
     connection.contact_last_name = ''
     connection.addresses = 'a:0:{}'
@@ -892,6 +892,7 @@ def get_matching_profiles(last_name, first_name, email, organization):
     filtered_profiles = list()
     if len(profiles_list) > 0:
         for profile in profiles_list:
+            pprint(profile)
             # Add a new aroperty
             profile.score = 0
 
@@ -914,7 +915,8 @@ def get_matching_profiles(last_name, first_name, email, organization):
                 # Deserialize the email value to a python dict
                 deserilized_email_dict = phpserialize.loads(profile.email.encode('utf-8'), decode_strings=True)
                 # Add another new property for display only
-                profile.deserilized_email = (deserilized_email_dict[0])['address']
+                if deserilized_email_dict:
+                    profile.deserilized_email = (deserilized_email_dict[0])['address']
                 filtered_profiles.append(profile)
 
     print("========after scoring=========")
