@@ -477,18 +477,24 @@ def get_user_profile(globus_user_id):
 # Update user profile with user-provided information 
 def update_user_profile(stage_user_info, img, user_id):
     wp_user = WPUser.query.get(user_id)
+    
+    img_file = None
+    extension = None
 
-    if not stage_user_info['photo_url'] == '':
+    # Get the photo from URL if provided
+    if stage_user_info['photo_url'] != '':
         response = requests.get(stage_user_info['photo_url'])
         img_file = Image.open(BytesIO(response.content))
         extension = img_file.format
-    else:
-        _, extension = img.filename.rsplit('.', 1)
-        img_file = img
     
-    save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{stage_user_info['globus_user_id']}.{extension}"))
-    img_file.save(save_path)
-    stage_user_info['photo'] = save_path
+    if img:
+        img_file = img
+        _, extension = img.filename.rsplit('.', 1)
+        
+    if extension:
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{stage_user_info['globus_user_id']}.{extension}"))
+        img_file.save(save_path)
+        stage_user_info['photo'] = save_path
     
     try:
         # will this stage_user be added to database?
@@ -1113,7 +1119,7 @@ def profile():
                 return show_user_error("Oops! Invalid CSRF token!")
             else:
                 stage_user_info, img_to_upload = construct_user(request)
-                wp_user_id = request.POST['wp_user_id']
+                wp_user_id = request.form['wp_user_id']
 
                 # Update user profile in database
                 update_user_profile(stage_user_info, img_to_upload, wp_user_id)
