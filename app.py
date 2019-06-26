@@ -41,14 +41,6 @@ db = SQLAlchemy(app)
 # Init MA
 ma = Marshmallow(app)
 
-# User Connection mapping table
-class Mapping(db.Model):
-    __tablename__ = 'user_connection'
-
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('wp_users.id'), nullable=False)
-    connection_id = db.Column(db.Integer, db.ForeignKey('wp_connections.id'), nullable=False)
-    
 
 connects = db.Table('user_connection',
         db.Column('user_id', db.Integer, db.ForeignKey('wp_users.id')),
@@ -482,38 +474,31 @@ def get_user_profile(globus_user_id):
     user = result[0][0]
     return user
 
-# TO-DO
-def update_user_profile(j_user, img, id):
-    """
-    Match a wp user to a existing user if id present
-    Create a new user if id not present
-    """
-    wp_user = WPUser.query.get(id)
+# Update user profile with user-provided information 
+def update_user_profile(stage_user_info, img, user_id):
+    wp_user = WPUser.query.get(user_id)
 
-    if not j_user['photo_url'] == '':
-        response = requests.get(j_user['photo_url'])
+    if not stage_user_info['photo_url'] == '':
+        response = requests.get(stage_user_info['photo_url'])
         img_file = Image.open(BytesIO(response.content))
         extension = img_file.format
     else:
         _, extension = img.filename.rsplit('.', 1)
         img_file = img
-    save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{j_user['globus_user_id']}.{extension}"))
+    
+    save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{stage_user_info['globus_user_id']}.{extension}"))
     img_file.save(save_path)
-    j_user['photo'] = save_path
+    stage_user_info['photo'] = save_path
     
     try:
-        stage_user = StageUser(j_user)
-        assign_wp_user(wp_user, stage_user, wp_user.connection[0], 'EDIT')
+        # will this stage_user be added to database?
+        stage_user = StageUser(stage_user_info)
+        edit_connection(stage_user, wp_user, wp_user.connection[0])
         db.session.commit()
     except Exception as e:
+        print("Failed to update the user profile")
         print(e)
-        print("Exception in user code:")
-        print("-"*60)
-        traceback.print_exc(file=sys.stdout)
-        print("-"*60)
-        print('Failed to update user profile')
 
-    print('User profile updated successfully')
 
 # This is user approval without using existing mathicng profile
 # Approving by moving user data from `stage_user` into `wp_user` and `wp_connections`
@@ -556,15 +541,9 @@ def approve_stage_user_by_editing_matched(stage_user, connection_profile):
             new_wp_user = create_new_user(stage_user)
 
             # Edit profile in `wp_connections`
-            edit_matched_connection(stage_user, new_wp_user, connection_profile)
-
-            # Add mapping to `user_connection` table
-            mapping = Mapping()
-            mapping.user_id = new_wp_user.id
-            mapping.connection_id = connection_profile.id
+            edit_connection(stage_user, new_wp_user, connection_profile)
 
             db.session.add(new_wp_user)
-            db.session.add(mapping)
             db.session.delete(stage_user)
             db.session.commit()
         except Exception as e:
@@ -572,7 +551,7 @@ def approve_stage_user_by_editing_matched(stage_user, connection_profile):
             print(e)
     else:
         try:
-            edit_matched_connection(stage_user, wp_user, connection_profile)
+            edit_connection(stage_user, wp_user, connection_profile)
             db.session.delete(stage_user)
             db.session.commit()
         except Exception as e:
@@ -766,8 +745,8 @@ def create_new_connection(stage_user, new_wp_user):
     connection.metas.append(connection_meta_pm_email)
 
 
-# Overwrite the existing fields with the ones from user registration
-def edit_matched_connection(stage_user, wp_user, connection):
+# Overwrite the existing fields with the ones from user registration or profile update
+def edit_connection(stage_user, wp_user, connection):
     # First get the id of admin user in `wp_usermeta` table
     admin_id = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == session['globus_user_id']).first().user_id
 
@@ -1133,16 +1112,16 @@ def profile():
             if not session_csrf_token or session_csrf_token != request.form['csrf_token']:
                 return show_user_error("Oops! Invalid CSRF token!")
             else:
-                new_user, img_to_upload = construct_user(request)
+                stage_user_info, img_to_upload = construct_user(request)
                 wp_user_id = request.POST['wp_user_id']
 
                 # Update user profile in database
-                update_user_profile(new_user, img_to_upload, wp_user_id)
+                update_user_profile(stage_user_info, img_to_upload, wp_user_id)
 
                 try:
                     # Send email to admin for user profile update
                     # so the admin can do furtuer changes in globus
-                    send_user_profile_update_mail(new_user)
+                    send_user_profile_update_mail(stage_user_info)
                 except Exception as e: 
                     print(e)
                     print("Failed to send user profile update email to admin.")
