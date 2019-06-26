@@ -460,8 +460,10 @@ def add_new_stage_user(user_info, profile_pic_option, img_to_upload):
         try:
             db.session.add(stage_user)
             db.session.commit()
-        except:
+        except Exception as e:
             print('Failed to add a new stage user')
+            print(e)
+            
 
 # Query the user data to populate into profile form
 def get_user_profile(globus_user_id):
@@ -476,27 +478,33 @@ def get_user_profile(globus_user_id):
 
 def handle_user_profile_pic(user_info, profile_pic_option, img_to_upload):
     save_path = None
-
-    if profile_pic_option == 'upload':
-        _, extension = img_to_upload.filename.rsplit('.', 1)
-        img_file = img_to_upload
-
-        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{new_user['globus_user_id']}.{extension}"))
-        img_file.save(save_path)
-    elif profile_pic_option == 'url':
-        response = requests.get(new_user['photo_url'])
-        img_file = Image.open(BytesIO(response.content))
-        extension = img_file.format
-
-        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{new_user['globus_user_id']}.{extension}"))
-        img_file.save(save_path)
-    else:
-        # Use default image
-        BASE = os.path.dirname(os.path.abspath(__file__))
-        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{new_user['globus_user_id']}.jpg"))
-        copy2(os.path.join(BASE, 'avatar/', 'noname.jpg'), save_path)
     
-    return save_path
+    try:
+        if profile_pic_option == 'upload':
+            _, extension = img_to_upload.filename.rsplit('.', 1)
+            img_file = img_to_upload
+
+            save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{user_info['globus_user_id']}.{extension}"))
+            img_file.save(save_path)
+        elif profile_pic_option == 'url':
+            response = requests.get(new_user['photo_url'])
+            img_file = Image.open(BytesIO(response.content))
+            extension = img_file.format
+
+            save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{user_info['globus_user_id']}.{extension}"))
+            img_file.save(save_path)
+        else:
+            # Use default image
+            BASE = os.path.dirname(os.path.abspath(__file__))
+            save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{user_info['globus_user_id']}.jpg"))
+            copy2(os.path.join(BASE, 'avatar/', 'noname.jpg'), save_path)
+
+        return save_path
+    except Exception as e:
+        print("Failed to handle user profile picture")
+        print(e)
+
+    
 
 # Update user profile with user-provided information 
 def update_user_profile(user_info, profile_pic_option, img_to_upload, user_id):
