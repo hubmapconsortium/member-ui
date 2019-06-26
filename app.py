@@ -263,17 +263,26 @@ def get_globus_user_info(token):
 def construct_user(request):
     photo_file = None
     imgByteArr = None
-    if 'photo' in request.files and request.files['photo']:
-        photo_file = request.files['photo']
-    
-    url = request.form['photo_url']
-    if photo_file is None and url:
-        response = requests(url)
-        img = Image.open(BytesIO(response.content))
-        imgByteArr = BytesIO()
-        img.save(imgByteArr, format=img.format)
-        imgByteArr = imgByteArr.getvalue()
 
+    # Users can only choose to upload image ,pull image from URL, or just the default image
+    # Values: "upload", "url", "default"
+    profile_pic_option = request.form['profile_pic_option'].lower()
+
+    if profile_pic_option == 'upload':
+        if 'photo' in request.files and request.files['photo']:
+            photo_file = request.files['photo']
+    elif profile_pic_option == 'url':
+        photo_url = request.form['photo_url']
+        if photo_url:
+            response = requests(photo_url)
+            img = Image.open(BytesIO(response.content))
+            imgByteArr = BytesIO()
+            img.save(imgByteArr, format=img.format)
+            imgByteArr = imgByteArr.getvalue()
+    else:
+        # use default image
+        photo_file = None
+    
     new_user = {
         # Get the globus user id from session data
         "globus_user_id": session['globus_user_id'],
@@ -307,7 +316,7 @@ def construct_user(request):
 
     img_to_upload = photo_file if photo_file is not None else imgByteArr if imgByteArr is not None else None
 
-    return new_user, img_to_upload
+    return new_user, profile_pic_option, img_to_upload
 
 
 def get_pm_selection(value):
@@ -433,35 +442,20 @@ def user_in_pending(globus_user_id):
     return True
 
 # Add new user reigstration to `stage_user` table
-def add_new_stage_user(new_user, img_to_upload):
-    # Add user profile image data
-    if not img_to_upload:
-        BASE = os.path.dirname(os.path.abspath(__file__))
-        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{new_user['globus_user_id']}.jpg"))
-        copy2(os.path.join(BASE, 'avatar/', 'noname.jpg'), save_path)
-        new_user['photo'] = save_path
-    else:
-        if new_user['photo_url'] != '':
-            response = requests.get(new_user['photo_url'])
-            img_file = Image.open(BytesIO(response.content))
-            extension = img_file.format
-        else:
-            _, extension = img_to_upload.filename.rsplit('.', 1)
-            img_file = img_to_upload
-        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{new_user['globus_user_id']}.{extension}"))
-        img_file.save(save_path)
-        new_user['photo'] = save_path
-    
+def add_new_stage_user(user_info, profile_pic_option, img_to_upload):
+    # First handle the profile image and save it to target directory
+    user_info['photo'] = handle_user_profile_pic(user_info, profile_pic_option, img_to_upload)
+
     try:
-        new_stage_user = StageUser(new_user)
+        stage_user = StageUser(user_info)
     except:
-        print('User data is not valid')
+        print('User data is invalid')
     
-    if StageUser.query.filter(StageUser.globus_user_id == new_stage_user.globus_user_id).first():
+    if StageUser.query.filter(StageUser.globus_user_id == stage_user.globus_user_id).first():
         print('The same stage user exists')
     else:
         try:
-            db.session.add(new_stage_user)
+            db.session.add(stage_user)
             db.session.commit()
         except:
             print('Failed to add a new stage user')
@@ -477,31 +471,41 @@ def get_user_profile(globus_user_id):
     user = result[0][0]
     return user
 
-# Update user profile with user-provided information 
-def update_user_profile(stage_user_info, img, user_id):
-    wp_user = WPUser.query.get(user_id)
-    
-    img_file = None
-    extension = None
+def handle_user_profile_pic(user_info, profile_pic_option, img_to_upload):
+    save_path = None
 
-    # Get the photo from URL if provided
-    if stage_user_info['photo_url'] != '':
-        response = requests.get(stage_user_info['photo_url'])
+    if profile_pic_option == 'upload':
+        _, extension = img_to_upload.filename.rsplit('.', 1)
+        img_file = img_to_upload
+
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{new_user['globus_user_id']}.{extension}"))
+        img_file.save(save_path)
+    elif profile_pic_option == 'url':
+        response = requests.get(new_user['photo_url'])
         img_file = Image.open(BytesIO(response.content))
         extension = img_file.format
-    
-    if img:
-        img_file = img
-        _, extension = img.filename.rsplit('.', 1)
-        
-    if extension:
-        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{stage_user_info['globus_user_id']}.{extension}"))
+
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{new_user['globus_user_id']}.{extension}"))
         img_file.save(save_path)
-        stage_user_info['photo'] = save_path
+    else:
+        # Use default image
+        BASE = os.path.dirname(os.path.abspath(__file__))
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{new_user['globus_user_id']}.jpg"))
+        copy2(os.path.join(BASE, 'avatar/', 'noname.jpg'), save_path)
     
+    return save_path
+
+# Update user profile with user-provided information 
+def update_user_profile(user_info, profile_pic_option, img_to_upload, user_id):
+    # Get the wp_user record by id
+    wp_user = WPUser.query.get(user_id)
+    
+    # Handle the profile image and save it to target directory
+    user_info['photo'] = handle_user_profile_pic(user_info, profile_pic_option, img_to_upload)
+
     try:
         # will this stage_user be added to database?
-        stage_user = StageUser(stage_user_info)
+        stage_user = StageUser(user_info)
         edit_connection(stage_user, wp_user, wp_user.connection[0])
         db.session.commit()
     except Exception as e:
@@ -1088,11 +1092,11 @@ def register():
                     if not session_csrf_token or session_csrf_token != request.form['csrf_token']:
                         return show_user_error("Oops! Invalid CSRF token!")
                     else:
-                        new_user, img_to_upload = construct_user(request)
+                        new_user, profile_pic_option, img_to_upload = construct_user(request)
 
                         # Add user info to `stage_user` table for approval
                         try:
-                            add_new_stage_user(new_user, img_to_upload)
+                            add_new_stage_user(new_user, profile_pic_option, img_to_upload)
                         except:
                             print("Failed to add new stage user, something wrong with add_new_stage_user()")
 
@@ -1128,11 +1132,11 @@ def profile():
             if not session_csrf_token or session_csrf_token != request.form['csrf_token']:
                 return show_user_error("Oops! Invalid CSRF token!")
             else:
-                stage_user_info, img_to_upload = construct_user(request)
+                stage_user_info, profile_pic_option, img_to_upload = construct_user(request)
                 wp_user_id = request.form['wp_user_id']
 
                 # Update user profile in database
-                update_user_profile(stage_user_info, img_to_upload, wp_user_id)
+                update_user_profile(stage_user_info, profile_pic_option, img_to_upload, wp_user_id)
 
                 try:
                     # Send email to admin for user profile update
