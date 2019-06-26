@@ -279,6 +279,9 @@ def construct_user(request):
             imgByteArr = BytesIO()
             img.save(imgByteArr, format=img.format)
             imgByteArr = imgByteArr.getvalue()
+    elif profile_pic_option == 'existing':
+        # This only happends for updating profile
+        pass
     else:
         # use default image
         photo_file = None
@@ -501,7 +504,9 @@ def update_user_profile(user_info, profile_pic_option, img_to_upload, user_id):
     wp_user = WPUser.query.get(user_id)
     
     # Handle the profile image and save it to target directory
-    user_info['photo'] = handle_user_profile_pic(user_info, profile_pic_option, img_to_upload)
+    # if user doesn't want to use the exisiting image
+    if profile_pic_option != "existing":
+        user_info['photo'] = handle_user_profile_pic(user_info, profile_pic_option, img_to_upload)
 
     try:
         # will this stage_user be added to database?
@@ -1191,7 +1196,8 @@ def profile():
                 'isAuthenticated': True,
                 'username': session['name'],
                 'csrf_token': generate_csrf_token(),
-                'wp_user_id': wp_user['id']
+                'wp_user_id': wp_user['id'],
+                'profile_pic': json.loads(wp_user['connection'][0]['options'])['image']['meta']['original']['url']
             }
             
             # Merge initial_data and context as one dict 
