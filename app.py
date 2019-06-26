@@ -781,63 +781,180 @@ def edit_connection(stage_user, wp_user, connection):
 
 
     # Update corresponding metas
-    connection_meta_component = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'component').first()
-    connection_meta_component.meta_value = stage_user.component
+    import pdb; pdb.set_trace()
+    connection_meta_component = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'component', ConnectionMeta.entry_id == connection.id).first()
+    if connection_meta_component:
+        connection_meta_component.meta_value = stage_user.component
+    else:
+        connection_meta_component = ConnectionMeta()
+        connection_meta_component.meta_key = 'component'
+        connection_meta_component.meta_value = stage_user.component
+        connection.metas.append(connection_meta_component)
 
-    connection_meta_other_component = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'other_component').first()
-    connection_meta_other_component.meta_value = stage_user.other_component
+    connection_meta_other_component = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'other_component', ConnectionMeta.entry_id == connection.id).first()
+    if connection_meta_other_component:
+        connection_meta_other_component.meta_value = stage_user.other_component
+    else:
+        connection_meta_other_component = ConnectionMeta()
+        connection_meta_other_component.meta_key = 'other_component'
+        connection_meta_other_component.meta_value = stage_user.other_component
+        connection.metas.append(connection_meta_other_component)
 
-    connection_meta_organization = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'organization').first()
-    connection_meta_organization.meta_value = stage_user.organization
+    connection_meta_organization = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'organization', ConnectionMeta.entry_id == connection.id).first()
+    if connection_meta_organization:
+        connection_meta_organization.meta_value = stage_user.organization
+    else:
+        connection_meta_organization = ConnectionMeta()
+        connection_meta_organization.meta_key = 'organization'
+        connection_meta_organization.meta_value = stage_user.organization
+        connection.metas.append(connection_meta_organization)
 
-    connection_meta_other_organization = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'other_organization').first()
-    connection_meta_other_organization.meta_value = stage_user.other_organization
+    connection_meta_other_organization = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'other_organization', ConnectionMeta.entry_id == connection.id).first()
+    if connection_meta_other_organization:
+        connection_meta_other_organization.meta_value = stage_user.other_organization
+    else:
+        connection_meta_other_organization = ConnectionMeta()
+        connection_meta_other_organization.meta_key = 'other_organization'
+        connection_meta_other_organization.meta_value = stage_user.other_organization
+        connection.metas.append(connection_meta_other_organization)
 
-    connection_meta_role = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'role').first()
-    connection_meta_role.meta_value = stage_user.role
+    connection_meta_role = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'role', ConnectionMeta.entry_id == connection.id).first()
+    if connection_meta_role:
+        connection_meta_role.meta_value = stage_user.role
+    else:
+        connection_meta_role = ConnectionMeta()
+        connection_meta_role.meta_key = 'role'
+        connection_meta_role.meta_value = stage_user.role
+        connection.metas.append(connection_meta_role)
 
-    connection_meta_other_role = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'other_role').first()
-    connection_meta_other_role.meta_value = stage_user.other_role
+    connection_meta_other_role = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'other_role', ConnectionMeta.entry_id == connection.id).first()
+    if connection_meta_other_role:
+        connection_meta_other_role.meta_value = stage_user.other_role
+    else:
+        connection_meta_other_role = ConnectionMeta()
+        connection_meta_other_role.meta_key = 'other_role'
+        connection_meta_other_role.meta_value = stage_user.other_role
+        connection.metas.append(connection_meta_other_role)
 
-    connection_meta_working_group = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'working_group').first()
-    connection_meta_working_group.meta_value = stage_user.working_group
+    connection_meta_working_group = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'working_group', ConnectionMeta.entry_id == connection.id).first()
+    if connection_meta_working_group:
+        connection_meta_working_group.meta_value = stage_user.working_group
+    else:
+        connection_meta_working_group = ConnectionMeta()
+        connection_meta_working_group.meta_key = 'working_group'
+        connection_meta_working_group.meta_value = stage_user.working_group
+        connection.metas.append(connection_meta_working_group)
 
-    connection_meta_access_requests = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'access_requests').first()
-    connection_meta_access_requests.meta_value = stage_user.access_requests
+    connection_meta_access_requests = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'access_requests', ConnectionMeta.entry_id == connection.id).first()
+    if connection_meta_access_requests:
+        connection_meta_access_requests.meta_value = stage_user.access_requests
+    else:
+        connection_meta_access_requests = ConnectionMeta()
+        connection_meta_access_requests.meta_key = 'access_requests'
+        connection_meta_access_requests.meta_value = stage_user.access_requests
+        connection.metas.append(connection_meta_access_requests)
 
-    connection_meta_google_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'google_email').first()
-    connection_meta_google_email.meta_value = stage_user.google_email
+    connection_meta_google_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'google_email', ConnectionMeta.entry_id == connection.id).first()
+    if connection_meta_google_email:
+        connection_meta_google_email.meta_value = stage_user.google_email
+    else:
+        connection_meta_google_email = ConnectionMeta()
+        connection_meta_google_email.meta_key = 'google_email'
+        connection_meta_google_email.meta_value = stage_user.google_email
+        connection.metas.append(connection_meta_google_email)
 
-    connection_meta_github_username = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'github_username').first()
-    connection_meta_github_username.meta_value = stage_user.github_username
+    connection_meta_github_username = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'github_username', ConnectionMeta.entry_id == connection.id).first()
+    if connection_meta_github_username:
+        connection_meta_github_username.meta_value = stage_user.github_username
+    else:
+        connection_meta_github_username = ConnectionMeta()
+        connection_meta_github_username.meta_key = 'github_username'
+        connection_meta_github_username.meta_value = stage_user.github_username
+        connection.metas.append(connection_meta_github_username)
 
-    connection_meta_slack_username = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'slack_username').first()
-    connection_meta_slack_username.meta_value = stage_user.slack_username
+    connection_meta_slack_username = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'slack_username', ConnectionMeta.entry_id == connection.id).first()
+    if connection_meta_slack_username:
+        connection_meta_slack_username.meta_value = stage_user.slack_username
+    else:
+        connection_meta_slack_username = ConnectionMeta()
+        connection_meta_slack_username.meta_key = 'slack_username'
+        connection_meta_slack_username.meta_value = stage_user.slack_username
+        connection.metas.append(connection_meta_slack_username)
 
-    connection_meta_website = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'website').first()
-    connection_meta_website.meta_value = stage_user.website
+    connection_meta_website = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'website', ConnectionMeta.entry_id == connection.id).first()
+    if connection_meta_website:
+        connection_meta_website.meta_value = stage_user.website
+    else:
+        connection_meta_website = ConnectionMeta()
+        connection_meta_website.meta_key = 'website'
+        connection_meta_website.meta_value = stage_user.website
+        connection.metas.append(connection_meta_website)
 
-    connection_meta_expertise = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'expertise').first()
-    connection_meta_expertise.meta_value = stage_user.expertise
+    connection_meta_expertise = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'expertise', ConnectionMeta.entry_id == connection.id).first()
+    if connection_meta_expertise:
+        connection_meta_expertise.meta_value = stage_user.expertise
+    else:
+        connection_meta_expertise = ConnectionMeta()
+        connection_meta_expertise.meta_key = 'expertise'
+        connection_meta_expertise.meta_value = stage_user.expertise
+        connection.metas.append(connection_meta_expertise)
 
-    connection_meta_orcid = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'orcid').first()
-    connection_meta_orcid.meta_value = stage_user.orcid
+    connection_meta_orcid = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'orcid', ConnectionMeta.entry_id == connection.id).first()
+    if connection_meta_orcid:
+        connection_meta_orcid.meta_value = stage_user.orcid
+    else:
+        connection_meta_orcid = ConnectionMeta()
+        connection_meta_orcid.meta_key = 'orcid'
+        connection_meta_orcid.meta_value = stage_user.orcid
+        connection.metas.append(connection_meta_orcid)
 
-    connection_meta_pm = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'pm').first()
-    connection_meta_pm.meta_value = stage_user.pm
+    connection_meta_pm = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'pm', ConnectionMeta.entry_id == connection.id).first()
+    if connection_meta_pm:
+        connection_meta_pm.meta_value = stage_user.pm
+    else:
+        connection_meta_pm = ConnectionMeta()
+        connection_meta_pm.meta_key = 'pm'
+        connection_meta_pm.meta_value = stage_user.pm
+        connection.metas.append(connection_meta_pm)
 
-    connection_meta_pm_name = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'pm_name').first()
-    connection_meta_pm_name.meta_value = stage_user.pm_name
+    connection_meta_pm_name = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'pm_name', ConnectionMeta.entry_id == connection.id).first()
+    if connection_meta_pm_name:
+        connection_meta_pm_name.meta_value = stage_user.pm_name
+    else:
+        connection_meta_pm_name = ConnectionMeta()
+        connection_meta_pm_name.meta_key = 'pm_name'
+        connection_meta_pm_name.meta_value = stage_user.pm_name
+        connection.metas.append(connection_meta_pm_name)
 
-    connection_meta_pm_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'pm_email').first()
-    connection_meta_pm_email.meta_value = stage_user.pm_email
+    connection_meta_pm_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'pm_email', ConnectionMeta.entry_id == connection.id).first()
+    if connection_meta_pm_email:
+        connection_meta_pm_email.meta_value = stage_user.pm_email
+    else:
+        connection_meta_pm_email = ConnectionMeta()
+        connection_meta_pm_email.meta_key = 'pm_email'
+        connection_meta_pm_email.meta_value = stage_user.pm_email
+        connection.metas.append(connection_meta_pm_email)
 
-    connection_meta_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'email').first()
-    connection_meta_email.meta_value = stage_user.email
+    connection_meta_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'email', ConnectionMeta.entry_id == connection.id).first()
+    if connection_meta_email:
+        connection_meta_email.meta_value = stage_user.email
+    else:
+        connection_meta_email = ConnectionMeta()
+        connection_meta_email.meta_key = 'email'
+        connection_meta_email.meta_value = stage_user.email
+        connection.metas.append(connection_meta_email)
 
-    connection_meta_phone = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'phone').first()
-    connection_meta_phone.meta_value = stage_user.phone
+    connection_meta_phone = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'phone', ConnectionMeta.entry_id == connection.id).first()
+    if connection_meta_phone:
+        connection_meta_phone.meta_value = stage_user.phone
+    else:
+        connection_meta_phone = ConnectionMeta()
+        connection_meta_phone.meta_key = 'phone'
+        connection_meta_phone.meta_value = stage_user.phone
+        connection.metas.append(connection_meta_phone)
 
+    if not wp_user in connection.owners:
+        connection.owners.append(wp_user)
 
 # Deny the new user registration
 def deny_stage_user(globus_user_id):
