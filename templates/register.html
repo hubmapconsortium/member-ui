@@ -23,6 +23,9 @@
         $("div.pm-name").hide();
         $("div.pm-email").hide();
         $(".main-error-message").hide();
+        $("#pic_upload").hide();
+        $("#pic_url").hide();
+
 
         $("#id_component").change(function() {
             let id = $(this).children("option:selected").val();
@@ -118,16 +121,38 @@
         if ($("#id_access_requests_6").is(':checked')){
             $("#id_access_requests_6").prop('disabled', true);
         }
-        if($(":radio[id^='id_pm_0']").is(':checked')){
+        if ($(":radio[id^='id_pm_0']").is(':checked')){
             $("div.pm-name").show();
             $("div.pm-email").show();
         }
-        $('#id_photo_url').change(function() {
-            $('#id_photo').val('');
-        });
-        $('#id_photo').change(function() {
+        
+        // Profile image upload, pull from URL, or use default
+        $('#profile_pic_option_upload').click(function() {
+            $("#pic_upload").show();
+            $("#pic_url").hide();
+            // Clear the url
             $('#id_photo_url').val('');
-        })
+            // Reset thumbnail
+            $('#profile_picture').attr('src', "{{ url_for('static', filename = 'images/default_profile.png') }}");
+        });
+        $('#profile_pic_option_url').click(function() {
+            $("#pic_upload").hide();
+            $("#pic_url").show();
+            // Clear file
+            $('#id_photo').val('');
+            // Reset thumbnail
+            $('#profile_picture').attr('src', "{{ url_for('static', filename = 'images/default_profile.png') }}");
+        });
+        $('#profile_pic_option_default').click(function() {
+            $("#pic_upload").hide();
+            $("#pic_url").hide();
+            // Clear file and url
+            $('#id_photo').val('');
+            $('#id_photo_url').val('');
+            // Reset thumbnail
+            $('#profile_picture').attr('src', "{{ url_for('static', filename = 'images/default_profile.png') }}");
+        });
+
         function readURL(input) {
             if (input.files && input.files[0]) {
                 var reader = new FileReader();
@@ -154,6 +179,7 @@
             $('#profile_picture').attr('src', "{{ url_for('static', filename = 'images/default_profile.png') }}");
             $('#profile_picture').attr('src', e.target.value);
         }, 500));
+
         $(":radio[id^='id_pm_']").change(function() {
             if($(this).val() === 'Yes'){
                 $("div.pm-name").show();
@@ -387,40 +413,53 @@
                                 </div>
                             </div>
                         </div>
-                        <label for="file">Profile Picture</label>
+
+                        
                         <div class="row">
                             <div class="col-xs-12 col-sm-3">
-                                <img src="{{ url_for('static', filename='images/default_profile.png') }}" alt="" class="img-thumbnail" id="profile_picture">
+                                <img src="{{ url_for('static', filename='images/default_profile.png') }}" alt="Profile image" width="200" height="200" class="img-thumbnail" id="profile_picture">
                             </div>
                             <div class="col-xs-12 col-sm-9">
-                                <ul class="nav nav-tabs" id="myTab" role="tablist">
-                                    <li class="nav-item">
-                                        <a class="nav-link active" id="file-tab" data-toggle="tab" href="#file" role="tab" aria-controls="file" aria-selected="true">Upload New Image</a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link" id="url-tab" data-toggle="tab" href="#url" role="tab" aria-controls="url" aria-selected="false">Pull Image From Exsitng URL</a>
-                                    </li>
-                                </ul>
-                                <div class="tab-content" id="myTabContent">
-                                    <div class="tab-pane fade show active" id="file" role="tabpanel" aria-labelledby="file-tab">
-                                        <div class="form-photo">
-                                            <input type="file" name="photo" class="form-control" accept="image/*" id="id_photo">
-                                            <div class="invalid-feedback">
-                                                
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="tab-pane fade" id="url" role="tabpanel" aria-labelledby="url-tab">
-                                        <div class="form-photo-url">
-                                            <input type="url" name="photo_url" class="form-control" placeholder="http://example.com" id="id_photo_url">
-                                            <div class="invalid-feedback">
-                                                
-                                            </div>
-                                        </div>
+                                <label for="file">Profile Picture: </label>
+
+                                <div class="form-check form-check-inline">
+                                  <input class="form-check-input" type="radio" name="profile_pic_option" id="profile_pic_option_default" value="default" checked>
+                                  <label class="form-check-label" for="profile_pic_option_default">
+                                    Use default image
+                                  </label>
+                                </div>
+
+                                <div class="form-check form-check-inline">
+                                  <input class="form-check-input" type="radio" name="profile_pic_option" id="profile_pic_option_upload" value="upload">
+                                  <label class="form-check-label" for="profile_pic_option_upload">
+                                    Upload image file
+                                  </label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                  <input class="form-check-input" type="radio" name="profile_pic_option" id="profile_pic_option_url" value="url">
+                                  <label class="form-check-label" for="profile_pic_option_url">
+                                    Pull image from URL
+                                  </label>
+                                </div>
+                                
+
+                                <div id="pic_upload" class="form-photo">
+                                    <input type="file" name="photo" class="form-control" accept="image/*" id="id_photo">
+                                    <div class="invalid-feedback">
+                                        
                                     </div>
                                 </div>
+
+                                <div id="pic_url" class="form-photo-url">
+                                    <input type="url" name="photo_url" class="form-control" placeholder="http://example.com" id="id_photo_url">
+                                    <div class="invalid-feedback">
+                                        
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
+
                         <div class="form-group">
                             <label for="group">What HuBMAP working groups are you a member of?</label>
                             <ul id="id_working_group">

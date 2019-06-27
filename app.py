@@ -32,6 +32,9 @@ from pprint import pprint
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_pyfile('app.cfg')
 
+# Remove trailing slash / from URL base to avoid "//" caused by config with trailing slash
+app.config['FLASK_APP_BASE_URI'] = app.config['FLASK_APP_BASE_URI'].strip('/')
+
 # Flask-Mail instance
 mail = Mail(app)
 
@@ -260,18 +263,30 @@ def get_globus_user_info(token):
 def construct_user(request):
     photo_file = None
     imgByteArr = None
-    if 'photo' in request.files and request.files['photo']:
-        photo_file = request.files['photo']
-    
-    url = request.form['photo_url']
-    if photo_file is None and url:
-        response = requests(url)
-        img = Image.open(BytesIO(response.content))
-        imgByteArr = BytesIO()
-        img.save(imgByteArr, format=img.format)
-        imgByteArr = imgByteArr.getvalue()
 
-    new_user = {
+    # Users can only choose to upload image ,pull image from URL, or just the default image
+    # Values: "upload", "url", "default"
+    profile_pic_option = request.form['profile_pic_option'].lower()
+
+    if profile_pic_option == 'upload':
+        if 'photo' in request.files and request.files['photo']:
+            photo_file = request.files['photo']
+    elif profile_pic_option == 'url':
+        photo_url = request.form['photo_url']
+        if photo_url:
+            response = requests.get(photo_url)
+            img = Image.open(BytesIO(response.content))
+            imgByteArr = BytesIO()
+            img.save(imgByteArr, format=img.format)
+            imgByteArr = imgByteArr.getvalue()
+    elif profile_pic_option == 'existing':
+        # This only happends for updating profile
+        pass
+    else:
+        # use default image
+        photo_file = None
+    
+    user_info = {
         # Get the globus user id from session data
         "globus_user_id": session['globus_user_id'],
         # All others are from the form data
@@ -304,7 +319,7 @@ def construct_user(request):
 
     img_to_upload = photo_file if photo_file is not None else imgByteArr if imgByteArr is not None else None
 
-    return new_user, img_to_upload
+    return user_info, profile_pic_option, img_to_upload
 
 
 def get_pm_selection(value):
@@ -430,76 +445,98 @@ def user_in_pending(globus_user_id):
     return True
 
 # Add new user reigstration to `stage_user` table
-def add_new_stage_user(new_user, img_to_upload):
-    # Add user profile image data
-    if not img_to_upload:
-        BASE = os.path.dirname(os.path.abspath(__file__))
-        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{new_user['globus_user_id']}.jpg"))
-        copy2(os.path.join(BASE, 'avatar/', 'noname.jpg'), save_path)
-        new_user['photo'] = save_path
-    else:
-        if new_user['photo_url'] != '':
-            response = requests.get(new_user['photo_url'])
-            img_file = Image.open(BytesIO(response.content))
-            extension = img_file.format
-        else:
-            _, extension = img_to_upload.filename.rsplit('.', 1)
-            img_file = img_to_upload
-        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{new_user['globus_user_id']}.{extension}"))
-        img_file.save(save_path)
-        new_user['photo'] = save_path
-    
+def add_new_stage_user(user_info, profile_pic_option, img_to_upload):
+    # First handle the profile image and save it to target directory
+    user_info['photo'] = handle_user_profile_pic(user_info, profile_pic_option, img_to_upload)
+
     try:
-        new_stage_user = StageUser(new_user)
+        stage_user = StageUser(user_info)
     except:
-        print('User data is not valid')
+        print('User data is invalid')
     
-    if StageUser.query.filter(StageUser.globus_user_id == new_stage_user.globus_user_id).first():
+    if StageUser.query.filter(StageUser.globus_user_id == stage_user.globus_user_id).first():
         print('The same stage user exists')
     else:
         try:
-            db.session.add(new_stage_user)
+            db.session.add(stage_user)
             db.session.commit()
-        except:
+        except Exception as e:
             print('Failed to add a new stage user')
+            print(e)
+            
 
 # Query the user data to populate into profile form
+# This is different from get_wp_user() in that it also returns the meta and connection data
+# from where we can parse all the profile data
 def get_user_profile(globus_user_id):
     user_meta = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == globus_user_id).first()
     if not user_meta:
-        print('No user found with globus_user_id: ' + globus_user_id)
+        print('No WP user found with globus_user_id: ' + globus_user_id)
         return None
     users = [user_meta.user]
     result = wp_users_schema.dump(users)
     user = result[0][0]
     return user
 
-# Update user profile with user-provided information 
-def update_user_profile(stage_user_info, img, user_id):
-    wp_user = WPUser.query.get(user_id)
-    
-    img_file = None
-    extension = None
-
-    # Get the photo from URL if provided
-    if stage_user_info['photo_url'] != '':
-        response = requests.get(stage_user_info['photo_url'])
-        img_file = Image.open(BytesIO(response.content))
-        extension = img_file.format
-    
-    if img:
-        img_file = img
-        _, extension = img.filename.rsplit('.', 1)
-        
-    if extension:
-        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{stage_user_info['globus_user_id']}.{extension}"))
-        img_file.save(save_path)
-        stage_user_info['photo'] = save_path
+def handle_user_profile_pic(user_info, profile_pic_option, img_to_upload):
+    save_path = None
     
     try:
+        if profile_pic_option == 'upload':
+            _, extension = img_to_upload.filename.rsplit('.', 1)
+            img_file = img_to_upload
+
+            save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{user_info['globus_user_id']}.{extension}"))
+            img_file.save(save_path)
+        elif profile_pic_option == 'url':
+            response = requests.get(user_info['photo_url'])
+            img_file = Image.open(BytesIO(response.content))
+            extension = img_file.format
+
+            save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{user_info['globus_user_id']}.{extension}"))
+            img_file.save(save_path)
+        else:
+            # Use default image
+            BASE = os.path.dirname(os.path.abspath(__file__))
+            save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{user_info['globus_user_id']}.jpg"))
+            copy2(os.path.join(BASE, 'avatar/', 'noname.jpg'), save_path)
+
+        return save_path
+    except Exception as e:
+        print("Failed to handle user profile picture")
+        print(e)
+
+    
+
+# Update user profile with user-provided information 
+def update_user_profile(user_info, profile_pic_option, img_to_upload):
+    # First get the exisiting wp_user record with globus id
+    # this has no connection data
+    wp_user = get_wp_user(session['globus_user_id'])
+
+    # Get the connection and meta data record by globus id
+    result = get_user_profile(session['globus_user_id'])
+
+    connection_id = result['connection'][0]['id']
+
+    # Get connection profile by connection id
+    connection_profile = get_connection_profile(connection_id)
+
+    pprint("====wp_user=====")
+    pprint(wp_user)
+    pprint("====connection_profile=====")
+    pprint(connection_profile)
+    # Handle the profile image and save it to target directory
+    # if user doesn't want to use the exisiting image
+    if profile_pic_option != "existing":
+        user_info['photo'] = handle_user_profile_pic(user_info, profile_pic_option, img_to_upload)
+
+    try:
         # will this stage_user be added to database?
-        stage_user = StageUser(stage_user_info)
-        edit_connection(stage_user, wp_user, wp_user.connection[0])
+        stage_user = StageUser(user_info)
+        pprint("====stage_user=====")
+        pprint(vars(stage_user))
+        edit_connection(stage_user, wp_user, connection_profile)
         db.session.commit()
     except Exception as e:
         print("Failed to update the user profile")
@@ -772,7 +809,9 @@ def edit_connection(stage_user, wp_user, connection):
     connection.bio = stage_user.expertise
     connection.edited_by = admin_id
 
-    if not stage_user.photo == '':
+    if stage_user.photo != '':
+        print("======stage_user.photo=======")
+        pprint(stage_user.photo)
         photo_file_name = stage_user.photo.split('/')[-1]
         # Disable for now
         #pathlib.Path(app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() ).mkdir(parents=True, exist_ok=True)
@@ -781,7 +820,6 @@ def edit_connection(stage_user, wp_user, connection):
 
 
     # Update corresponding metas
-    import pdb; pdb.set_trace()
     connection_meta_component = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'component', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_component:
         connection_meta_component.meta_value = stage_user.component
@@ -925,6 +963,7 @@ def edit_connection(stage_user, wp_user, connection):
         connection_meta_pm_name.meta_key = 'pm_name'
         connection_meta_pm_name.meta_value = stage_user.pm_name
         connection.metas.append(connection_meta_pm_name)
+        print(stage_user.pm_name)
 
     connection_meta_pm_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'pm_email', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_pm_email:
@@ -1202,11 +1241,11 @@ def register():
                     if not session_csrf_token or session_csrf_token != request.form['csrf_token']:
                         return show_user_error("Oops! Invalid CSRF token!")
                     else:
-                        new_user, img_to_upload = construct_user(request)
+                        user_info, profile_pic_option, img_to_upload = construct_user(request)
 
                         # Add user info to `stage_user` table for approval
                         try:
-                            add_new_stage_user(new_user, img_to_upload)
+                            add_new_stage_user(user_info, profile_pic_option, img_to_upload)
                         except:
                             print("Failed to add new stage user, something wrong with add_new_stage_user()")
 
@@ -1242,16 +1281,17 @@ def profile():
             if not session_csrf_token or session_csrf_token != request.form['csrf_token']:
                 return show_user_error("Oops! Invalid CSRF token!")
             else:
-                stage_user_info, img_to_upload = construct_user(request)
-                wp_user_id = request.form['wp_user_id']
-
+                user_info, profile_pic_option, img_to_upload = construct_user(request)
+                pprint("=========================user info=====================")
+                pprint(user_info)
+                pprint("=======================================================")
                 # Update user profile in database
-                update_user_profile(stage_user_info, img_to_upload, wp_user_id)
+                update_user_profile(user_info, profile_pic_option, img_to_upload)
 
                 try:
                     # Send email to admin for user profile update
                     # so the admin can do furtuer changes in globus
-                    send_user_profile_update_mail(stage_user_info)
+                    send_user_profile_updated_mail(user_info)
                 except Exception as e: 
                     print("Failed to send user profile update email to admin.")
                     print(e)
@@ -1263,32 +1303,34 @@ def profile():
             # Fetch user profile data
             wp_user = get_user_profile(session['globus_user_id'])
 
-            pprint(wp_user['connection'][0]['metas'] )
-            # Parsing the json to get initial user profile data
+            #pprint(wp_user['connection'] )
+
+            # Parsing the json(from schema dump) to get initial user profile data
+            connection_data = wp_user['connection'][0]
             initial_data = {
-                'first_name': wp_user['connection'][0]['first_name'],
-                'last_name': wp_user['connection'][0]['last_name'],
-                #'email': wp_user['connection'][0]['email'],
+                'first_name': connection_data['first_name'],
+                'last_name': connection_data['last_name'],
+                #'email': connection_data['email'],
                 'email': wp_user['user_email'],
-                #'phone': phpserialize.loads(wp_user['connection'][0]['phone_numbers'].encode())[0][b'number'].decode(),
-                'phone': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'phone'), {'meta_value': ''})['meta_value'],
-                'component': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'component'), {'meta_value': ''})['meta_value'],
-                'other_component': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_component'), {'meta_value': ''})['meta_value'],
-                'organization': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'organization'), {'meta_value': ''})['meta_value'],
-                'other_organization': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_organization'), {'meta_value': ''})['meta_value'],
-                'role': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'role'), {'meta_value': ''})['meta_value'],
-                'other_role': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'other_role'), {'meta_value': ''})['meta_value'],
-                'working_group': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'working_group'), {'meta_value': ''})['meta_value'],
-                'access_requests': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'access_requests'), {'meta_value': ''})['meta_value'],
-                'google_email': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'google_email'), {'meta_value': ''})['meta_value'],
-                'github_username': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'github_username'), {'meta_value': ''})['meta_value'],
-                'slack_username': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'slack_username'), {'meta_value': ''})['meta_value'],
-                'website': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'website'), {'meta_value': ''})['meta_value'],
-                'expertise': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'expertise'), {'meta_value': ''})['meta_value'],
-                'orcid': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'orcid'), {'meta_value': ''})['meta_value'],
-                'pm': 'Yes' if next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm'), {'meta_value': ''})['meta_value'] == '1' else 'No',
-                'pm_name': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm_name'), {'meta_value': ''})['meta_value'],
-                'pm_email': next((meta for meta in wp_user['connection'][0]['metas'] if meta['meta_key'] == 'pm_email'), {'meta_value': ''})['meta_value'],
+                #'phone': phpserialize.loads(connection_data['phone_numbers'].encode())[0][b'number'].decode(),
+                'phone': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'phone'), {'meta_value': ''})['meta_value'],
+                'component': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'component'), {'meta_value': ''})['meta_value'],
+                'other_component': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'other_component'), {'meta_value': ''})['meta_value'],
+                'organization': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'organization'), {'meta_value': ''})['meta_value'],
+                'other_organization': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'other_organization'), {'meta_value': ''})['meta_value'],
+                'role': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'role'), {'meta_value': ''})['meta_value'],
+                'other_role': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'other_role'), {'meta_value': ''})['meta_value'],
+                'working_group': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'working_group'), {'meta_value': ''})['meta_value'],
+                'access_requests': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'access_requests'), {'meta_value': ''})['meta_value'],
+                'google_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'google_email'), {'meta_value': ''})['meta_value'],
+                'github_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'github_username'), {'meta_value': ''})['meta_value'],
+                'slack_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'slack_username'), {'meta_value': ''})['meta_value'],
+                'website': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'website'), {'meta_value': ''})['meta_value'],
+                'expertise': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'expertise'), {'meta_value': ''})['meta_value'],
+                'orcid': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'orcid'), {'meta_value': ''})['meta_value'],
+                'pm': 'Yes' if next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'pm'), {'meta_value': ''})['meta_value'] == '1' else 'No',
+                'pm_name': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'pm_name'), {'meta_value': ''})['meta_value'],
+                'pm_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'pm_email'), {'meta_value': ''})['meta_value'],
             }
 
             # Convert string representation to dict
@@ -1301,12 +1343,11 @@ def profile():
                 'isAuthenticated': True,
                 'username': session['name'],
                 'csrf_token': generate_csrf_token(),
-                'wp_user_id': wp_user['id']
+                'profile_pic': json.loads(connection_data['options'])['image']['meta']['original']['url']
             }
             
             # Merge initial_data and context as one dict 
             data = {**context, **initial_data}
-            pprint(data)
             # Populate the user data in profile
             return render_template('profile.html', data = data)
     else:
