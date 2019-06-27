@@ -258,6 +258,19 @@
                 $("#id_other_role").addClass('is-invalid');
                 $("#id_other_role").after("<div class='invalid-feedback'>Role is required.</div>");
             }
+
+            // Show users error if profile pic option is upload but no file, or url is selected but no valida url
+            if($("#profile_pic_option_upload").is(':checked') && ($("#id_photo").get(0).files.length === 0)) {
+                valid = false;
+                $("#id_photo").addClass('is-invalid');
+                $("#id_photo").after("<div class='invalid-feedback'>Please choose profile image to upload.</div>");
+            }
+            if($("#profile_pic_option_url").is(':checked') && ($("#id_photo_url").val() === '')) {
+                valid = false;
+                $("#id_photo_url").addClass('is-invalid');
+                $("#id_photo_url").after("<div class='invalid-feedback'>Please specify the image URL.</div>");
+            }
+            
             if($("#id_access_requests_3").is(':checked') && $.trim($("#id_google_email").val()) === ''){
                 valid = false;
                 $("#id_google_email").addClass('is-invalid');
@@ -445,16 +458,10 @@
 
                                 <div id="pic_upload" class="form-photo">
                                     <input type="file" name="photo" class="form-control" accept="image/*" id="id_photo">
-                                    <div class="invalid-feedback">
-                                        
-                                    </div>
                                 </div>
 
                                 <div id="pic_url" class="form-photo-url">
-                                    <input type="url" name="photo_url" class="form-control" placeholder="http://example.com" id="id_photo_url">
-                                    <div class="invalid-feedback">
-                                        
-                                    </div>
+                                    <input type="url" name="photo_url" class="form-control" placeholder="http://example.com/profile.png" id="id_photo_url">
                                 </div>
 
                             </div>
