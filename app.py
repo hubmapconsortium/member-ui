@@ -566,6 +566,7 @@ def approve_stage_user_by_creating_new(stage_user):
             print(e)
     else:
         try:
+            edit_wp_user(stage_user)
             create_new_connection(stage_user, wp_user)
             db.session.delete(stage_user)
             db.session.commit()
@@ -594,14 +595,24 @@ def approve_stage_user_by_editing_matched(stage_user, connection_profile):
             print(e)
     else:
         try:
+            edit_wp_user(stage_user)
             edit_connection(stage_user, wp_user, connection_profile)
             db.session.delete(stage_user)
             db.session.commit()
         except Exception as e:
             print("approve_stage_user_by_editing_matched() failed to update the connection or delete the stage user record")
             print(e)
+            raise e
 
+def edit_wp_user(stage_user):
+    wp_user = get_wp_user(stage_user.globus_user_id)
+    wp_user.user_login = stage_user.email
+    wp_user.user_email = stage_user.email
 
+    meta_capabilities = next((meta for meta in wp_user.metas if meta.meta_key == "wp_capabilities"), None)
+    if meta_capabilities:
+        meta_capabilities.meta_value = "a:1:{s:6:\"member\";b:1;}"
+    
 def create_new_user(stage_user):
     # Create a new wp_user record
     new_wp_user = WPUser()
