@@ -5,10 +5,13 @@
 
 <script type="text/javascript">
     $(function() {
-    	// Populate the data for these dropdown menus and checkboxes/radio buttons - Zhou
+    	// Populate the data for these dropdown menus and checkboxes/radio buttons
     	function populate_selections() {
 	        // Select the one user registered from the dropdown menu
 	        $('select#id_component option:contains("{{ data.component }}")').prop('selected', true);
+            // Also show the card detail
+            let target_card = $('div[data-name="{{ data.component }}"]').html();
+            $("#active_card").html(target_card);
 	        
 	        // Show the component detail card
 	        $('div[data-name="{{ data.component }}"]').show();
@@ -30,12 +33,11 @@
         
         // Hide these by default
         $(".oth-cmpnt").hide();
-        $(".component_detail_card").hide();
         $(".oth-org").hide();
         $(".oth-role").hide();
-        $(".google-email").hide();
-        $(".slack-username").hide();
-        $(".github-username").hide();
+        $("#google-email").hide();
+        $("#slack-username").hide();
+        $("#github-username").hide();
         $("div.pm-name").hide();
         $("div.pm-email").hide();
         $(".main-error-message").hide();
@@ -46,15 +48,22 @@
 
         $("#id_component").change(function() {
             let id = $(this).children("option:selected").val();
-            $("[id^='cmpnt_']").hide();
-            $("div[data-name='" + id + "']").show();
-            if(id==='Other'){ // other selected
-                $(".oth-cmpnt").show();
+            // All cards are hidden by default
+            if (id === '----') {
+                $("#active_card").html('');
             } else {
-                $("#id_other_component").val('');
-                $(".oth-cmpnt").hide();
+                let target_card = $("div[data-name='" + id + "']").html();
+                $("#active_card").html(target_card);
+
+                if(id==='Other'){ // other selected
+                    $(".oth-cmpnt").show();
+                } else {
+                    $("#id_other_component").val('');
+                    $(".oth-cmpnt").hide();
+                }
             }
         });
+
         $("#id_organization").change(function() {
             let id = $(this).children("option:selected").val();
             if(id==='Other'){ // other selected
@@ -76,31 +85,26 @@
                 $(".oth-role").hide();
             }
         });
+
         $("#id_access_requests_3").change(function() {
             if (!this.checked){
                 $("#id_google_email").val('');
             }
-            $(".google-email").toggle(this.checked);
+            $("#google-email").toggle(this.checked);
         });
         $("#id_access_requests_4").change(function() {
             if (!this.checked){
                 $("#id_github_username").val('');
             }
-            $(".github-username").toggle(this.checked);
+            $("#github-username").toggle(this.checked);
         });
         $("#id_access_requests_5").change(function() {
             if (!this.checked){
                 $("#id_slack_username").val('');
             }
-            $(".slack-username").toggle(this.checked);
+            $("#slack-username").toggle(this.checked);
         });
-        let id = $("#id_component").children("option:selected").val();
-        $("#cmpnt_" + id).show();
-        if(id==='Other'){ // other selected
-            $(".oth-cmpnt").show()
-        } else {
-            $(".oth-cmpnt").hide()
-        }
+        
         id = $('#id_organization').children("option:selected").val();
         if(id==='Other'){ // other selected
             $(".oth-org").show();
@@ -119,13 +123,13 @@
         // Disabled in HTML, no need to handle it in js here
 
         if ($("#id_access_requests_3").is(':checked')){
-            $(".google-email").show();
+            $("#google-email").show();
         }
         if ($("#id_access_requests_4").is(':checked')){
-            $(".github-username").show();
+            $("#github-username").show();
         }
         if ($("#id_access_requests_5").is(':checked')){
-            $(".slack-username").show();
+            $("#slack-username").show();
         }
 
         if($(":radio[id^='id_pm_0']").is(':checked')){
@@ -387,7 +391,7 @@
                                 <div class="row">
                                     <div class="col-sm-12">
                                         <div class="form-group oth-cmpnt">
-                                            <label for="other_component">Component: What component are you with?</label>
+                                            <label for="other_component">Component: What component are you with? <span class="text-danger">*</span></label>
                                             <input type="text" name="other_component" value="{{ data.other_component}}" class="form-control" maxlength="100" id="id_other_component">
                                             <div class="invalid-feedback">
                                                 
@@ -408,7 +412,7 @@
                                 <div class="row">
                                     <div class="col-sm-12">
                                         <div class="form-group oth-org">
-                                            <label for="other_organization">Organization: What organization are you with?</label>
+                                            <label for="other_organization">Organization: What organization are you with? <span class="text-danger">*</span></label>
                                             <input type="text" name="other_organization" value="{{ data.other_organization}}" class="form-control" maxlength="100" id="id_other_organization">
                                             <div class="invalid-feedback">
                                                 
@@ -420,9 +424,13 @@
                         </div>
                         
 
-                        <div class="form-group">
-                        	{% include 'component_cards.html' %}
+                        <!-- All hidden cards -->
+                        <div class="d-none">
+                            {% include 'component_cards.html' %}
                         </div>
+
+                        <!-- Active card -->
+                        <div class="form-group" id="active_card"></div>
 
 
                         <div class="form-group">
@@ -445,7 +453,7 @@
                             </div>
                         </div>
                         
-                        <div class="row">
+                        <div class="row mb-3">
                             <div class="col-xs-12 col-sm-3">
                                 <img src="{{ profile_pic }}" alt="Profile image" width="200" height="200" class="img-thumbnail" id="profile_picture">
                             </div>
@@ -492,6 +500,8 @@
                             </div>
                         </div>
 
+                     <div class="row">
+                        <div class="col-sm-12">
                         <div class="form-group">
                             <label for="working_group">What HuBMAP working groups are you a member of?</label>
                             <ul id="id_working_group">
@@ -518,9 +528,12 @@
 </ul>
                   
                         </div>
+                    </div>
+                </div>
+
                         <!-- Note: disabled checkbox will not be posted -->
-                        <div class="row">
-                            <div class="col-xs-12 col-sm-6" style="min-height: 20em;">
+                        <div class="row mb-2">
+                            <div class="col-xs-12 col-sm-6">
                                 <div class="form-group">
                                     <label for="access_requests">Which HuBMAP resources will you need to access?</label>
                                     <ul id="id_access_requests">
@@ -599,15 +612,13 @@ HuBMAP Data Portal</label>
 
 </li>
 </ul>
-                                    <div class="invalid-feedback">
-                                        
-                                    </div>
+                                   
                                 </div>
                             </div>
                             <div class="col-sm-6">
                                 <div class="row">
                                     <div class="col-sm-12">
-                                        <div class="form-group form-group-sm google-email">
+                                        <div class="form-group form-group-sm" id="google-email">
                                             <label for="google_email">Your Google account email address: <span class="text-danger">*</span> <button type="button" class="btn btn-link" data-toggle="tooltip" data-placement="right" data-html="true" title="Please enter the email address that you use to log into Google.  HuBMAP specific Google documents will be shared with this account.">what is this?</button></label>
                                             
                                             {% if data.google_email %}
@@ -623,7 +634,7 @@ HuBMAP Data Portal</label>
                                 </div>
                                 <div class="row">
                                     <div class="col-sm-12">
-                                        <div class="form-group form-group-sm github-username">
+                                        <div class="form-group form-group-sm" id="github-username">
                                             <label for="github_username">Your GitHub username: <span class="text-danger">*</span></label>
                                             {% if data.google_email %}
                                             <input type="text" name="github_username" value="{{ data.github_username }}" class="form-control" maxlength="100" id="id_github_username" disabled>
@@ -638,7 +649,7 @@ HuBMAP Data Portal</label>
                                 </div>
                                 <div class="row">
                                     <div class="col-sm-12">
-                                        <div class="form-group form-group-sm slack-username">
+                                        <div class="form-group form-group-sm" id="slack-username">
                                             <label for="slack_username">Your email address for the slack invitation: <span class="text-danger">*</span></label>
                                             {% if data.google_email %}
                                             <input type="text" name="slack_username" value="{{ data.slack_username }}" class="form-control" maxlength="100" id="id_slack_username" disabled>
@@ -698,7 +709,7 @@ HuBMAP Data Portal</label>
                         <div class="row">
                             <div class="col-sm-6">
                                 <div class="form-group pm-name">
-                                    <label for="pm_name">Project Manager's Name</label>
+                                    <label for="pm_name">Project Manager's Name <span class="text-danger">*</span></label>
                                     <input type="text" name="pm_name" value="{{ data.pm_name }}" class="form-control" maxlength="100" id="id_pm_name">
                                     
                                 </div>
@@ -706,7 +717,7 @@ HuBMAP Data Portal</label>
 
                             <div class="col-sm-6">
                                 <div class="form-group pm-email">
-                                    <label for="pm_email">Project Manager's Email</label>
+                                    <label for="pm_email">Project Manager's Email <span class="text-danger">*</span></label>
                                     <input type="email" name="pm_email" value="{{ data.pm_email }}" class="form-control" maxlength="100" id="id_pm_email">
                                     
                                 </div>
@@ -717,7 +728,7 @@ HuBMAP Data Portal</label>
                             There are errors, please correct the fields above.
                         </div>
 
-            <button type="submit" id="submitBtn" class="btn btn-primary" >Update</button>
+            <button type="submit" id="submitBtn" class="btn btn-primary btn-lg">Update</button>
         </form>
 
     </div>

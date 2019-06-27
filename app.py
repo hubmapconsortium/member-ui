@@ -794,8 +794,6 @@ def edit_connection(stage_user, wp_user, connection):
     connection.edited_by = admin_id
 
     if stage_user.photo != '':
-        print("======stage_user.photo=======")
-        pprint(stage_user.photo)
         photo_file_name = stage_user.photo.split('/')[-1]
         # Disable for now
         #pathlib.Path(app.config.get('CONNECTION_IMAGE_PATH') + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() ).mkdir(parents=True, exist_ok=True)
@@ -1216,7 +1214,7 @@ def register():
                         else:
                             # Send email to admin for new user approval
                             try:
-                                send_new_user_registered_mail(new_user)
+                                send_new_user_registered_mail(user_info)
                             except Exception as e: 
                                 print("send email failed")
                                 print(e)
