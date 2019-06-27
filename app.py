@@ -451,8 +451,9 @@ def add_new_stage_user(user_info, profile_pic_option, img_to_upload):
 
     try:
         stage_user = StageUser(user_info)
-    except:
+    except Exception as e:
         print('User data is invalid')
+        print(e)
     
     if StageUser.query.filter(StageUser.globus_user_id == stage_user.globus_user_id).first():
         print('The same stage user exists')
@@ -481,30 +482,26 @@ def get_user_profile(globus_user_id):
 def handle_user_profile_pic(user_info, profile_pic_option, img_to_upload):
     save_path = None
     
-    try:
-        if profile_pic_option == 'upload':
-            _, extension = img_to_upload.filename.rsplit('.', 1)
-            img_file = img_to_upload
+    if profile_pic_option == 'upload':
+        _, extension = img_to_upload.filename.rsplit('.', 1)
+        img_file = img_to_upload
 
-            save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{user_info['globus_user_id']}.{extension}"))
-            img_file.save(save_path)
-        elif profile_pic_option == 'url':
-            response = requests.get(user_info['photo_url'])
-            img_file = Image.open(BytesIO(response.content))
-            extension = img_file.format
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{user_info['globus_user_id']}.{extension}"))
+        img_file.save(save_path)
+    elif profile_pic_option == 'url':
+        response = requests.get(user_info['photo_url'])
+        img_file = Image.open(BytesIO(response.content))
+        extension = img_file.format
 
-            save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{user_info['globus_user_id']}.{extension}"))
-            img_file.save(save_path)
-        else:
-            # Use default image
-            BASE = os.path.dirname(os.path.abspath(__file__))
-            save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{user_info['globus_user_id']}.jpg"))
-            copy2(os.path.join(BASE, 'avatar/', 'noname.jpg'), save_path)
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{user_info['globus_user_id']}.{extension}"))
+        img_file.save(save_path)
+    else:
+        # Use default image
+        BASE = os.path.dirname(os.path.abspath(__file__))
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{user_info['globus_user_id']}.jpg"))
+        copy2(os.path.join(BASE, 'avatar/', 'noname.jpg'), save_path)
 
-        return save_path
-    except Exception as e:
-        print("Failed to handle user profile picture")
-        print(e)
+    return save_path
 
     
 
@@ -522,25 +519,16 @@ def update_user_profile(user_info, profile_pic_option, img_to_upload):
     # Get connection profile by connection id
     connection_profile = get_connection_profile(connection_id)
 
-    pprint("====wp_user=====")
-    pprint(wp_user)
-    pprint("====connection_profile=====")
-    pprint(connection_profile)
     # Handle the profile image and save it to target directory
     # if user doesn't want to use the exisiting image
     if profile_pic_option != "existing":
         user_info['photo'] = handle_user_profile_pic(user_info, profile_pic_option, img_to_upload)
 
-    try:
-        # will this stage_user be added to database?
-        stage_user = StageUser(user_info)
-        pprint("====stage_user=====")
-        pprint(vars(stage_user))
-        edit_connection(stage_user, wp_user, connection_profile)
-        db.session.commit()
-    except Exception as e:
-        print("Failed to update the user profile")
-        print(e)
+    # will this stage_user be added to database?
+    stage_user = StageUser(user_info)
+    edit_connection(stage_user, wp_user, connection_profile)
+    db.session.commit()
+
 
 
 # This is user approval without using existing mathicng profile
@@ -551,28 +539,20 @@ def approve_stage_user_by_creating_new(stage_user):
     wp_user = get_wp_user(stage_user.globus_user_id)
 
     if not wp_user:
-        try:
-            # Create new user and meta
-            new_wp_user = create_new_user(stage_user)
+        # Create new user and meta
+        new_wp_user = create_new_user(stage_user)
 
-            # Create profile in `wp_connections`
-            create_new_connection(stage_user, new_wp_user)
+        # Create profile in `wp_connections`
+        create_new_connection(stage_user, new_wp_user)
 
-            db.session.add(new_wp_user)
-            db.session.delete(stage_user)
-            db.session.commit()
-        except Exception as e:
-            print("approve_stage_user_by_creating_new() failed to create new wp_user and new connection, or delete the stage user record")
-            print(e)
+        db.session.add(new_wp_user)
+        db.session.delete(stage_user)
+        db.session.commit()
     else:
-        try:
-            edit_wp_user(stage_user)
-            create_new_connection(stage_user, wp_user)
-            db.session.delete(stage_user)
-            db.session.commit()
-        except Exception as e:
-            print("approve_stage_user_by_creating_new() failed to create new connection or delete the stage user record")
-            print(e)
+        edit_wp_user(stage_user)
+        create_new_connection(stage_user, wp_user)
+        db.session.delete(stage_user)
+        db.session.commit()
         
 
 def approve_stage_user_by_editing_matched(stage_user, connection_profile):
@@ -580,30 +560,23 @@ def approve_stage_user_by_editing_matched(stage_user, connection_profile):
     wp_user = get_wp_user(stage_user.globus_user_id)
 
     if not wp_user:
-        try:
-            # Create new user and meta
-            new_wp_user = create_new_user(stage_user)
+        # Create new user and meta
+        new_wp_user = create_new_user(stage_user)
 
-            # Edit profile in `wp_connections`
-            edit_connection(stage_user, new_wp_user, connection_profile)
+        # Edit profile in `wp_connections`
+        edit_connection(stage_user, new_wp_user, connection_profile)
 
-            db.session.add(new_wp_user)
-            db.session.delete(stage_user)
-            db.session.commit()
-        except Exception as e:
-            print("approve_stage_user_by_editing_matched() failed to create new wp_user and update the connection, or delete the stage user record")
-            print(e)
+        db.session.add(new_wp_user)
+        db.session.delete(stage_user)
+        db.session.commit()
     else:
-        try:
-            edit_wp_user(stage_user)
-            edit_connection(stage_user, wp_user, connection_profile)
-            db.session.delete(stage_user)
-            db.session.commit()
-        except Exception as e:
-            print("approve_stage_user_by_editing_matched() failed to update the connection or delete the stage user record")
-            print(e)
-            raise e
+        edit_wp_user(stage_user)
+        edit_connection(stage_user, wp_user, connection_profile)
+        db.session.delete(stage_user)
+        db.session.commit()
 
+
+# Edit the exisiting wp_user role as "member"
 def edit_wp_user(stage_user):
     wp_user = get_wp_user(stage_user.globus_user_id)
     wp_user.user_login = stage_user.email
@@ -1010,12 +983,7 @@ def edit_connection(stage_user, wp_user, connection):
 def deny_stage_user(globus_user_id):
     stage_user = get_stage_user(globus_user_id)
     stage_user.deny = True
-
-    try:
-        db.session.commit()
-    except Exception as e:
-        print("deny_stage_user() failed to update the database")
-        print(e)
+    db.session.commit()
 
 # Get a list of all the pending registrations
 def get_all_stage_users():
@@ -1053,8 +1021,6 @@ def get_matching_profiles(last_name, first_name, email, organization):
     profiles_set = set(profiles_by_last_name + profiles_by_first_name + profiles_by_email + profiles_by_organization)
     # convert back to a list for sorting later
     profiles_list = list(profiles_set)
-    print("========before scoring=========")
-    pprint(vars(profiles_list[0]))
 
     filtered_profiles = list()
     if len(profiles_list) > 0:
@@ -1086,12 +1052,8 @@ def get_matching_profiles(last_name, first_name, email, organization):
                     profile.deserilized_email = (deserilized_email_dict[0])['address']
                 filtered_profiles.append(profile)
 
-    print("========after scoring=========")
-    pprint(vars(profiles_list[0]))
-
     # Sort the filtered results by scoring
     profiles = sorted(filtered_profiles, key=lambda x: x.score, reverse=True)
-    pprint(profiles)
     # Return a set of sorted matching profiles by score or an empty set if no match
     return profiles
 
@@ -1100,16 +1062,6 @@ def get_connection_profile(connection_id):
     connection_profile = Connection.query.filter(Connection.id == connection_id).first()
     return connection_profile
     
-
-
-
-
-
-
-
-
-
-
 
 # Login Required Decorator
 # To use the decorator, apply it as innermost decorator to a view function. 
@@ -1212,7 +1164,7 @@ def logout():
     # Redirect the user to the Globus Auth logout page
     return redirect(globus_logout_url)
 
-# Register is only for authenticated users who never registered
+# Register is only for authenticated users who has never registered
 @app.route("/register", methods=['GET', 'POST'])
 @login_required
 def register():
@@ -1244,7 +1196,7 @@ def register():
                 result['success'] = True
 
                 # Currently no backend form validation
-                # Only front end validation and reCAPTCHA - Zhou
+                # Only front end validation and reCAPTCHA
                 if result['success']:
                     # CSRF check
                     session_csrf_token = session.pop('csrf_token', None)
@@ -1257,16 +1209,18 @@ def register():
                         # Add user info to `stage_user` table for approval
                         try:
                             add_new_stage_user(user_info, profile_pic_option, img_to_upload)
-                        except:
-                            print("Failed to add new stage user, something wrong with add_new_stage_user()")
-
-                        # Send email to admin for new user approval
-                        try:
-                            send_new_user_registered_mail(new_user)
                         except Exception as e: 
+                            print("Failed to add new stage user, something wrong with add_new_stage_user()")
                             print(e)
-                            print("send email failed")
-                            pass
+                            return show_user_error("Oops! The system failed to submit your registration!")
+                        else:
+                            # Send email to admin for new user approval
+                            try:
+                                send_new_user_registered_mail(new_user)
+                            except Exception as e: 
+                                print("send email failed")
+                                print(e)
+                                return show_user_error("Oops! The system has submited your registration but failed to send the confirmation email!")
 
                         # Show confirmation
                         return show_user_confirmation("Your registration has been submitted for approval. You'll get an email once it's approved or denied.")
@@ -1293,26 +1247,35 @@ def profile():
                 return show_user_error("Oops! Invalid CSRF token!")
             else:
                 user_info, profile_pic_option, img_to_upload = construct_user(request)
-                pprint("=========================user info=====================")
-                pprint(user_info)
-                pprint("=======================================================")
-                # Update user profile in database
-                update_user_profile(user_info, profile_pic_option, img_to_upload)
-
+                
                 try:
-                    # Send email to admin for user profile update
-                    # so the admin can do furtuer changes in globus
-                    send_user_profile_updated_mail(user_info)
+                    # Update user profile in database
+                    update_user_profile(user_info, profile_pic_option, img_to_upload)
                 except Exception as e: 
-                    print("Failed to send user profile update email to admin.")
+                    print("Failed to update user profile!")
                     print(e)
+                    return show_user_error("Oops! The system failed to update your profile changes!")
+                else:
+                    try:
+                        # Send email to admin for user profile update
+                        # so the admin can do furtuer changes in globus
+                        send_user_profile_updated_mail(user_info)
+                    except Exception as e: 
+                        print("Failed to send user profile update email to admin.")
+                        print(e)
+                        return show_user_error("Your profile has been updated but the system failed to send confirmation email to admin. No worries, no action needed from you.")
 
                 # Also notify the user
-                return show_user_confirmation("Your profile information has been updated successfully. The admin will do any additional changes to your account is need.")
+                return show_user_confirmation("Your profile information has been updated successfully. The admin will handle additional changes to your account as needed.")
         # Handle GET
         else:
             # Fetch user profile data
-            wp_user = get_user_profile(session['globus_user_id'])
+            try:
+                wp_user = get_user_profile(session['globus_user_id'])
+            except Exception as e: 
+                print("Failed to get user profile for globus_user_id: " + session['globus_user_id'])
+                print(e)
+                return show_user_error("Oops! The system failed to query your profile data!")
 
             #pprint(wp_user['connection'] )
 
@@ -1424,18 +1387,24 @@ def approve(globus_user_id):
     if not stage_user:
         return show_admin_error("This stage user does not exist!")
     else:
-        approve_stage_user_by_creating_new(stage_user)
-        # Send email
-        data = {
-            'first_name': stage_user.first_name,
-            'last_name': stage_user.last_name
-        }
-
         try:
-            send_new_user_approved_mail(stage_user.email, data = data)
+            approve_stage_user_by_creating_new(stage_user)
         except Exception as e: 
-            print("Failed to send user registration approval email.")
+            print("Failed to approve new registration and create new user record.")
             print(e)
+            return show_admin_error("This system failed to approve new registration and create new user record!")
+        else:
+            try:
+                # Send email
+                data = {
+                    'first_name': stage_user.first_name,
+                    'last_name': stage_user.last_name
+                }
+                send_new_user_approved_mail(stage_user.email, data = data)
+            except Exception as e: 
+                print("The new registration has been approved, but the system failed to send out user registration approval email.")
+                print(e)
+                return show_admin_error("The new registration has been approved, but the system failed to send out user registration approval email!")
 
         return show_admin_info("This registration has been approved successfully!")
 
@@ -1453,19 +1422,24 @@ def deny(globus_user_id):
         if stage_user.deny:
             return show_admin_info("This registration has already been denied!")
         else:
-            deny_stage_user(globus_user_id)
-            
-            # Send email
-            data = {
-                'first_name': stage_user.first_name,
-                'last_name': stage_user.last_name
-            }
-
             try:
-                send_new_user_denied_mail(stage_user.email, data = data)
+                deny_stage_user(globus_user_id)
             except Exception as e: 
-                print("Failed to send user registration denied email.")
+                print("The system failed to deny user registration.")
                 print(e)
+                return show_admin_error("The system failed to deny user registration!")
+            else:
+                try:
+                    # Send email
+                    data = {
+                        'first_name': stage_user.first_name,
+                        'last_name': stage_user.last_name
+                    }
+                    send_new_user_denied_mail(stage_user.email, data = data)
+                except Exception as e: 
+                    print("Failed to send user registration denied email.")
+                    print(e)
+                    return show_admin_error("The user registration has been denied but the system failed to sent out email notification!")
 
             return show_admin_info("This registration has been denied!")
 
@@ -1485,20 +1459,24 @@ def match(globus_user_id, connection_id):
     if not connection_profile:
         return show_admin_error("This connection profile does not exist!")
 
-    # Will need to link and edit the exisiting profile 
-    approve_stage_user_by_editing_matched(stage_user, connection_profile)
-
-    # Send email
-    data = {
-        'first_name': stage_user.first_name,
-        'last_name': stage_user.last_name
-    }
-
-    try:
-        send_new_user_approved_mail(stage_user.email, data = data)
+    try: 
+        approve_stage_user_by_editing_matched(stage_user, connection_profile)
     except Exception as e: 
-        print("Failed to send user registration approval email.")
-        print(e)
+        print("Failed to approve the registration by using existing matched connection!")
+        print(e) 
+        return show_admin_error("Failed to approve the registration by using existing matched connection!")
+    else:
+        try:
+            # Send email
+            data = {
+                'first_name': stage_user.first_name,
+                'last_name': stage_user.last_name
+            }
+            send_new_user_approved_mail(stage_user.email, data = data)
+        except Exception as e: 
+            print("Failed to send user registration approval email.")
+            print(e)
+            return show_admin_error("The registration by using existing matched connection has been approved, but the system failed to sent out approval email!")
 
     return show_admin_info("This registration has been approved successfully by using an exisiting mathcing profile!")
 
