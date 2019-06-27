@@ -18,11 +18,18 @@
 	        
 	        // Checkboxes
 	        {% for grp in data.working_group %}
-	        $('input[name="working_group"][value="{{ grp }}"').prop('checked', true);
+	        $('input[name="working_group"][value="{{ grp|safe}}"]').prop('checked', true);
 	        {% endfor %}
 
 	        {% for req in data.access_requests %}
-	        $('input[name="access_requests"][value="{{ req }}"').prop('checked', true);
+            $('input[name="access_requests"]').each(function(index, item) {
+                if (item.value === "{{ req|safe }}") {
+                    $(this).prop('checked', true);
+                }
+            });
+            
+            // Below doesn't work for values with single quotes
+	        //$('input[name="access_requests"][value="{{ req|safe }}"]').prop('checked', true);
 	        {% endfor %}
 
 	        // Project manager

@@ -534,6 +534,8 @@ def update_user_profile(user_info, profile_pic_option, img_to_upload):
     try:
         # will this stage_user be added to database?
         stage_user = StageUser(user_info)
+        pprint("====stage_user=====")
+        pprint(vars(stage_user))
         edit_connection(stage_user, wp_user, connection_profile)
         db.session.commit()
     except Exception as e:
@@ -1280,7 +1282,9 @@ def profile():
                 return show_user_error("Oops! Invalid CSRF token!")
             else:
                 user_info, profile_pic_option, img_to_upload = construct_user(request)
-
+                pprint("=========================user info=====================")
+                pprint(user_info)
+                pprint("=======================================================")
                 # Update user profile in database
                 update_user_profile(user_info, profile_pic_option, img_to_upload)
 
