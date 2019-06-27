@@ -94,33 +94,21 @@
         } else {
             $(".oth-role").hide();
         }
-        if ($("#id_access_requests_0").is(':checked')){
-            $("#id_access_requests_0").prop('disabled', true);
-        }
-        if ($("#id_access_requests_1").is(':checked')){
-            $("#id_access_requests_1").prop('disabled', true);
-        }
-        if ($("#id_access_requests_2").is(':checked')){
-            $("#id_access_requests_2").prop('disabled', true);
-        }
+
+        // All users need access to Collabration Portal
+        // Disallow them to uncheck this option
+        // Disabled in HTML, no need to handle it in js here
+
         if ($("#id_access_requests_3").is(':checked')){
-            $("#id_access_requests_3").prop('disabled', true);
             $(".google-email").show();
-            $("#id_google_email").prop('disabled', true);
         }
         if ($("#id_access_requests_4").is(':checked')){
-            $("#id_access_requests_4").prop('disabled', true);
             $(".github-username").show();
-            $("#id_github_username").prop('disabled', true);
         }
         if ($("#id_access_requests_5").is(':checked')){
-            $("#id_access_requests_5").prop('disabled', true);
             $(".slack-username").show();
-            $("#id_slack_username").prop('disabled', true);
         }
-        if ($("#id_access_requests_6").is(':checked')){
-            $("#id_access_requests_6").prop('disabled', true);
-        }
+
         if ($(":radio[id^='id_pm_0']").is(':checked')){
             $("div.pm-name").show();
             $("div.pm-email").show();
@@ -270,7 +258,7 @@
                 $("#id_photo_url").addClass('is-invalid');
                 $("#id_photo_url").after("<div class='invalid-feedback'>Please specify the image URL.</div>");
             }
-            
+
             if($("#id_access_requests_3").is(':checked') && $.trim($("#id_google_email").val()) === ''){
                 valid = false;
                 $("#id_google_email").addClass('is-invalid');
@@ -468,7 +456,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="group">What HuBMAP working groups are you a member of?</label>
+                            <label for="working_group">What HuBMAP working groups are you a member of?</label>
                             <ul id="id_working_group">
     <li><label for="id_working_group_0"><input type="checkbox" name="working_group" value="Communications &amp; Engagement" id="id_working_group_0">
  Communications &amp; Engagement</label>
@@ -491,16 +479,18 @@
 
 </li>
 </ul>
-                            <div class="invalid-feedback">
-                                
-                            </div>
+
                         </div>
+                        <!-- Note: disabled checkbox will not be posted -->
                         <div class="row">
                             <div class="col-xs-12 col-sm-6" style="min-height: 20em;">
                                 <div class="form-group">
-                                    <label for="access-requests">Which HuBMAP resources will you need to access?</label>
+                                    <label for="access_requests">Which HuBMAP resources will you need to access?</label>
                                     <ul id="id_access_requests">
-    <li><label for="id_access_requests_0"><input type="checkbox" name="access_requests" value="Collaboration Portal" id="id_access_requests_0" checked>
+    <li><label for="id_access_requests_0">
+        <input type="checkbox" name="access_requests" value="Collaboration Portal" id="id_access_requests_0" disabled checked>
+        <input type="hidden" name="access_requests" value="Collaboration Portal" />
+
  Collaboration Portal</label>
 
 </li>

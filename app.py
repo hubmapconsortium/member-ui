@@ -285,7 +285,7 @@ def construct_user(request):
     else:
         # use default image
         photo_file = None
-    
+
     user_info = {
         # Get the globus user id from session data
         "globus_user_id": session['globus_user_id'],
@@ -305,7 +305,7 @@ def construct_user(request):
         "photo": '',
         "photo_url": request.form['photo_url'],
         # multiple checkboxes
-        "access_requests": ['Collaboration Portal'] + request.form.getlist('access_requests'),
+        "access_requests": request.form.getlist('access_requests'),
         "google_email": request.form['google_email'],
         "github_username": request.form['github_username'],
         "slack_username": request.form['slack_username'],

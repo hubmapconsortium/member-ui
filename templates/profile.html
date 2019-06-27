@@ -16,20 +16,10 @@
 	        $('select#id_organization option:contains("{{ data.organization }}")').prop('selected', true);
 	        $('select#id_role option:contains("{{ data.role }}")').prop('selected', true);
 	        
-	        // Checkboxes
+	        // Checkboxes for working_group
+            // Handle access_requests differently
 	        {% for grp in data.working_group %}
 	        $('input[name="working_group"][value="{{ grp|safe}}"]').prop('checked', true);
-	        {% endfor %}
-
-	        {% for req in data.access_requests %}
-            $('input[name="access_requests"]').each(function(index, item) {
-                if (item.value === "{{ req|safe }}") {
-                    $(this).prop('checked', true);
-                }
-            });
-            
-            // Below doesn't work for values with single quotes
-	        //$('input[name="access_requests"][value="{{ req|safe }}"]').prop('checked', true);
 	        {% endfor %}
 
 	        // Project manager
@@ -124,37 +114,20 @@
             $(".oth-role").hide();
         }
         
-        // All users need access to Collabration Portal
+        // All users need access to "Collabration Portal"
         // Disallow them to uncheck this option
-        if ($("#id_access_requests_0").is(':checked')){
-            $("#id_access_requests_0").prop('disabled', true);
-        }
+        // Disabled in HTML, no need to handle it in js here
 
-
-        if ($("#id_access_requests_1").is(':checked')){
-            $("#id_access_requests_1").prop('disabled', true);
-        }
-        // if ($("#id_access_requests_2").is(':checked')){
-        //     $("#id_access_requests_2").prop('disabled', true);
-        // }
         if ($("#id_access_requests_3").is(':checked')){
-            //$("#id_access_requests_3").prop('disabled', true);
             $(".google-email").show();
-            //$("#id_google_email").prop('disabled', true);
         }
         if ($("#id_access_requests_4").is(':checked')){
-            //$("#id_access_requests_4").prop('disabled', true);
             $(".github-username").show();
-            //$("#id_github_username").prop('disabled', true);
         }
         if ($("#id_access_requests_5").is(':checked')){
-            //$("#id_access_requests_5").prop('disabled', true);
             $(".slack-username").show();
-            //$("#id_slack_username").prop('disabled', true);
         }
-        if ($("#id_access_requests_6").is(':checked')){
-            $("#id_access_requests_6").prop('disabled', true);
-        }
+
         if($(":radio[id^='id_pm_0']").is(':checked')){
             $("div.pm-name").show();
             $("div.pm-email").show();
@@ -520,7 +493,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="group">What HuBMAP working groups are you a member of?</label>
+                            <label for="working_group">What HuBMAP working groups are you a member of?</label>
                             <ul id="id_working_group">
     <li><label for="id_working_group_0"><input type="checkbox" name="working_group" value="Communications &amp; Engagement" id="id_working_group_0">
  Communications &amp; Engagement</label>
@@ -543,41 +516,86 @@
 
 </li>
 </ul>
-                            <div class="invalid-feedback">
-                                
-                            </div>
+                  
                         </div>
+                        <!-- Note: disabled checkbox will not be posted -->
                         <div class="row">
                             <div class="col-xs-12 col-sm-6" style="min-height: 20em;">
                                 <div class="form-group">
-                                    <label for="access-requests">Which HuBMAP resources will you need to access?</label>
+                                    <label for="access_requests">Which HuBMAP resources will you need to access?</label>
                                     <ul id="id_access_requests">
-    <li><label for="id_access_requests_0"><input type="checkbox" name="access_requests" value="Collaboration Portal" id="id_access_requests_0" checked>
+    <li><label for="id_access_requests_0"><input type="checkbox" name="access_requests" value="Collaboration Portal" id="id_access_requests_0" disabled checked>
+        <input type="hidden" name="access_requests" value="Collaboration Portal" />
  Collaboration Portal</label>
 
 </li>
-    <li><label for="id_access_requests_1"><input type="checkbox" name="access_requests" value="Sample Data Portal" id="id_access_requests_1">
+    <li><label for="id_access_requests_1">
+{% if "Sample Data Portal" in data.access_requests %}
+    <input type="checkbox" name="access_requests" value="Sample Data Portal" id="id_access_requests_1" disabled checked />
+    <input type="hidden" name="access_requests" value="Sample Data Portal" />
+{% else %}
+    <input type="checkbox" name="access_requests" value="Sample Data Portal" id="id_access_requests_1" />
+{% endif %}
+
  Sample Data Portal</label>
 
 </li>
-    <li><label for="id_access_requests_2"><input type="checkbox" name="access_requests" value="HuBMAP Data Portal" id="id_access_requests_2">
- HuBMAP Data Portal</label>
+    <li><label for="id_access_requests_2">
+{% if "HuBMAP Data Portal" in data.access_requests %}
+    <input type="checkbox" name="access_requests" value="HuBMAP Data Portal" id="id_access_requests_2" disabled checked />
+    <input type="hidden" name="access_requests" value="HuBMAP Data Portal" />
+{% else %}
+    <input type="checkbox" name="access_requests" value="HuBMAP Data Portal" id="id_access_requests_2" />
+{% endif %}
+    
+HuBMAP Data Portal</label>
 
 </li>
-    <li><label for="id_access_requests_3"><input type="checkbox" name="access_requests" value="HuBMAP Google Drive Share" id="id_access_requests_3">
+    <li><label for="id_access_requests_3">
+
+{% if "HuBMAP Google Drive Share" in data.access_requests %}
+    <input type="checkbox" name="access_requests" value="HuBMAP Google Drive Share" id="id_access_requests_3" disabled checked />
+    <input type="hidden" name="access_requests" value="HuBMAP Google Drive Share" />
+{% else %}
+    <input type="checkbox" name="access_requests" value="HuBMAP Google Drive Share" id="id_access_requests_3" />
+{% endif %}
+
+
  HuBMAP Google Drive Share</label>
 
 </li>
-    <li><label for="id_access_requests_4"><input type="checkbox" name="access_requests" value="HuBMAP GitHub Repository" id="id_access_requests_4">
+    <li><label for="id_access_requests_4">
+{% if "HuBMAP GitHub Repository" in data.access_requests %}
+    <input type="checkbox" name="access_requests" value="HuBMAP GitHub Repository" id="id_access_requests_4" disabled checked />
+    <input type="hidden" name="access_requests" value="HuBMAP GitHub Repository" />
+{% else %}
+    <input type="checkbox" name="access_requests" value="HuBMAP GitHub Repository" id="id_access_requests_4" />
+{% endif %}
+
+        
  HuBMAP GitHub Repository</label>
 
 </li>
-    <li><label for="id_access_requests_5"><input type="checkbox" name="access_requests" value="HuBMAP Slack Workspace" id="id_access_requests_5">
+    <li><label for="id_access_requests_5">
+{% if "HuBMAP Slack Workspace" in data.access_requests %}
+    <input type="checkbox" name="access_requests" value="HuBMAP Slack Workspace" id="id_access_requests_5" disabled checked />
+    <input type="hidden" name="access_requests" value="HuBMAP Slack Workspace" />
+{% else %}
+    <input type="checkbox" name="access_requests" value="HuBMAP Slack Workspace" id="id_access_requests_5" />
+{% endif %}
+
  HuBMAP Slack Worksapce</label>
 
 </li>
-    <li><label for="id_access_requests_6"><input type="checkbox" name="access_requests" value="Edit My Component&#39;s Project Page" id="id_access_requests_6">
- Edit My Component&#39;s Project Page</label>
+    <li><label for="id_access_requests_6">
+{% if "Edit My Component's Project Page" in data.access_requests %}
+    <input type="checkbox" name="access_requests" value="Edit My Component's Project Page" id="id_access_requests_6" disabled checked />
+    <input type="hidden" name="access_requests" value="Edit My Component's Project Page" />
+{% else %}
+    <input type="checkbox" name="access_requests" value="Edit My Component's Project Page" id="id_access_requests_6" />
+{% endif %}
+
+ Edit My Component's Project Page</label>
 
 </li>
 </ul>
@@ -591,10 +609,15 @@
                                     <div class="col-sm-12">
                                         <div class="form-group form-group-sm google-email">
                                             <label for="google_email">Your Google account email address: <span class="text-danger">*</span> <button type="button" class="btn btn-link" data-toggle="tooltip" data-placement="right" data-html="true" title="Please enter the email address that you use to log into Google.  HuBMAP specific Google documents will be shared with this account.">what is this?</button></label>
+                                            
+                                            {% if data.google_email %}
+                                            <input type="email" name="google_email" value="{{ data.google_email }}" class="form-control" maxlength="100" id="id_google_email" disabled>
+                                            <input type="hidden" name="google_email" value="{{ data.google_email }}" class="form-control" maxlength="100" id="id_google_email">
+                                            {% else %}
                                             <input type="email" name="google_email" value="{{ data.google_email }}" class="form-control" maxlength="100" id="id_google_email">
-                                            <div class="invalid-feedback">
-                                                
-                                            </div>
+                                            {% endif %}
+                                            
+                                            
                                         </div>
                                     </div>
                                 </div>
@@ -602,10 +625,14 @@
                                     <div class="col-sm-12">
                                         <div class="form-group form-group-sm github-username">
                                             <label for="github_username">Your GitHub username: <span class="text-danger">*</span></label>
+                                            {% if data.google_email %}
+                                            <input type="text" name="github_username" value="{{ data.github_username }}" class="form-control" maxlength="100" id="id_github_username" disabled>
+                                            <input type="hidden" name="github_username" value="{{ data.github_username }}" class="form-control" maxlength="100" id="id_github_username">
+                                            {% else %}
                                             <input type="text" name="github_username" value="{{ data.github_username }}" class="form-control" maxlength="100" id="id_github_username">
-                                            <div class="invalid-feedback">
-                                                
-                                            </div>
+                                            {% endif %}
+
+    
                                         </div>
                                     </div>
                                 </div>
@@ -613,10 +640,14 @@
                                     <div class="col-sm-12">
                                         <div class="form-group form-group-sm slack-username">
                                             <label for="slack_username">Your email address for the slack invitation: <span class="text-danger">*</span></label>
+                                            {% if data.google_email %}
+                                            <input type="text" name="slack_username" value="{{ data.slack_username }}" class="form-control" maxlength="100" id="id_slack_username" disabled>
+                                            <input type="hidden" name="slack_username" value="{{ data.slack_username }}" class="form-control" maxlength="100" id="id_slack_username">
+                                            {% else %}
                                             <input type="text" name="slack_username" value="{{ data.slack_username }}" class="form-control" maxlength="100" id="id_slack_username">
-                                            <div class="invalid-feedback">
-                                                
-                                            </div>
+                                            {% endif %}
+
+                                            
                                         </div>
                                     </div>
                                 </div>
@@ -629,9 +660,7 @@
                                 <div class="form-group">
 		                            <label for="orcid">What is your ORCID ID?</label>
 		                            <input type="text" name="orcid" value="{{ data.orcid }}" class="form-control" maxlength="100" id="id_orcid">
-		                            <div class="invalid-feedback">
-		                                
-		                            </div>
+		                            
 		                        </div>
                             </div>
 
@@ -639,9 +668,7 @@
                                 <div class="form-group">
 		                            <label for="website">URL of a personal profile page to share with the consortium.</label>
 		                            <input type="url" name="website" value="{{ data.website }}" class="form-control" maxlength="500" id="id_website">
-		                            <div class="invalid-feedback">
-		                                
-		                            </div>
+		                            
 		                        </div>
                             </div>
                         </div>
@@ -651,9 +678,6 @@
                             <label for="expertise">Biography: Please provide any biographical information that you'd like to share. This information may be shared publicly.</label>
                             <textarea name="expertise" cols="40" rows="6" class="form-control" id="id_expertise">{{ data.expertise}}
 </textarea>
-                            <div class="invalid-feedback">
-                                
-                            </div>
                         </div>
                         <div class="form-group">
                             <label for="pm">Is there a project manager who should be copied on all communications to you?</label>
@@ -676,9 +700,7 @@
                                 <div class="form-group pm-name">
                                     <label for="pm_name">Project Manager's Name</label>
                                     <input type="text" name="pm_name" value="{{ data.pm_name }}" class="form-control" maxlength="100" id="id_pm_name">
-                                    <div class="invalid-feedback">
-                                        
-                                    </div>
+                                    
                                 </div>
                             </div>
 
@@ -686,9 +708,7 @@
                                 <div class="form-group pm-email">
                                     <label for="pm_email">Project Manager's Email</label>
                                     <input type="email" name="pm_email" value="{{ data.pm_email }}" class="form-control" maxlength="100" id="id_pm_email">
-                                    <div class="invalid-feedback">
-                                        
-                                    </div>
+                                    
                                 </div>
                             </div>
                         </div>
