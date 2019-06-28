@@ -14,12 +14,11 @@
         
         // Hide these by default
         $(".oth-cmpnt").hide();
-        $(".component_detail_card").hide();
         $(".oth-org").hide();
         $(".oth-role").hide();
-        $(".google-email").hide();
-        $(".slack-username").hide();
-        $(".github-username").hide();
+        $("#google-email").hide();
+        $("#slack-username").hide();
+        $("#github-username").hide();
         $("div.pm-name").hide();
         $("div.pm-email").hide();
         $(".main-error-message").hide();
@@ -29,15 +28,22 @@
 
         $("#id_component").change(function() {
             let id = $(this).children("option:selected").val();
-            $("[id^='cmpnt_']").hide();
-            $("div[data-name='" + id + "']").show();
-            if(id==='Other'){ // other selected
-                $(".oth-cmpnt").show();
+            // All cards are hidden by default
+            if (id === '----') {
+                $("#active_card").html('');
             } else {
-                $("#id_other_component").val('');
-                $(".oth-cmpnt").hide();
+                let target_card = $("div[data-name='" + id + "']").html();
+                $("#active_card").html(target_card);
+
+                if(id==='Other'){ // other selected
+                    $(".oth-cmpnt").show();
+                } else {
+                    $("#id_other_component").val('');
+                    $(".oth-cmpnt").hide();
+                }
             }
         });
+
         $("#id_organization").change(function() {
             let id = $(this).children("option:selected").val();
             if(id==='Other'){ // other selected
@@ -60,28 +66,21 @@
             if (!this.checked){
                 $("#id_google_email").val('');
             }
-            $(".google-email").toggle(this.checked);
+            $("#google-email").toggle(this.checked);
         });
         $("#id_access_requests_4").change(function() {
             if (!this.checked){
                 $("#id_github_username").val('');
             }
-            $(".github-username").toggle(this.checked);
+            $("#github-username").toggle(this.checked);
         });
         $("#id_access_requests_5").change(function() {
             if (!this.checked){
                 $("#id_slack_username").val('');
             }
-            $(".slack-username").toggle(this.checked);
+            $("#slack-username").toggle(this.checked);
         });
-        let id = $("#id_component").children("option:selected").val();
-        $("[id^='cmpnt_']").hide();
-        $("#cmpnt_" + id).show();
-        if(id==='Other'){ // other selected
-            $(".oth-cmpnt").show()
-        } else {
-            $(".oth-cmpnt").hide()
-        }
+
         id = $('#id_organization').children("option:selected").val();
         if(id==='Other'){ // other selected
             $(".oth-org").show();
@@ -94,33 +93,21 @@
         } else {
             $(".oth-role").hide();
         }
-        if ($("#id_access_requests_0").is(':checked')){
-            $("#id_access_requests_0").prop('disabled', true);
-        }
-        if ($("#id_access_requests_1").is(':checked')){
-            $("#id_access_requests_1").prop('disabled', true);
-        }
-        if ($("#id_access_requests_2").is(':checked')){
-            $("#id_access_requests_2").prop('disabled', true);
-        }
+
+        // All users need access to Collabration Portal
+        // Disallow them to uncheck this option
+        // Disabled in HTML, no need to handle it in js here
+
         if ($("#id_access_requests_3").is(':checked')){
-            $("#id_access_requests_3").prop('disabled', true);
-            $(".google-email").show();
-            $("#id_google_email").prop('disabled', true);
+            $("#google-email").show();
         }
         if ($("#id_access_requests_4").is(':checked')){
-            $("#id_access_requests_4").prop('disabled', true);
-            $(".github-username").show();
-            $("#id_github_username").prop('disabled', true);
+            $("#github-username").show();
         }
         if ($("#id_access_requests_5").is(':checked')){
-            $("#id_access_requests_5").prop('disabled', true);
-            $(".slack-username").show();
-            $("#id_slack_username").prop('disabled', true);
+            $("#slack-username").show();
         }
-        if ($("#id_access_requests_6").is(':checked')){
-            $("#id_access_requests_6").prop('disabled', true);
-        }
+
         if ($(":radio[id^='id_pm_0']").is(':checked')){
             $("div.pm-name").show();
             $("div.pm-email").show();
@@ -258,6 +245,19 @@
                 $("#id_other_role").addClass('is-invalid');
                 $("#id_other_role").after("<div class='invalid-feedback'>Role is required.</div>");
             }
+
+            // Show users error if profile pic option is upload but no file, or url is selected but no valida url
+            if($("#profile_pic_option_upload").is(':checked') && ($("#id_photo").get(0).files.length === 0)) {
+                valid = false;
+                $("#id_photo").addClass('is-invalid');
+                $("#id_photo").after("<div class='invalid-feedback'>Please choose profile image to upload.</div>");
+            }
+            if($("#profile_pic_option_url").is(':checked') && ($("#id_photo_url").val() === '')) {
+                valid = false;
+                $("#id_photo_url").addClass('is-invalid');
+                $("#id_photo_url").after("<div class='invalid-feedback'>Please specify the image URL.</div>");
+            }
+
             if($("#id_access_requests_3").is(':checked') && $.trim($("#id_google_email").val()) === ''){
                 valid = false;
                 $("#id_google_email").addClass('is-invalid');
@@ -351,18 +351,14 @@
                     <div class="form-group">
                         <label for="component">Award/component <span class="text-danger">*</span></label>
                         {% include 'component_selection.html' %}
-                                    <div class="invalid-feedback">
-                                        
-                                    </div>
+
                                 </div>
                                 <div class="row">
                                     <div class="col-sm-12">
                                         <div class="form-group oth-cmpnt">
-                                            <label for="other_component">Component: What component are you with?</label>
+                                            <label for="other_component">Component: What component are you with? <span class="text-danger">*</span></label>
                                             <input type="text" name="other_component" class="form-control" maxlength="100" id="id_other_component">
-                                            <div class="invalid-feedback">
-                                                
-                                            </div>
+                                           
                                         </div>
                                     </div>
                                 </div>
@@ -372,50 +368,44 @@
                                     <label for="organization">Organization <span class="text-danger">*</span></label>
                                     {% include 'organization_selection.html' %}
 
-                                    <div class="invalid-feedback">
-                                        
-                                    </div>
                                 </div>
                                 <div class="row">
                                     <div class="col-sm-12">
                                         <div class="form-group oth-org">
-                                            <label for="other_organization">Organization: What organization are you with?</label>
+                                            <label for="other_organization">Organization: What organization are you with? <span class="text-danger">*</span></label>
                                             <input type="text" name="other_organization" class="form-control" maxlength="100" id="id_other_organization">
-                                            <div class="invalid-feedback">
-                                                
-                                            </div>
+                                           
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="form-group">
+                        <!-- All hidden cards -->
+                        <div class="d-none">
                             {% include 'component_cards.html' %}
                         </div>
+
+                        <!-- Active card -->
+                        <div class="form-group" id="active_card"></div>
 
                         <div class="form-group">
                             <label for="role">Role in HuBMAP <span class="text-danger">*</span></label>
                             {% include 'role_selection.html' %}
 
-                            <div class="invalid-feedback">
-                                
-                            </div>
                         </div>
                         <div class="row">
                             <div class="col-sm-12">
                                 <div class="form-group oth-role">
                                     <label for="other_role">Role: What is your role in HuBMAP?</label>
                                     <input type="text" name="other_role" class="form-control" maxlength="100" id="id_other_role">
-                                    <div class="invalid-feedback">
-                                        
-                                    </div>
+                               
                                 </div>
                             </div>
                         </div>
 
                         
-                        <div class="row">
+                        <div class="row mb-3">
                             <div class="col-xs-12 col-sm-3">
                                 <img src="{{ url_for('static', filename='images/default_profile.png') }}" alt="Profile image" width="200" height="200" class="img-thumbnail" id="profile_picture">
                             </div>
@@ -445,23 +435,20 @@
 
                                 <div id="pic_upload" class="form-photo">
                                     <input type="file" name="photo" class="form-control" accept="image/*" id="id_photo">
-                                    <div class="invalid-feedback">
-                                        
-                                    </div>
                                 </div>
 
                                 <div id="pic_url" class="form-photo-url">
-                                    <input type="url" name="photo_url" class="form-control" placeholder="http://example.com" id="id_photo_url">
-                                    <div class="invalid-feedback">
-                                        
-                                    </div>
+                                    <input type="url" name="photo_url" class="form-control" placeholder="http://example.com/profile.png" id="id_photo_url">
                                 </div>
 
                             </div>
                         </div>
 
+
+                        <div class="row">
+                        <div class="col-sm-12">
                         <div class="form-group">
-                            <label for="group">What HuBMAP working groups are you a member of?</label>
+                            <label for="working_group">What HuBMAP working groups are you a member of?</label>
                             <ul id="id_working_group">
     <li><label for="id_working_group_0"><input type="checkbox" name="working_group" value="Communications &amp; Engagement" id="id_working_group_0">
  Communications &amp; Engagement</label>
@@ -484,16 +471,21 @@
 
 </li>
 </ul>
-                            <div class="invalid-feedback">
-                                
-                            </div>
+
                         </div>
-                        <div class="row">
-                            <div class="col-xs-12 col-sm-6" style="min-height: 20em;">
+                    </div>
+                </div>
+
+                        <!-- Note: disabled checkbox will not be posted -->
+                        <div class="row mb-2">
+                            <div class="col-xs-12 col-sm-6">
                                 <div class="form-group">
-                                    <label for="access-requests">Which HuBMAP resources will you need to access?</label>
+                                    <label for="access_requests">Which HuBMAP resources will you need to access?</label>
                                     <ul id="id_access_requests">
-    <li><label for="id_access_requests_0"><input type="checkbox" name="access_requests" value="Collaboration Portal" id="id_access_requests_0" checked>
+    <li><label for="id_access_requests_0">
+        <input type="checkbox" name="access_requests" value="Collaboration Portal" id="id_access_requests_0" disabled checked>
+        <input type="hidden" name="access_requests" value="Collaboration Portal" />
+
  Collaboration Portal</label>
 
 </li>
@@ -517,47 +509,38 @@
  HuBMAP Slack Worksapce</label>
 
 </li>
-    <li><label for="id_access_requests_6"><input type="checkbox" name="access_requests" value="Edit My Component&#39;s Project Page" id="id_access_requests_6">
- Edit My Component&#39;s Project Page</label>
+    <li><label for="id_access_requests_6"><input type="checkbox" name="access_requests" value="Edit My Component's Project Page" id="id_access_requests_6">
+ Edit My Component's Project Page</label>
 
 </li>
 </ul>
-                                    <div class="invalid-feedback">
-                                        
-                                    </div>
                                 </div>
                             </div>
                             <div class="col-sm-6">
                                 <div class="row">
                                     <div class="col-sm-12">
-                                        <div class="form-group form-group-sm google-email">
+                                        <div class="form-group form-group-sm" id="google-email">
                                             <label for="google_email">Your Google account email address: <span class="text-danger">*</span> <button type="button" class="btn btn-link" data-toggle="tooltip" data-placement="right" data-html="true" title="Please enter the email address that you use to log into Google.  HuBMAP specific Google documents will be shared with this account.">what is this?</button></label>
                                             <input type="email" name="google_email" class="form-control" maxlength="100" id="id_google_email">
-                                            <div class="invalid-feedback">
-                                                
-                                            </div>
+                                         
                                         </div>
                                     </div>
                                 </div>
                                 <div class="row">
                                     <div class="col-sm-12">
-                                        <div class="form-group form-group-sm github-username">
+                                        <div class="form-group form-group-sm" id="github-username">
                                             <label for="github_username">Your GitHub username: <span class="text-danger">*</span></label>
                                             <input type="text" name="github_username" class="form-control" maxlength="100" id="id_github_username">
-                                            <div class="invalid-feedback">
-                                                
-                                            </div>
+                                           
                                         </div>
                                     </div>
                                 </div>
                                 <div class="row">
                                     <div class="col-sm-12">
-                                        <div class="form-group form-group-sm slack-username">
+                                        <div class="form-group form-group-sm" id="slack-username">
                                             <label for="slack_username">Your email address for the slack invitation: <span class="text-danger">*</span></label>
                                             <input type="text" name="slack_username" class="form-control" maxlength="100" id="id_slack_username">
-                                            <div class="invalid-feedback">
-                                                
-                                            </div>
+                                            
                                         </div>
                                     </div>
                                 </div>
@@ -570,9 +553,7 @@
                                 <div class="form-group">
 		                            <label for="orcid">What is your ORCID ID?</label>
 		                            <input type="text" name="orcid" class="form-control" maxlength="100" id="id_orcid">
-		                            <div class="invalid-feedback">
-		                                
-		                            </div>
+		                           
 		                        </div>
                             </div>
 
@@ -580,9 +561,7 @@
                                 <div class="form-group">
 		                            <label for="website">URL of a personal profile page to share with the consortium.</label>
 		                            <input type="url" name="website" class="form-control" maxlength="500" id="id_website">
-		                            <div class="invalid-feedback">
-		                                
-		                            </div>
+		                           
 		                        </div>
                             </div>
                         </div>
@@ -592,9 +571,6 @@
                             <label for="expertise">Biography: Please provide any biographical information that you'd like to share. This information may be shared publicly.</label>
                             <textarea name="expertise" cols="40" rows="6" class="form-control" id="id_expertise">
 </textarea>
-                            <div class="invalid-feedback">
-                                
-                            </div>
                         </div>
                         <div class="form-group">
                             <label for="pm">Is there a project manager who should be copied on all communications to you?</label>
@@ -608,28 +584,21 @@
 
 </li>
 </ul>
-                            <div class="invalid-feedback">
-                                
-                            </div>
                         </div>
                         <div class="row">
                             <div class="col-sm-6">
                                 <div class="form-group pm-name">
-                                    <label for="pm_name">Project Manager's Name</label>
+                                    <label for="pm_name">Project Manager's Name <span class="text-danger">*</span></label>
                                     <input type="text" name="pm_name" class="form-control" maxlength="100" id="id_pm_name">
-                                    <div class="invalid-feedback">
-                                        
-                                    </div>
+                                   
                                 </div>
                             </div>
 
                             <div class="col-sm-6">
                                 <div class="form-group pm-email">
-                                    <label for="pm_email">Project Manager's Email</label>
+                                    <label for="pm_email">Project Manager's Email <span class="text-danger">*</span></label>
                                     <input type="email" name="pm_email" class="form-control" maxlength="100" id="id_pm_email">
-                                    <div class="invalid-feedback">
-                                        
-                                    </div>
+                                  
                                 </div>
                             </div>
                         </div>
@@ -646,7 +615,7 @@
             </div>
 
 
-            <button type="submit" id="submitBtn" class="btn btn-primary" >Submit</button>
+            <button type="submit" id="submitBtn" class="btn btn-primary btn-lg">Submit</button>
         </form>
 
         <script src="https://www.google.com/recaptcha/api.js" async defer></script>
