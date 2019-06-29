@@ -1312,7 +1312,7 @@ def profile():
                 'isAuthenticated': True,
                 'username': session['name'],
                 'csrf_token': generate_csrf_token(),
-                'profile_pic': json.loads(connection_data['options'])['image']['meta']['original']['url']
+                'profile_pic_url': json.loads(connection_data['options'])['image']['meta']['original']['url']
             }
             
             # Merge initial_data and context as one dict 
