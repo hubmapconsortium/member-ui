@@ -447,7 +447,7 @@ def user_in_pending(globus_user_id):
 # Add new user reigstration to `stage_user` table
 def add_new_stage_user(user_info, profile_pic_option, img_to_upload):
     # First handle the profile image and save it to target directory
-    user_info['photo'] = handle_user_profile_pic(user_info, profile_pic_option, img_to_upload)
+    user_info['photo'] = handle_stage_user_profile_pic(user_info, profile_pic_option, img_to_upload)
 
     try:
         stage_user = StageUser(user_info)
@@ -479,31 +479,53 @@ def get_user_profile(globus_user_id):
     user = result[0][0]
     return user
 
-def handle_user_profile_pic(user_info, profile_pic_option, img_to_upload):
+# Only save image to the stage dir, once approved, will copy to target dir
+def handle_stage_user_profile_pic(user_info, profile_pic_option, img_to_upload):
     save_path = None
     
     if profile_pic_option == 'upload':
         _, extension = img_to_upload.filename.rsplit('.', 1)
         img_file = img_to_upload
 
-        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{user_info['globus_user_id']}.{extension}"))
+        save_path = os.path.join(app.config['STAGE_USER_IMAGE_DIR'], secure_filename(f"{user_info['globus_user_id']}.{extension}"))
         img_file.save(save_path)
     elif profile_pic_option == 'url':
         response = requests.get(user_info['photo_url'])
         img_file = Image.open(BytesIO(response.content))
         extension = img_file.format
 
-        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{user_info['globus_user_id']}.{extension}"))
+        save_path = os.path.join(app.config['STAGE_USER_IMAGE_DIR'], secure_filename(f"{user_info['globus_user_id']}.{extension}"))
         img_file.save(save_path)
     else:
         # Use default image
-        BASE = os.path.dirname(os.path.abspath(__file__))
-        save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{user_info['globus_user_id']}.jpg"))
-        copy2(os.path.join(app.config['UPLOAD_FOLDER'], 'noname.jpg'), save_path)
+        save_path = os.path.join(app.config['STAGE_USER_IMAGE_DIR'], secure_filename(f"{user_info['globus_user_id']}.jpg"))
+        copy2(os.path.join(app.config['STAGE_USER_IMAGE_DIR'], 'noname.jpg'), save_path)
 
     return save_path
 
+# Save the profile image to target dir directly per user, no need to use stage image dir 
+def update_user_profile_pic(user_info, profile_pic_option, img_to_upload, profile_images_folder_name):
+    save_path = None
     
+    if profile_pic_option == 'upload':
+        _, extension = img_to_upload.filename.rsplit('.', 1)
+        img_file = img_to_upload
+
+        save_path = os.path.join(app.config['CONNECTION_IMAGE_DIR'], profile_images_folder_name, secure_filename(f"{user_info['globus_user_id']}.{extension}"))
+        img_file.save(save_path)
+    elif profile_pic_option == 'url':
+        response = requests.get(user_info['photo_url'])
+        img_file = Image.open(BytesIO(response.content))
+        extension = img_file.format
+
+        save_path = os.path.join(app.config['CONNECTION_IMAGE_DIR'], profile_images_folder_name, secure_filename(f"{user_info['globus_user_id']}.{extension}"))
+        img_file.save(save_path)
+    else:
+        # Use default image
+        save_path = os.path.join(app.config['CONNECTION_IMAGE_DIR'], profile_images_folder_name, secure_filename(f"{user_info['globus_user_id']}.jpg"))
+        copy2(os.path.join(app.config['STAGE_USER_IMAGE_DIR'], 'noname.jpg'), save_path)
+
+    return save_path
 
 # Update user profile with user-provided information 
 def update_user_profile(user_info, profile_pic_option, img_to_upload):
@@ -519,10 +541,13 @@ def update_user_profile(user_info, profile_pic_option, img_to_upload):
     # Get connection profile by connection id
     connection_profile = get_connection_profile(connection_id)
 
+    # User connection images folder name, AKA slug
+    profile_images_folder_name = connection_profile.slug
+
     # Handle the profile image and save it to target directory
-    # if user doesn't want to use the exisiting image
+    # Do nothing if user wants to keep the exisiting image
     if profile_pic_option != "existing":
-        user_info['photo'] = handle_user_profile_pic(user_info, profile_pic_option, img_to_upload)
+        user_info['photo'] = update_user_profile_pic(user_info, profile_pic_option, img_to_upload, profile_images_folder_name)
 
     # will this stage_user be added to database?
     stage_user = StageUser(user_info)
@@ -564,14 +589,14 @@ def approve_stage_user_by_editing_matched(stage_user, connection_profile):
         new_wp_user = create_new_user(stage_user)
 
         # Edit profile in `wp_connections`
-        edit_connection(stage_user, new_wp_user, connection_profile)
+        edit_connection(stage_user, new_wp_user, connection_profile, True)
 
         db.session.add(new_wp_user)
         db.session.delete(stage_user)
         db.session.commit()
     else:
         edit_wp_user(stage_user)
-        edit_connection(stage_user, wp_user, connection_profile)
+        edit_connection(stage_user, wp_user, connection_profile, True)
         db.session.delete(stage_user)
         db.session.commit()
 
@@ -667,11 +692,12 @@ def create_new_connection(stage_user, new_wp_user):
     connection.user = 0
     connection.status = 'approved'
 
+    # TO-DO, delete image once copied to target dir
     if not stage_user.photo == '':
         photo_file_name = stage_user.photo.split('/')[-1]
-        pathlib.Path(app.config['CONNECTION_IMAGE_PATH'] + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() ).mkdir(parents=True, exist_ok=True)
-        copyfile(stage_user.photo, app.config['CONNECTION_IMAGE_PATH'] + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "/" + photo_file_name)
-        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config['CONNECTION_IMAGE_URL'] + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "/" + photo_file_name + "\",\"url\": \"" + app.config['CONNECTION_IMAGE_URL'] + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image/jpeg\",\"type\":2}}}}"
+        pathlib.Path(app.config['CONNECTION_IMAGE_DIR'] + connection.slug).mkdir(parents=True, exist_ok=True)
+        copyfile(stage_user.photo, app.config['CONNECTION_IMAGE_DIR'] + connection.slug + "/" + photo_file_name)
+        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config['CONNECTION_IMAGE_URL'] + connection.slug + "/" + photo_file_name + "\",\"url\": \"" + app.config['CONNECTION_IMAGE_URL'] + connection.slug + "/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image/jpeg\",\"type\":2}}}}"
 
     google_email = stage_user.google_email
     github_username = stage_user.github_username
@@ -771,7 +797,7 @@ def create_new_connection(stage_user, new_wp_user):
 
 
 # Overwrite the existing fields with the ones from user registration or profile update
-def edit_connection(stage_user, wp_user, connection):
+def edit_connection(stage_user, wp_user, connection, new_user = False):
     # First get the id of admin user in `wp_usermeta` table
     admin_id = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == session['globus_user_id']).first().user_id
 
@@ -791,11 +817,17 @@ def edit_connection(stage_user, wp_user, connection):
     connection.bio = stage_user.expertise
     connection.edited_by = admin_id
 
+    
     if stage_user.photo != '':
         photo_file_name = stage_user.photo.split('/')[-1]
-        pathlib.Path(app.config['CONNECTION_IMAGE_PATH'] + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() ).mkdir(parents=True, exist_ok=True)
-        copyfile(stage_user.photo, app.config['CONNECTION_IMAGE_PATH'] + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "/" + photo_file_name)
-        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config['CONNECTION_IMAGE_URL'] + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "/" + photo_file_name + "\",\"url\": \"" + app.config['CONNECTION_IMAGE_URL'] + stage_user.first_name.lower() + '-' + stage_user.last_name.lower() + "/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image/jpeg\",\"type\":2}}}}"
+
+        # Profile update for an approved user doesn't need to mkdir and copy image
+        # Approving a new user by editing an exisiting profile requires to mkdir and copy the image
+        if new_user:
+            pathlib.Path(app.config['CONNECTION_IMAGE_DIR'] + connection.slug).mkdir(parents=True, exist_ok=True)
+            copyfile(stage_user.photo, app.config['CONNECTION_IMAGE_DIR'] + connection.slug + "/" + photo_file_name)
+
+        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config['CONNECTION_IMAGE_URL'] + connection.slug + "/" + photo_file_name + "\",\"url\": \"" + app.config['CONNECTION_IMAGE_URL'] + connection.slug + "/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image/jpeg\",\"type\":2}}}}"
 
 
     # Update corresponding metas
