@@ -499,7 +499,7 @@ def handle_user_profile_pic(user_info, profile_pic_option, img_to_upload):
         # Use default image
         BASE = os.path.dirname(os.path.abspath(__file__))
         save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f"{user_info['globus_user_id']}.jpg"))
-        copy2(os.path.join(BASE, 'avatar/', 'noname.jpg'), save_path)
+        copy2(os.path.join(app.config['UPLOAD_FOLDER'], 'noname.jpg'), save_path)
 
     return save_path
 
