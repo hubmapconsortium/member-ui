@@ -4,9 +4,8 @@
 # Python
 .pytest_cache
 
-# images file
-avatar/*.*
-!./avatar/noname.jpg
+# Stage user images
+avatar/
 
 # Flask config
 instance/app.cfg
