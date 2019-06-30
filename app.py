@@ -34,6 +34,7 @@ app.config.from_pyfile('app.cfg')
 
 # Remove trailing slash / from URL base to avoid "//" caused by config with trailing slash
 app.config['FLASK_APP_BASE_URI'] = app.config['FLASK_APP_BASE_URI'].strip('/')
+app.config['CONNECTION_IMAGE_URL'] = app.config['CONNECTION_IMAGE_URL'].strip('/')
 
 # Flask-Mail instance
 mail = Mail(app)
@@ -695,9 +696,11 @@ def create_new_connection(stage_user, new_wp_user):
     # TO-DO, delete image once copied to target dir
     if not stage_user.photo == '':
         photo_file_name = stage_user.photo.split('/')[-1]
-        pathlib.Path(app.config['CONNECTION_IMAGE_DIR'] + connection.slug).mkdir(parents=True, exist_ok=True)
-        copyfile(stage_user.photo, app.config['CONNECTION_IMAGE_DIR'] + connection.slug + "/" + photo_file_name)
-        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config['CONNECTION_IMAGE_URL'] + connection.slug + "/" + photo_file_name + "\",\"url\": \"" + app.config['CONNECTION_IMAGE_URL'] + connection.slug + "/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image/jpeg\",\"type\":2}}}}"
+        pathlib.Path(os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug)).mkdir(parents=True, exist_ok=True)
+        copyfile(stage_user.photo, os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug, photo_file_name))
+        # Both "path" and "url" use the same url
+        image_url = app.config['CONNECTION_IMAGE_URL'] + "/" + connection.slug + "/" + photo_file_name
+        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + image_url + "\",\"url\": \"" + image_url + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image/jpeg\",\"type\":2}}}}"
 
     google_email = stage_user.google_email
     github_username = stage_user.github_username
@@ -819,15 +822,18 @@ def edit_connection(stage_user, wp_user, connection, new_user = False):
 
     
     if stage_user.photo != '':
+        # stage_user.photo is the save path
         photo_file_name = stage_user.photo.split('/')[-1]
 
         # Profile update for an approved user doesn't need to mkdir and copy image
         # Approving a new user by editing an exisiting profile requires to mkdir and copy the image
         if new_user:
-            pathlib.Path(app.config['CONNECTION_IMAGE_DIR'] + connection.slug).mkdir(parents=True, exist_ok=True)
-            copyfile(stage_user.photo, app.config['CONNECTION_IMAGE_DIR'] + connection.slug + "/" + photo_file_name)
-
-        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + app.config['CONNECTION_IMAGE_URL'] + connection.slug + "/" + photo_file_name + "\",\"url\": \"" + app.config['CONNECTION_IMAGE_URL'] + connection.slug + "/" + photo_file_name + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image/jpeg\",\"type\":2}}}}"
+            pathlib.Path(os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug)).mkdir(parents=True, exist_ok=True)
+            copyfile(stage_user.photo, os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug , photo_file_name))
+        
+        # Both "path" and "url" use the same url
+        image_url = app.config['CONNECTION_IMAGE_URL'] + "/" + connection.slug + "/" + photo_file_name
+        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + image_url + "\",\"url\": \"" + image_url + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image/jpeg\",\"type\":2}}}}"
 
 
     # Update corresponding metas

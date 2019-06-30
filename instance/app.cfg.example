@@ -1,6 +1,6 @@
 # App name and deployment URI
 FLASK_APP_NAME = 'HuBMAP User Profile'
-# No need the trailing slash /
+# Works regardless the trailing slash /
 FLASK_APP_BASE_URI = 'http://localhost:5000'
 
 # Flask app session key
@@ -19,7 +19,7 @@ GOOGLE_RECAPTCHA_VERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify'
 SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://username:password@localhost/wp_dev'
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-# IMAGE DIRECTORIES
+# IMAGE DIRECTORIES, works regardless the trailing slash /
 STAGE_USER_IMAGE_DIR = '/PATH/registration/avatar/'
 CONNECTION_IMAGE_DIR = '/PATH/wp-content/uploads/connections-images/'
 CONNECTION_IMAGE_URL = 'https://dev.hubmapconsortium.org/wp-content/uploads/connections-images/'

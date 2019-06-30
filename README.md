@@ -27,7 +27,7 @@ The confiuration file `app.cfg` is located under `instance` folder. You can read
 ````
 # App name and deployment URI
 FLASK_APP_NAME = 'HuBMAP User Profile'
-# No need the trailing slash /
+# Works regardless the trailing slash /
 FLASK_APP_BASE_URI = 'http://localhost:5000'
 
 # Flask app session key
@@ -45,12 +45,11 @@ GOOGLE_RECAPTCHA_VERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify'
 # DB connection and settings
 SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://username:password@localhost/wp_dev'
 SQLALCHEMY_TRACK_MODIFICATIONS = False
-UPLOAD_FOLDER = ''
-ALLOWED_EXTENSIONS = set(['jpg', 'jepg', 'png', 'gif'])
-ADMIN_USERNAME = 'wpadmin'
-CONNECTION_IMAGE_PATH = '/home/webadmin/wp-content/uploads/connections-images/'
-CONNECTION_IMAGE_URL = 'https://dev2.hubmapconsortium.org/wp-content/uploads/connections-images/'
-#MAX_CONTENT_PATH = 100000 # Specifies Maximum size of file will be uploaded
+
+# IMAGE DIRECTORIES, works regardless the trailing slash /
+STAGE_USER_IMAGE_DIR = '/path/registration/avatar/'
+CONNECTION_IMAGE_DIR = '/path/images/'
+CONNECTION_IMAGE_URL = 'https://hubmapconsortium.org/wp-content/uploads/connections-images/'
 
 # Email settings for Flask-Mail extension
 MAIL_SERVER = 'smtp.gmail.com'
