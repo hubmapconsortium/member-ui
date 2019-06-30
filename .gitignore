@@ -2,6 +2,7 @@
 .vscode
 
 # Python
+__pycache__/
 .pytest_cache
 
 # Stage user images
