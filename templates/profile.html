@@ -170,7 +170,7 @@
             $('#id_photo').val('');
             $('#id_photo_url').val('');
             // Reset thumbnail
-            $('#profile_picture').attr('src', "{{ url_for('static', filename = 'images/default_profile.png') }}");
+            $('#profile_picture').attr('src', "{{ url_for('static', filename = 'images/default_profile.jpg') }}");
         });
 
         function readURL(input) {
@@ -196,7 +196,7 @@
             readURL(this);
         });
         $("#id_photo_url").keyup(delay(function(e) {
-            $('#profile_picture').attr('src', "{{ url_for('static', filename = 'images/default_profile.png') }}");
+            $('#profile_picture').attr('src', "{{ url_for('static', filename = 'images/default_profile.jpg') }}");
             $('#profile_picture').attr('src', e.target.value);
         }, 500));
         $(":radio[id^='id_pm_']").change(function() {

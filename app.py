@@ -500,7 +500,7 @@ def handle_stage_user_profile_pic(user_info, profile_pic_option, img_to_upload):
     else:
         # Use default image
         save_path = os.path.join(app.config['STAGE_USER_IMAGE_DIR'], secure_filename(f"{user_info['globus_user_id']}.jpg"))
-        copy2(os.path.join(app.config['STAGE_USER_IMAGE_DIR'], 'noname.jpg'), save_path)
+        copy2(os.path.join(app.root_path, 'static', 'images', 'default_profile.jpg'), save_path)
 
     return save_path
 
@@ -524,7 +524,7 @@ def update_user_profile_pic(user_info, profile_pic_option, img_to_upload, profil
     else:
         # Use default image
         save_path = os.path.join(app.config['CONNECTION_IMAGE_DIR'], profile_images_folder_name, secure_filename(f"{user_info['globus_user_id']}.jpg"))
-        copy2(os.path.join(app.config['STAGE_USER_IMAGE_DIR'], 'noname.jpg'), save_path)
+        copy2(os.path.join(app.root_path, 'static', 'images', 'default_profile.jpg'), save_path)
 
     return save_path
 
