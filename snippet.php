@@ -89,8 +89,7 @@ function cn_register_custom_metabox_and_text_field() {
                     'Data Science'   => 'Data Science',
                     'Policies' => 'Policies',
                     'Tissue, Technology & Data Collection'  => 'Tissue, Technology & Data Collection',
-                    'Tools & Models'  => 'Tools & Models',
-					'NA' => 'NA',
+                    'Tools & Models'  => 'Tools & Models'
                 ),
 			),
 		),
