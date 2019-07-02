@@ -733,9 +733,7 @@ def create_new_connection(stage_user, new_wp_user):
     connection_meta_phone.meta_value = stage_user.phone
     connection.metas.append(connection_meta_phone)
 
-    # Currectly hard-coded id
     connection.email = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:{connection.emails[0].id};s:4:\"type\";s:4:\"work\";s:4:\"name\";s:10:\"Work Email\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:7:\"address\";s:{len(connection.emails[0].address)}:\"{connection.emails[0].address}\";}}}}"
-    # Currectly hard-coded id
     connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:{connection.phones[0].id};s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(connection.phones[0].number)}:\"{connection.phones[0].number}\";}}}}"
 
     # Handle profile image
@@ -854,7 +852,6 @@ def edit_connection(stage_user, wp_user, connection, new_user = False):
     wp_user.user_login = stage_user.email
     wp_user.user_email = stage_user.email
     
-    # TO-DO: add new record to `wp_connections_email` and `wp_connections_phone` then get the id and update `wp_connections` email/phone fields
     connection_email = ConnectionEmail()
     connection_email.order = 0
     connection_email.preferred = 0
@@ -879,6 +876,7 @@ def edit_connection(stage_user, wp_user, connection, new_user = False):
         existing_email.visibility = 'public'
     else:
         connection.emails.append(connection_email)
+        
     if existing_phone:
         existing_phone.order = 0
         existing_phone.preferred = 0
@@ -890,9 +888,7 @@ def edit_connection(stage_user, wp_user, connection, new_user = False):
 
     db.session.commit()
 
-    # Currectly hard-coded id
     connection.email = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:{connection.emails[0].id};s:4:\"type\";s:4:\"work\";s:4:\"name\";s:10:\"Work Email\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:7:\"address\";s:{len(connection.emails[0].address)}:\"{connection.emails[0].address}\";}}}}"
-    # Currectly hard-coded id
     connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:{connection.phones[0].id};s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(connection.phones[0].number)}:\"{connection.phones[0].number}\";}}}}"
     
     connection.first_name = stage_user.first_name
