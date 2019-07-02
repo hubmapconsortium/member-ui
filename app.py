@@ -1230,8 +1230,7 @@ def register():
         else:
             if request.method == 'POST':
                 # reCAPTCHA validation
-                # Use request.args.get() instead of request.form[''] since esponse' is not the form
-                recaptcha_response = request.args.get('g-recaptcha-response')
+                recaptcha_response = request.form['g-recaptcha-response']
                 values = {
                     'secret': app.config['GOOGLE_RECAPTCHA_SECRET_KEY'],
                     'response': recaptcha_response
