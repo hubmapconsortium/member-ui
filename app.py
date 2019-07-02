@@ -148,6 +148,28 @@ class ConnectionMetaSchema(ma.Schema):
     class Meta:
         fields = ('meta_id', 'entry_id', 'meta_key', 'meta_value')
 
+class ConnectionEmail(db.Model):
+    __tablename__ = 'wp_connections_email'
+
+    id = db.Column(db.Integer, primary_key=True)
+    entry_id = db.Column(db.Integer, db.ForeignKey('wp_connections.id'), nullable=False)
+    order = db.Column(db.Integer)
+    preferred = db.Column(db.Integer)
+    type = db.Column(db.Text)
+    address = db.Column(db.Text)
+    visibility = db.Column(db.Text)
+
+class ConnectionPhone(db.Model):
+    __tablename__ = 'wp_connections_phone'
+
+    id = db.Column(db.Integer, primary_key=True)
+    entry_id = db.Column(db.Integer, db.ForeignKey('wp_connections.id'), nullable=False)
+    order = db.Column(db.Integer)
+    preferred = db.Column(db.Integer)
+    type = db.Column(db.Text)
+    number = db.Column(db.Text)
+    visibility = db.Column(db.Text)
+
 # Connection
 class Connection(db.Model):
     __tablename__ = 'wp_connections'
@@ -187,6 +209,8 @@ class Connection(db.Model):
     user = db.Column(db.Integer)
     status = db.Column(db.String(20))
     metas = db.relationship('ConnectionMeta', backref='connection', lazy='joined')
+    emails = db.relationship('ConnectionEmail', backref='connection', lazy='joined')
+    phones = db.relationship('ConnectionPhone', backref='connection', lazy='joined')
 
 # Connection Schema
 class ConnectionSchema(ma.Schema):
@@ -572,14 +596,15 @@ def approve_stage_user_by_creating_new(stage_user):
         create_new_connection(stage_user, new_wp_user)
 
         db.session.add(new_wp_user)
-        db.session.delete(stage_user)
-        db.session.commit()
     else:
         edit_wp_user(stage_user)
         create_new_connection(stage_user, wp_user)
-        db.session.delete(stage_user)
-        db.session.commit()
-        
+
+    db.session.delete(stage_user)
+    db.session.commit()
+
+    
+
 
 def approve_stage_user_by_editing_matched(stage_user, connection_profile):
     # First need to check if there's an exisiting wp_user record with the same globus id
@@ -643,25 +668,22 @@ def create_new_connection(stage_user, new_wp_user):
     admin_id = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == session['globus_user_id']).first().user_id
 
     connection = Connection()
-    connection.owners.append(new_wp_user)
+    connection_email = ConnectionEmail()
+    connection_email.order = 0
+    connection_email.preferred = 0
+    connection_email.type = 'work'
+    connection_email.address = stage_user.email
+    connection_email.visibility = 'public'
+    connection.emails.append(connection_email)
 
-    # Need to handle email and phone metas first
-    connection_meta_email = ConnectionMeta()
-    connection_meta_email.meta_key = 'email'
-    connection_meta_email.meta_value = stage_user.email
-    connection.metas.append(connection_meta_email)
-    
-    connection_meta_phone = ConnectionMeta()
-    connection_meta_phone.meta_key = 'phone'
-    connection_meta_phone.meta_value = stage_user.phone
-    connection.metas.append(connection_meta_phone)
+    connection_phone = ConnectionPhone()
+    connection_phone.order = 0
+    connection_phone.preferred = 0
+    connection_phone.type = 'workphone'
+    connection_phone.number = stage_user.phone
+    connection_phone.visibility = 'public'
+    connection.phones.append(connection_phone)
 
-    # TO-DO: add new record to `wp_connections_email` and `wp_connections_phone` then get the id and update `wp_connections` email/phone fields
-    # Currectly hard-coded id
-    connection.email = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:2199;s:4:\"type\";s:4:\"work\";s:4:\"name\";s:10:\"Work Email\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:7:\"address\";s:{len(stage_user.email)}:\"{stage_user.email}\";}}}}"
-    # Currectly hard-coded id
-    connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(stage_user.phone)}:\"{stage_user.phone}\";}}}}"
-    
     connection.first_name = stage_user.first_name
     connection.last_name = stage_user.last_name
     connection.organization = stage_user.organization
@@ -692,6 +714,29 @@ def create_new_connection(stage_user, new_wp_user):
     connection.owner = admin_id
     connection.user = 0
     connection.status = 'approved'
+    connection.email = ''
+    connection.phone_numbers = ''
+    connection.options = ''
+
+    connection.owners.append(new_wp_user)
+
+    db.session.commit()
+
+    # Need to handle email and phone metas first
+    connection_meta_email = ConnectionMeta()
+    connection_meta_email.meta_key = 'email'
+    connection_meta_email.meta_value = stage_user.email
+    connection.metas.append(connection_meta_email)
+    
+    connection_meta_phone = ConnectionMeta()
+    connection_meta_phone.meta_key = 'phone'
+    connection_meta_phone.meta_value = stage_user.phone
+    connection.metas.append(connection_meta_phone)
+
+    # Currectly hard-coded id
+    connection.email = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:{connection.emails[0].id};s:4:\"type\";s:4:\"work\";s:4:\"name\";s:10:\"Work Email\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:7:\"address\";s:{len(connection.emails[0].address)}:\"{connection.emails[0].address}\";}}}}"
+    # Currectly hard-coded id
+    connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:{connection.phones[0].id};s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(connection.phones[0].number)}:\"{connection.phones[0].number}\";}}}}"
 
     # Handle profile image
     photo_file_name = stage_user.photo.split('/')[-1]
@@ -810,10 +855,45 @@ def edit_connection(stage_user, wp_user, connection, new_user = False):
     wp_user.user_email = stage_user.email
     
     # TO-DO: add new record to `wp_connections_email` and `wp_connections_phone` then get the id and update `wp_connections` email/phone fields
+    connection_email = ConnectionEmail()
+    connection_email.order = 0
+    connection_email.preferred = 0
+    connection_email.type = 'work'
+    connection_email.address = stage_user.email
+    connection_email.visibility = 'public'
+
+    connection_phone = ConnectionPhone()
+    connection_phone.order = 0
+    connection_phone.preferred = 0
+    connection_phone.type = 'workphone'
+    connection_phone.number = stage_user.phone
+    connection_phone.visibility = 'public'
+
+    existing_email = next((e for e in connection.emails if e.type == 'work'), None)
+    existing_phone = next((e for e in connection.phones if e.type == 'workphone'), None)
+    if existing_email:
+        existing_email.order = 0
+        existing_email.preferred = 0
+        existing_email.type = 'work'
+        existing_email.address = stage_user.email
+        existing_email.visibility = 'public'
+    else:
+        connection.emails.append(connection_email)
+    if existing_phone:
+        existing_phone.order = 0
+        existing_phone.preferred = 0
+        existing_phone.type = 'workphone'
+        existing_phone.number = stage_user.phone
+        existing_phone.visibility = 'public'
+    else:
+        connection.phones.append(connection_phone)
+
+    db.session.commit()
+
     # Currectly hard-coded id
-    connection.email = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:2199;s:4:\"type\";s:4:\"work\";s:4:\"name\";s:10:\"Work Email\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:7:\"address\";s:{len(stage_user.email)}:\"{stage_user.email}\";}}}}"
+    connection.email = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:{connection.emails[0].id};s:4:\"type\";s:4:\"work\";s:4:\"name\";s:10:\"Work Email\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:7:\"address\";s:{len(connection.emails[0].address)}:\"{connection.emails[0].address}\";}}}}"
     # Currectly hard-coded id
-    connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:417;s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(stage_user.phone)}:\"{stage_user.phone}\";}}}}"
+    connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:{connection.phones[0].id};s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(connection.phones[0].number)}:\"{connection.phones[0].number}\";}}}}"
     
     connection.first_name = stage_user.first_name
     connection.last_name = stage_user.last_name
