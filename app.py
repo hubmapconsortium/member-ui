@@ -549,7 +549,9 @@ def update_user_profile_pic(user_info, profile_pic_option, img_to_upload, profil
         # Use default image
         save_path = os.path.join(app.config['CONNECTION_IMAGE_DIR'], profile_images_folder_name, secure_filename(f"{user_info['globus_user_id']}.jpg"))
         copy2(os.path.join(app.root_path, 'static', 'images', 'default_profile.jpg'), save_path)
-
+        
+    print("=========save_path=============")
+    print(save_path)
     return save_path
 
 # Update user profile with user-provided information 
@@ -849,9 +851,7 @@ def edit_connection(stage_user, wp_user, connection, new_user = False):
     # First get the id of admin user in `wp_usermeta` table
     admin_id = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == session['globus_user_id']).first().user_id
 
-    wp_user.user_login = stage_user.email
-    wp_user.user_email = stage_user.email
-    
+    # Handle the connections email and phone first
     connection_email = ConnectionEmail()
     connection_email.order = 0
     connection_email.preferred = 0
@@ -876,7 +876,7 @@ def edit_connection(stage_user, wp_user, connection, new_user = False):
         existing_email.visibility = 'public'
     else:
         connection.emails.append(connection_email)
-        
+
     if existing_phone:
         existing_phone.order = 0
         existing_phone.preferred = 0
@@ -888,6 +888,7 @@ def edit_connection(stage_user, wp_user, connection, new_user = False):
 
     db.session.commit()
 
+    # Get the id for connection email and phone
     connection.email = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:{connection.emails[0].id};s:4:\"type\";s:4:\"work\";s:4:\"name\";s:10:\"Work Email\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:7:\"address\";s:{len(connection.emails[0].address)}:\"{connection.emails[0].address}\";}}}}"
     connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:{connection.phones[0].id};s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(connection.phones[0].number)}:\"{connection.phones[0].number}\";}}}}"
     
@@ -901,6 +902,8 @@ def edit_connection(stage_user, wp_user, connection, new_user = False):
     # Handle profile image
     # stage_user.photo is the save path
     photo_file_name = stage_user.photo.split('/')[-1]
+    print("stage_user.photo=== " + stage_user.photo)
+    print("photo_file_name=== " + photo_file_name)
 
     # Profile update for an approved user doesn't need to mkdir and copy image
     # Approving a new user by editing an exisiting profile requires to mkdir and copy the image
@@ -1083,6 +1086,7 @@ def edit_connection(stage_user, wp_user, connection, new_user = False):
         connection_meta_pm_email.meta_value = stage_user.pm_email
         connection.metas.append(connection_meta_pm_email)
 
+    # The email and phone is connections meta are customized fields
     connection_meta_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'email', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_email:
         connection_meta_email.meta_value = stage_user.email
@@ -1100,6 +1104,11 @@ def edit_connection(stage_user, wp_user, connection, new_user = False):
         connection_meta_phone.meta_key = 'phone'
         connection_meta_phone.meta_value = stage_user.phone
         connection.metas.append(connection_meta_phone)
+
+
+    # Also update the wp_user record
+    wp_user.user_login = stage_user.email
+    wp_user.user_email = stage_user.email
 
     if not wp_user in connection.owners:
         connection.owners.append(wp_user)
