@@ -113,7 +113,7 @@ function cn_register_custom_metabox_and_text_field() {
                     'HuBMAP Google Drive Share'  => 'HuBMAP Google Drive Share',
                     'HuBMAP GitHub Repository'  => 'HuBMAP GitHub Repository',
                     'HuBMAP Slack Workspace' => 'HuBMAP Slack Workspace',
-                    'Edit My Component\'s Project Page' => 'Edit my component\'s project page'
+                    'Edit My Component\'s Project Page' => 'Edit My Component\'s Project Page'
                 ),
                 'default'    => '', // This is the default selected option. Leave blank for none.
             ),
