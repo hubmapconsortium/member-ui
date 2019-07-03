@@ -745,9 +745,9 @@ def create_new_connection(stage_user_obj, new_wp_user):
     image_url = app.config['CONNECTION_IMAGE_URL'] + "/" + connection.slug + "/" + photo_file_name
     connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + image_url + "\",\"url\": \"" + image_url + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image/jpeg\",\"type\":2}}}}"
 
-    google_email = stage_user.google_email
-    github_username = stage_user.github_username
-    slack_username = stage_user.slack_username
+    google_email = stage_user_obj.google_email
+    github_username = stage_user_obj.github_username
+    slack_username = stage_user_obj.slack_username
 
     # Other connections metas
     connection_meta_component = ConnectionMeta()
