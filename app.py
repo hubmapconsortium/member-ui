@@ -736,14 +736,19 @@ def create_new_connection(stage_user_obj, new_wp_user):
     # For new user registration, stage_user_obj.photo will never be empty
     # So no need to check if stage_user_obj.photo === '' here like in edit_connection()
     photo_file_name = stage_user_obj.photo.split('/')[-1]
-    pathlib.Path(os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug)).mkdir(parents=True, exist_ok=True)
-    copyfile(stage_user_obj.photo, os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug, photo_file_name))
+    target_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug)
+    pathlib.Path(target_image_dir).mkdir(parents=True, exist_ok=True)
+    copyfile(stage_user_obj.photo, os.path.join(target_image_dir, photo_file_name))
     # Delete stage image file
     os.unlink(stage_user_obj.photo)
 
+    # Get the MIME type of image
+    image = Image.open(os.path.join(target_image_dir, photo_file_name))
+    content_type = Image.MIME[image.format]
+
     # Both "path" and "url" use the same url
     image_url = app.config['CONNECTION_IMAGE_URL'] + "/" + connection.slug + "/" + photo_file_name
-    connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + image_url + "\",\"url\": \"" + image_url + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image/jpeg\",\"type\":2}}}}"
+    connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + image_url + "\",\"url\": \"" + image_url + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"" + content_type + "\",\"type\":2}}}}"
 
     google_email = stage_user_obj.google_email
     github_username = stage_user_obj.github_username
@@ -922,9 +927,13 @@ def edit_connection(user_obj, wp_user, connection, new_user = False):
                         print("Failed to empty the profile image folder: " + target_image_dir)
                         print(e)
 
+        # Get the MIME type of image
+        image = Image.open(os.path.join(target_image_dir, photo_file_name))
+        content_type = Image.MIME[image.format]
+
         # Both "path" and "url" use the same url
         image_url = app.config['CONNECTION_IMAGE_URL'] + "/" + connection.slug + "/" + photo_file_name
-        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + image_url + "\",\"url\": \"" + image_url + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"image/jpeg\",\"type\":2}}}}"
+        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + image_url + "\",\"url\": \"" + image_url + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"" + content_type + "\",\"type\":2}}}}"
 
 
     # Update corresponding metas
