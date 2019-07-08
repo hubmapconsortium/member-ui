@@ -73,7 +73,7 @@ function cn_register_custom_metabox_and_text_field() {
 	);
 	
 	$wg_atts = array(
-		'title'    => 'What HuBMAP working group are you a member of?',         // Change this to a name which applies to your project.
+		'title'    => 'What HuBMAP Working Groups would you like to join?',         // Change this to a name which applies to your project.
 		'id'       => 'working_group',           // Change this so it is unique to you project.
 		'context'  => 'normal',
 		'priority' => 'core',
