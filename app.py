@@ -536,7 +536,7 @@ def handle_stage_user_profile_pic(user_info, profile_pic_option, img_to_upload):
     return save_path
 
 # Save the profile image to target dir directly per user, no need to use stage image dir 
-def update_user_profile_pic(user_info, profile_pic_option, img_to_upload, target_image_dir):
+def update_user_profile_pic(user_info, profile_pic_option, img_to_upload, image_dir):
     save_path = ''
     
     if profile_pic_option == 'existing':
@@ -546,18 +546,18 @@ def update_user_profile_pic(user_info, profile_pic_option, img_to_upload, target
         _, extension = img_to_upload.filename.rsplit('.', 1)
         img_file = img_to_upload
 
-        save_path = os.path.join(target_image_dir, secure_filename(f"{user_info['globus_user_id']}.{extension}"))
+        save_path = os.path.join(image_dir, secure_filename(f"{user_info['globus_user_id']}.{extension}"))
         img_file.save(save_path)
     elif profile_pic_option == 'url':
         response = requests.get(user_info['photo_url'])
         img_file = Image.open(BytesIO(response.content))
         extension = img_file.format
 
-        save_path = os.path.join(target_image_dir, secure_filename(f"{user_info['globus_user_id']}.{extension}"))
+        save_path = os.path.join(image_dir, secure_filename(f"{user_info['globus_user_id']}.{extension}"))
         img_file.save(save_path)
     else:
         # Use default image
-        save_path = os.path.join(target_image_dir, secure_filename(f"{user_info['globus_user_id']}.jpg"))
+        save_path = os.path.join(image_dir, secure_filename(f"{user_info['globus_user_id']}.jpg"))
         copyfile(os.path.join(app.root_path, 'static', 'images', 'default_profile.jpg'), save_path)
 
     return save_path
@@ -588,7 +588,7 @@ def update_user_profile(user_info, profile_pic_option, img_to_upload):
 
     # Handle the profile image and save/copy it to target directory
     # Do nothing if user wants to keep the exisiting image
-    user_info['photo'] = update_user_profile_pic(user_info, profile_pic_option, img_to_upload, target_image_dir)
+    user_info['photo'] = update_user_profile_pic(user_info, profile_pic_option, img_to_upload, scoure_image_dir)
 
     # Convert the user_info dict into object via StageUser() model
     # So edit_connection() can be reused for approcing new user by editing matched and updating exisiting approved user
