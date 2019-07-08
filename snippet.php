@@ -182,23 +182,7 @@ function cn_register_custom_metabox_and_text_field() {
 			),
 		),
 	);
-	
-	$biosketch_atts = array(
-		'title'    => 'Biosketch',         // Change this to a name which applies to your project.
-		'id'       => 'biosketch',           // Change this so it is unique to you project.
-		'context'  => 'normal',
-		'priority' => 'core',
-		'fields'   => array(
-			array(
-				'name'       => 'Biosketch', // Change this field name to something which applies to you project.
-				'show_label' => TRUE,         // Whether or not to display the 'name'. Changing it to false will suppress the name.
-				'id'         => 'biosketch',   // Change this so it is unique to you project. Each field id MUST be unique.
-				'type'       => 'text',       // This is the field type being added.
-				'size'       => 'regular',    // This can be changed to one of the following: 'small', 'regular', 'large'
-			),
-		),
-	);
-	
+
 	$expertise_atts = array(
 		'title'    => 'Area of Expertise',         // Change this to a name which applies to your project.
 		'id'       => 'expertise',           // Change this so it is unique to you project.
@@ -323,7 +307,6 @@ function cn_register_custom_metabox_and_text_field() {
     cnMetaboxAPI::add( $github_username_atts);
     cnMetaboxAPI::add( $slack_username_atts);
 	cnMetaboxAPI::add( $website_atts );
-	cnMetaboxAPI::add( $biosketch_atts );
 	cnMetaboxAPI::add( $expertise_atts );
 	cnMetaboxAPI::add( $orcid_atts );
     cnMetaboxAPI::add( $pm_atts );

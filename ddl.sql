@@ -19,7 +19,6 @@ CREATE TABLE `stage_user` (
   `slack_username` varchar(200) DEFAULT NULL,
   `phone` varchar(100) DEFAULT NULL,
   `website` varchar(500) DEFAULT NULL,
-  `biosketch` varchar(200) DEFAULT NULL,
   `expertise` longtext DEFAULT NULL,
   `orcid` varchar(100) DEFAULT NULL,
   `pm` tinyint(1) DEFAULT NULL,

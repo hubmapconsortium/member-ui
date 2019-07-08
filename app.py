@@ -73,7 +73,6 @@ class StageUser(db.Model):
     slack_username = db.Column(db.String(200))
     phone = db.Column(db.String(100))
     website = db.Column(db.String(500))
-    biosketch = db.Column(db.String(200))
     expertise = db.Column(db.Text)
     orcid = db.Column(db.String(100))
     pm = db.Column(db.Boolean)
@@ -103,7 +102,6 @@ class StageUser(db.Model):
             self.slack_username = a_dict['slack_username'] if 'slack_username' in a_dict else ''
             self.phone = a_dict['phone'] if 'phone' in a_dict else ''
             self.website = a_dict['website'] if 'website' in a_dict else ''
-            self.biosketch = a_dict['biosketch'] if 'biosketch' in a_dict else ''
             self.expertise = a_dict['expertise'] if 'expertise' in a_dict else ''
             self.orcid = a_dict['orcid'] if 'orcid' in a_dict else ''
             self.pm = a_dict['pm'] if 'pm' in a_dict else ''
@@ -117,7 +115,7 @@ class StageUserSchema(ma.Schema):
     class Meta:
         fields = ('id', 'globus_user_id', 'email', 'first_name', 'last_name', 'component', 'other_component', 'organization', 'other_organization',
                     'role', 'other_role', 'working_group', 'photo', 'photo_url', 'access_requests', 'google_email', 'github_username', 'slack_username', 'phone', 'website',
-                    'biosketch', 'orcid', 'pm', 'pm_name', 'pm_email', 'created_at', 'deny')
+                    'orcid', 'pm', 'pm_name', 'pm_email', 'created_at', 'deny')
 
 # WPUserMeta Class/Model
 class WPUserMeta(db.Model):
@@ -814,12 +812,6 @@ def create_new_connection(stage_user_obj, new_wp_user):
     connection_meta_website.meta_key = 'website'
     connection_meta_website.meta_value = stage_user_obj.website
     connection.metas.append(connection_meta_website)
-
-    # need biosketch?
-    connection_meta_biosketch = ConnectionMeta()
-    connection_meta_biosketch.meta_key = 'biosketch'
-    connection_meta_biosketch.meta_value = stage_user_obj.biosketch
-    connection.metas.append(connection_meta_biosketch)
 
     connection_meta_expertise = ConnectionMeta()
     connection_meta_expertise.meta_key = 'expertise'
