@@ -2,7 +2,131 @@
 add_action( 'cn_metabox', 'cn_register_custom_metabox_and_text_field' );
  
 function cn_register_custom_metabox_and_text_field() {
-    
+    // Award/component
+    $component_atts = array(
+        'title'    => 'HuBMAP Award/component', // Change this to a name which applies to your project.
+        'id'       => 'component', // Change this so it is unique to you project.
+        'context'  => 'normal',
+        'priority' => 'core',
+        'fields'   => array(
+            array(
+                'name'       => 'component',     // Change this field name to something which applies to you project.
+                'show_label' => TRUE,             // Whether or not to display the 'name'. Changing it to false will suppress the name.
+                'id'         => 'component', // Change this so it is unique to you project. Each field id MUST be unique.
+                'type'       => 'select',  // This is the field type being added.
+                'options'    => array(
+                    'HIVE IEC - Carnegie Mellon University'   => 'HIVE IEC - Carnegie Mellon University',
+                    'HIVE MC - Indiana University Bloomington'   => '>HIVE MC - Indiana University Bloomington',
+                    'HIVE MC - New York Genome Center' => 'HIVE MC - New York Genome Center',
+                    'HIVE TC - Carnegie Mellon University'  => 'HIVE TC - Carnegie Mellon University',
+                    'HIVE TC - Harvard Medical School'  => 'HIVE TC - Harvard Medical School',
+					'NIH' => 'NIH',
+					'TMC - California Institute of Technology' => 'TMC - California Institute of Technology',
+					'TMC - Stanford University' => 'TMC - Stanford University',
+					'TMC - University of California, San Diego' => 'TMC - University of California, San Diego',
+					'TMC - University of Florida' => 'TMC - University of Florida',
+					'TMC - Vanderbilt University' => 'TMC - Vanderbilt University',
+					'TTD - California Institute of Technology' => 'TTD - California Institute of Technology',
+					'TTD - Harvard University' => 'TTD - Harvard University',
+					'TTD - Purdue University' => 'TTD - Purdue University',
+					'TTD - Stanford University' => 'TTD - Stanford University',
+                    'Other' => 'Other'
+                ),
+                'default'    => '', // This is the default selected option. Leave blank for none.
+            ),
+        ),
+    );
+
+    $other_component_atts = array(
+		'title'    => 'Other Component',         // Change this to a name which applies to your project.
+		'id'       => 'other_component',           // Change this so it is unique to you project.
+		'context'  => 'normal',
+		'priority' => 'core',
+		'fields'   => array(
+			array(
+				'name'       => 'other component', // Change this field name to something which applies to you project.
+				'show_label' => TRUE,         // Whether or not to display the 'name'. Changing it to false will suppress the name.
+				'id'         => 'other_component',   // Change this so it is unique to you project. Each field id MUST be unique.
+				'type'       => 'text',       // This is the field type being added.
+				'size'       => 'regular',    // This can be changed to one of the following: 'small', 'regular', 'large'
+			),
+		),
+	);
+
+	// Organization
+	$organization_atts = array(
+        'title'    => 'Rrganization', // Change this to a name which applies to your project.
+        'id'       => 'organization', // Change this so it is unique to you project.
+        'context'  => 'normal',
+        'priority' => 'core',
+        'fields'   => array(
+            array(
+                'name'       => 'organization',     // Change this field name to something which applies to you project.
+                'show_label' => TRUE,             // Whether or not to display the 'name'. Changing it to false will suppress the name.
+                'id'         => 'organization', // Change this so it is unique to you project. Each field id MUST be unique.
+                'type'       => 'select',  // This is the field type being added.
+                'options'    => array(
+                    'California Institute of Technology'   => 'California Institute of Technology',
+                    'Carnegie Mellon University'   => 'Carnegie Mellon University',
+                    'Department of Biomedical Informatics (DBMI)/Unversity of Pittsburgh(Pitt)' => 'Department of Biomedical Informatics (DBMI)/Unversity of Pittsburgh(Pitt)',
+                    'Harvard Medical School'  => 'Harvard Medical School',
+                    'Harvard University'  => 'Harvard University',
+					'Indiana University' => 'Indiana University',
+					'Knowinnovation Inc.' => 'Knowinnovation Inc.',
+					'NCI' => 'NCI',
+					'NHGRI' => 'NHGRI',
+					'NHLBI' => 'NHLBI',
+					'NIA' => 'NIA',
+					'NIAID' => 'NIAID',
+					'NIAMS' => 'NIAMS',
+					'NIBIB' => 'NIBIB',
+					'NICHD' => 'NICHD',
+					'NIDA' => 'NIDA',
+					'NIDDK' => 'NIDDK',
+					'NIGMS' => 'NIGMS',
+					'NIMH' => 'NIMH',
+					'NINDS' => 'NINDS',
+					'New York Genome Center' => 'New York Genome Center',
+					'OD' => 'OD',
+					'PSC(Pittsburgh Supercomputing Center)/CMU' => 'PSC(Pittsburgh Supercomputing Center)/CMU',
+					'Pacific Northwest National Laboratory' => 'Pacific Northwest National Laboratory',
+					'Purdue University' => 'Purdue University',
+					'Renaissance Computing Institute (RENCI), University of North Carolina, Chapel Hill' => 'Renaissance Computing Institute (RENCI), University of North Carolina, Chapel Hill',
+					'Stanford University' => 'Stanford University',
+					'University of California, San Diego' => 'University of California, San Diego',
+					'University of California, Santa Cruz' => 'University of California, Santa Cruz',
+					'University of Florida' => 'University of Florida',
+					'University of Pittsburgh' => 'University of Pittsburgh',
+					'University of Rochester Medical Center' => 'University of Rochester Medical Center',
+					'University of South Dakota' => 'University of South Dakota',
+                    'University of Washington' => 'University of Washington',
+                    'University of Zurich' => 'University of Zurich',
+                    'Vanderbilt University' => 'Vanderbilt University',
+                    'Vanderbilt University Medical Center' => 'Vanderbilt University Medical Center',
+                    'Other' => 'Other'
+                ),
+                'default'    => '', // This is the default selected option. Leave blank for none.
+            ),
+        ),
+    );
+
+    $other_organization_atts = array(
+		'title'    => 'Other Organization',         // Change this to a name which applies to your project.
+		'id'       => 'other_organization',           // Change this so it is unique to you project.
+		'context'  => 'normal',
+		'priority' => 'core',
+		'fields'   => array(
+			array(
+				'name'       => 'other organization', // Change this field name to something which applies to you project.
+				'show_label' => TRUE,         // Whether or not to display the 'name'. Changing it to false will suppress the name.
+				'id'         => 'other_organization',   // Change this so it is unique to you project. Each field id MUST be unique.
+				'type'       => 'text',       // This is the field type being added.
+				'size'       => 'regular',    // This can be changed to one of the following: 'small', 'regular', 'large'
+			),
+		),
+	);
+
+    // Role
 	$role_atts = array(
         'title'    => 'Role in HuBMAP', // Change this to a name which applies to your project.
         'id'       => 'role', // Change this so it is unique to you project.
