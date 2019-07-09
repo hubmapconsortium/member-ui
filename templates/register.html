@@ -126,7 +126,7 @@
             // Clear the url
             $('#id_photo_url').val('');
             // Reset thumbnail
-            $('#profile_picture').attr('src', "{{ url_for('static', filename = 'images/default_profile.jpg') }}");
+            $('#profile_picture').attr('src', "{{ url_for('static', filename = 'images/default_profile.png') }}");
         });
         $('#profile_pic_option_url').click(function() {
             $("#pic_upload").hide();
@@ -134,7 +134,7 @@
             // Clear file
             $('#id_photo').val('');
             // Reset thumbnail
-            $('#profile_picture').attr('src', "{{ url_for('static', filename = 'images/default_profile.jpg') }}");
+            $('#profile_picture').attr('src', "{{ url_for('static', filename = 'images/default_profile.png') }}");
         });
         $('#profile_pic_option_default').click(function() {
             $("#pic_upload").hide();
@@ -143,7 +143,7 @@
             $('#id_photo').val('');
             $('#id_photo_url').val('');
             // Reset thumbnail
-            $('#profile_picture').attr('src', "{{ url_for('static', filename = 'images/default_profile.jpg') }}");
+            $('#profile_picture').attr('src', "{{ url_for('static', filename = 'images/default_profile.png') }}");
         });
 
         function readURL(input) {
@@ -169,7 +169,7 @@
             readURL(this);
         });
         $("#id_photo_url").keyup(delay(function(e) {
-            $('#profile_picture').attr('src', "{{ url_for('static', filename = 'images/default_profile.jpg') }}");
+            $('#profile_picture').attr('src', "{{ url_for('static', filename = 'images/default_profile.png') }}");
             $('#profile_picture').attr('src', e.target.value);
         }, 500));
 
@@ -413,7 +413,7 @@
                         
                         <div class="row mb-3">
                             <div class="col-xs-12 col-sm-3">
-                                <img src="{{ url_for('static', filename='images/default_profile.jpg') }}" alt="Profile image" width="200" height="200" class="img-thumbnail" id="profile_picture">
+                                <img src="{{ url_for('static', filename='images/default_profile.png') }}" alt="Profile image" width="200" height="200" class="img-thumbnail" id="profile_picture">
                             </div>
                             <div class="col-xs-12 col-sm-9">
                                 <label for="file">Profile Picture: </label>

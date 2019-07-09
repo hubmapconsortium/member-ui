@@ -532,8 +532,8 @@ def handle_stage_user_profile_pic(user_info, profile_pic_option, img_to_upload):
         img_file.save(save_path)
     else:
         # Use default image
-        save_path = os.path.join(app.config['STAGE_USER_IMAGE_DIR'], secure_filename(f"{user_info['globus_user_id']}.jpg"))
-        copyfile(os.path.join(app.root_path, 'static', 'images', 'default_profile.jpg'), save_path)
+        save_path = os.path.join(app.config['STAGE_USER_IMAGE_DIR'], secure_filename(f"{user_info['globus_user_id']}.png"))
+        copyfile(os.path.join(app.root_path, 'static', 'images', 'default_profile.png'), save_path)
 
     return save_path
 
@@ -558,8 +558,8 @@ def update_user_profile_pic(user_info, profile_pic_option, img_to_upload, image_
         img_file.save(save_path)
     else:
         # Use default image
-        save_path = os.path.join(image_dir, secure_filename(f"{user_info['globus_user_id']}.jpg"))
-        copyfile(os.path.join(app.root_path, 'static', 'images', 'default_profile.jpg'), save_path)
+        save_path = os.path.join(image_dir, secure_filename(f"{user_info['globus_user_id']}.png"))
+        copyfile(os.path.join(app.root_path, 'static', 'images', 'default_profile.png'), save_path)
 
     return save_path
 
@@ -944,7 +944,7 @@ def edit_connection(user_obj, wp_user, connection, new_user = False):
         connection.department = user_obj.other_component
     else:
         connection.department = user_obj.component
-        
+
     # Pass in the connection.id to decide if the user has updated first/last name which resuling a new slug with number
     connection.slug = unique_connection_slug(user_obj.first_name, user_obj.last_name, connection.id)
     connection.bio = user_obj.expertise
