@@ -334,6 +334,7 @@
     <div class="col-sm-12">
         <form id="registration-form" method="POST" action="/profile" enctype="multipart/form-data">
 			<input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+            <input type="hidden" name="connection_id" value="{{ data.connection_id }}">
 
             <div class="row">
                 <div class="col">

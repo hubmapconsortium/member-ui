@@ -486,15 +486,17 @@ def add_new_stage_user(user_info, profile_pic_option, img_to_upload):
 # Given a new user's first name and last name, get the unique slug name for `wp_connections`
 # Expecially useful when multiple users have the same names: joe-smith, joe-smith-1, joe-smith-2
 # The connections plugin uses slug as image folder name in cconnection-images   
-def unique_connection_slug(first_name, last_name):
+def unique_connection_slug(first_name, last_name, connection_id = None):
     first_name = first_name.lower()
     last_name = last_name.lower()
     slug = first_name + '-' + last_name
 
-    connections = Connection.query.filter(db.func.lower(Connection.first_name) == first_name, db.func.lower(Connection.last_name) == last_name)
-    
-    if connections.count() > 0:
-        slug = first_name + '-' + last_name + '-' + str(connections.count())
+    if connection_id:
+        # Filter conditions: different connection ID but the same first/last name
+        # Meaning the same user won't get a new slug
+        connections = Connection.query.filter(Connection.id != connection_id, db.func.lower(Connection.first_name) == first_name, db.func.lower(Connection.last_name) == last_name)
+        if connections.count() > 0:
+            slug = first_name + '-' + last_name + '-' + str(connections.count())
 
     return slug
 
@@ -563,15 +565,10 @@ def update_user_profile_pic(user_info, profile_pic_option, img_to_upload, image_
     return save_path
 
 # Update user profile with user-provided information 
-def update_user_profile(user_info, profile_pic_option, img_to_upload):
+def update_user_profile(connection_id, user_info, profile_pic_option, img_to_upload):
     # First get the exisiting wp_user record with globus id
     # this has no connection data
     wp_user = get_wp_user(session['globus_user_id'])
-
-    # Get the connection and meta data record by globus id
-    result = get_user_profile(session['globus_user_id'])
-
-    connection_id = result['connection'][0]['id']
 
     # Get connection profile by connection id
     connection_profile = get_connection_profile(connection_id)
@@ -580,15 +577,20 @@ def update_user_profile(user_info, profile_pic_option, img_to_upload):
     # We need to copy old dir to the new image directory
     # There won't be an existing dir due to unique_connection_slug()
     # Copy old image to new image dir if user changed first/last name, AKA new unique slug name
-    scoure_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection_profile.slug)
-    target_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], unique_connection_slug(user_info['first_name'], user_info['last_name']))
-    if scoure_image_dir != target_image_dir:
-        # Recursively move an entire directory tree rooted at src to target
-        move(scoure_image_dir, target_image_dir)
+    current_slug = connection_profile.slug
+    new_slug = unique_connection_slug(user_info['first_name'], user_info['last_name'], connection_id)
+    
+    current_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], current_slug)
+    new_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], new_slug)
 
-    # Handle the profile image and save/copy it to target directory
-    # Do nothing if user wants to keep the exisiting image
-    user_info['photo'] = update_user_profile_pic(user_info, profile_pic_option, img_to_upload, scoure_image_dir)
+    if new_slug != current_slug:
+        # Recursively move an entire directory tree rooted at current dir to new dir
+        move(current_image_dir, new_image_dir)
+        # Handle the profile image and save/copy it to new dir
+        # Do nothing if user wants to keep the exisiting image
+        user_info['photo'] = update_user_profile_pic(user_info, profile_pic_option, img_to_upload, new_image_dir)
+    else:
+        user_info['photo'] = update_user_profile_pic(user_info, profile_pic_option, img_to_upload, current_image_dir)
 
     # Convert the user_info dict into object via StageUser() model
     # So edit_connection() can be reused for approcing new user by editing matched and updating exisiting approved user
@@ -627,18 +629,17 @@ def approve_stage_user_by_editing_matched(stage_user_obj, connection_profile):
     if not wp_user:
         # Create new user and meta
         new_wp_user = create_new_user(stage_user_obj)
-
+        db.session.add(new_wp_user)
         # Edit profile in `wp_connections`
         edit_connection(stage_user_obj, new_wp_user, connection_profile, True)
-        db.session.add(new_wp_user)
-        db.session.delete(stage_user_obj)
-        db.session.commit()
+        
     else:
-        # Also need to update the `wp_users` record
+        # Update the `wp_users` record
         edit_wp_user(stage_user_obj)
         edit_connection(stage_user_obj, wp_user, connection_profile, True)
-        db.session.delete(stage_user_obj)
-        db.session.commit()
+
+    db.session.delete(stage_user_obj)
+    db.session.commit()
 
 
 # Edit the exisiting wp_user role as "member"
@@ -704,7 +705,8 @@ def create_new_connection(stage_user_obj, new_wp_user):
     connection.date_added = str(datetime.today().timestamp())
     connection.entry_type = 'individual'
     connection.visibility = 'public'
-    connection.slug = unique_connection_slug(stage_user_obj.first_name, stage_user_obj.last_name)
+    # slug for new user doesn't require connection ID
+    connection.slug = unique_connection_slug(stage_user_obj.first_name, stage_user_obj.last_name, None)
     connection.family_name = ''
     connection.honorific_prefix = ''
     connection.middle_name = ''
@@ -908,7 +910,8 @@ def edit_connection(user_obj, wp_user, connection, new_user = False):
     connection.first_name = user_obj.first_name
     connection.last_name = user_obj.last_name
     connection.organization = user_obj.organization
-    connection.slug = unique_connection_slug(user_obj.first_name, user_obj.last_name)
+    # Pass in the connection.id to decide if the user has updated first/last name which resuling a new slug with number
+    connection.slug = unique_connection_slug(user_obj.first_name, user_obj.last_name, connection.id)
     connection.bio = user_obj.expertise
     connection.edited_by = admin_id
 
@@ -1395,10 +1398,12 @@ def profile():
                 return show_user_error("Oops! Invalid CSRF token!")
             else:
                 user_info, profile_pic_option, img_to_upload = construct_user(request)
+                # Also get the connection_id
+                connection_id = request.form['connection_id']
                 
                 try:
                     # Update user profile in database
-                    update_user_profile(user_info, profile_pic_option, img_to_upload)
+                    update_user_profile(connection_id, user_info, profile_pic_option, img_to_upload)
                 except Exception as e: 
                     print("Failed to update user profile!")
                     print(e)
@@ -1465,6 +1470,7 @@ def profile():
                 'isAuthenticated': True,
                 'username': session['name'],
                 'csrf_token': generate_csrf_token(),
+                'connection_id': connection_data['id'],
                 'profile_pic_url': json.loads(connection_data['options'])['image']['meta']['original']['url']
             }
             
