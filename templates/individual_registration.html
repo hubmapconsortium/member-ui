@@ -19,8 +19,19 @@ Last name: {{ data.stage_user.last_name }} <br />
 Email: {{ data.stage_user.email }} <br />
 
 Component: {{ data.stage_user.component }} <br />
+{% if data.stage_user.other_component %}
+Other Component: {{ data.stage_user.other_component }} <br />
+{% endif %}
+
 Organization: {{ data.stage_user.organization }} <br />
+{% if data.stage_user.other_organization %}
+Other Rrganization: {{ data.stage_user.other_organization }} <br />
+{% endif %}
+
 Role: {{ data.stage_user.role }}<br />
+{% if data.stage_user.other_role %}
+Other Role: {{ data.stage_user.other_role }} <br />
+{% endif %}
 
 <br />
 Working group(s): <br />

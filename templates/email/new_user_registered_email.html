@@ -4,8 +4,19 @@ Name: {{ data['first_name'] }} {{ data['last_name'] }} <br />
 Email: {{ data['email'] }} <br />
 
 Component: {{ data['component'] }} <br />
+{% if data['other_component'] %}
+Other Component: {{ data['other_component'] }} <br />
+{% endif %}
+
 Organization: {{ data['organization'] }} <br />
+{% if data['other_organization'] %}
+Other Rrganization: {{ data['other_organization'] }} <br />
+{% endif %}
+
 Role: {{ data['role'] }}<br />
+{% if data['other_role'] %}
+Other Role: {{ data['other_role'] }} <br />
+{% endif %}
 
 <br />
 Working group(s): <br />
