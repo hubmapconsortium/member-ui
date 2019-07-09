@@ -423,6 +423,10 @@ function cn_register_custom_metabox_and_text_field() {
 		),
 	);
  
+    cnMetaboxAPI::add( $component_atts );
+    cnMetaboxAPI::add( $other_component_atts);
+    cnMetaboxAPI::add( $organization_atts );
+    cnMetaboxAPI::add( $other_organization_atts);
     cnMetaboxAPI::add( $role_atts );
     cnMetaboxAPI::add( $other_role_atts);
 	cnMetaboxAPI::add( $wg_atts );
