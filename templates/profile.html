@@ -105,6 +105,12 @@
             $("#slack-username").toggle(this.checked);
         });
         
+        id = $("#id_component").children("option:selected").val();
+        if(id==='Other'){ // other selected
+            $(".oth-cmpnt").show();
+        } else {
+            $(".oth-cmpnt").hide();
+        }
         id = $('#id_organization').children("option:selected").val();
         if(id==='Other'){ // other selected
             $(".oth-org").show();
