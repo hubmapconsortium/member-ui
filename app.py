@@ -538,12 +538,11 @@ def handle_stage_user_profile_pic(user_info, profile_pic_option, img_to_upload):
     return save_path
 
 # Save the profile image to target dir directly per user, no need to use stage image dir 
-def update_user_profile_pic(user_info, profile_pic_option, img_to_upload, image_dir):
+def update_user_profile_pic(user_info, profile_pic_option, img_to_upload, image_dir, current_image_filename):
     save_path = ''
-    
+
     if profile_pic_option == 'existing':
-        # No need to change the exisiting image on file system and the database (connection.options), leave it empty
-        save_path = ''
+        save_path = os.path.join(image_dir, current_image_filename)
     elif profile_pic_option == 'upload':
         _, extension = img_to_upload.filename.rsplit('.', 1)
         img_file = img_to_upload
@@ -579,19 +578,21 @@ def update_user_profile(connection_id, user_info, profile_pic_option, img_to_upl
     # Copy old image to new image dir if user changed first/last name, AKA new unique slug name
     current_slug = connection_profile.slug
     new_slug = unique_connection_slug(user_info['first_name'], user_info['last_name'], connection_id)
-    
+
     current_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], current_slug)
     new_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], new_slug)
 
+    current_image_path = json.loads(connection_profile.options)['image']['meta']['original']['path']
+    current_image_filename = current_image_path.split('/')[-1]
+
+    # Handle the profile image and save/copy it to new dir
     if new_slug != current_slug:
         # Recursively move an entire directory tree rooted at current dir to new dir
         move(current_image_dir, new_image_dir)
-        # Handle the profile image and save/copy it to new dir
-        # Do nothing if user wants to keep the exisiting image
-        user_info['photo'] = update_user_profile_pic(user_info, profile_pic_option, img_to_upload, new_image_dir)
+        user_info['photo'] = update_user_profile_pic(user_info, profile_pic_option, img_to_upload, new_image_dir, current_image_filename)
     else:
-        user_info['photo'] = update_user_profile_pic(user_info, profile_pic_option, img_to_upload, current_image_dir)
-
+        user_info['photo'] = update_user_profile_pic(user_info, profile_pic_option, img_to_upload, current_image_dir, current_image_filename)
+        
     # Convert the user_info dict into object via StageUser() model
     # So edit_connection() can be reused for approcing new user by editing matched and updating exisiting approved user
     user_obj = StageUser(user_info)
@@ -916,40 +917,39 @@ def edit_connection(user_obj, wp_user, connection, new_user = False):
     connection.edited_by = admin_id
 
     # Handle profile image
-    # user_obj.photo is the image file path when pic option is not "existing" (One of "default", "upload", or "url")
-    # Otherwise, no need to make changes to the profile image if reusing "existing", in which case user_obj.photo == ""
-    if user_obj.photo != "":
-        photo_file_name = user_obj.photo.split('/')[-1]
+    # user_obj.photo is the image file path when pic option is (One of "existing", "default", "upload", or "url")
+    # It's possible the user has changed first/last name, resulting a new slug with number
+    # In this special case, if the user chose to reuse "exisiting" image, we'll also need to update the image path and url in connection.options in database
+    photo_file_name = user_obj.photo.split('/')[-1]
 
-        # Profile update for an approved user doesn't need to mkdir and copy image
-        # Approving a new user by editing an exisiting profile requires to mkdir and copy the image
-        target_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug)
-        if new_user:
-            pathlib.Path(target_image_dir).mkdir(parents=True, exist_ok=True)
-            copyfile(user_obj.photo, os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug , photo_file_name))
-            # Delete stage image file
-            os.unlink(user_obj.photo)
-        else:
-            # For existing profile image update, remove all the old images and leave the new one there
-            # since the one image has already been copied there
-            for file in os.listdir(target_image_dir):
-                file_path = os.path.join(target_image_dir, file)
-                
-                if os.path.isfile(file_path) and (file_path != user_obj.photo):
-                    try:
-                        os.unlink(file_path)
-                    except Exception as e:
-                        print("Failed to empty the profile image folder: " + target_image_dir)
-                        print(e)
+    # Profile update for an approved user doesn't need to mkdir and copy image
+    # Approving a new user by editing an exisiting profile requires to mkdir and copy the image
+    target_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug)
+    if new_user:
+        pathlib.Path(target_image_dir).mkdir(parents=True, exist_ok=True)
+        copyfile(user_obj.photo, os.path.join(target_image_dir, photo_file_name))
+        # Delete stage image file
+        os.unlink(user_obj.photo)
+    else:
+        # For existing profile image update, remove all the old images and leave the new one there
+        # since the one image has already been copied there
+        for file in os.listdir(target_image_dir):
+            file_path = os.path.join(target_image_dir, file)
+            
+            if os.path.isfile(file_path) and (file_path != user_obj.photo):
+                try:
+                    os.unlink(file_path)
+                except Exception as e:
+                    print("Failed to empty the profile image folder: " + target_image_dir)
+                    print(e)
 
-        # Get the MIME type of image
-        image = Image.open(os.path.join(target_image_dir, photo_file_name))
-        content_type = Image.MIME[image.format]
+    # Get the MIME type of image
+    image = Image.open(os.path.join(target_image_dir, photo_file_name))
+    content_type = Image.MIME[image.format]
 
-        image_path = app.config['CONNECTION_IMAGE_DIR'] + "/" + connection.slug + "/" + photo_file_name
-        image_url = app.config['CONNECTION_IMAGE_URL'] + "/" + connection.slug + "/" + photo_file_name
-        connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + image_path + "\",\"url\": \"" + image_url + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"" + content_type + "\",\"type\":2}}}}"
-
+    image_path = app.config['CONNECTION_IMAGE_DIR'] + "/" + connection.slug + "/" + photo_file_name
+    image_url = app.config['CONNECTION_IMAGE_URL'] + "/" + connection.slug + "/" + photo_file_name
+    connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + image_path + "\",\"url\": \"" + image_url + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"" + content_type + "\",\"type\":2}}}}"
 
     # Update corresponding metas
     connection_meta_component = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'component', ConnectionMeta.entry_id == connection.id).first()
