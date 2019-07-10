@@ -16,7 +16,7 @@ function cn_register_custom_metabox_and_text_field() {
                 'type'       => 'select',  // This is the field type being added.
                 'options'    => array(
                     'HIVE IEC - Carnegie Mellon University'   => 'HIVE IEC - Carnegie Mellon University',
-                    'HIVE MC - Indiana University Bloomington'   => '>HIVE MC - Indiana University Bloomington',
+                    'HIVE MC - Indiana University Bloomington'   => 'HIVE MC - Indiana University Bloomington',
                     'HIVE MC - New York Genome Center' => 'HIVE MC - New York Genome Center',
                     'HIVE TC - Carnegie Mellon University'  => 'HIVE TC - Carnegie Mellon University',
                     'HIVE TC - Harvard Medical School'  => 'HIVE TC - Harvard Medical School',
