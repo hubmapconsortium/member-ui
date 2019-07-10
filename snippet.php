@@ -141,7 +141,7 @@ function cn_register_custom_metabox_and_text_field() {
                 'options'    => array(
                     'Administrative Assistant'   => 'Administrative Assistant',
                     'Agreement Specialist'   => 'Agreement Specialist',
-                    'co-investigator' => 'Co-investigator',
+                    'co-Investigator' => 'Co-investigator',
                     'Complicance Officer'  => 'Complicance Officer',
                     'Computer Scientist'  => 'Computer Scientist',
 					'Data Analysis Core' => 'Data Analysis Core',
