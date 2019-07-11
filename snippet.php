@@ -20,7 +20,7 @@ function cn_register_custom_metabox_and_text_field() {
                     'HIVE MC - New York Genome Center' => 'HIVE MC - New York Genome Center',
                     'HIVE TC - Carnegie Mellon University'  => 'HIVE TC - Carnegie Mellon University',
                     'HIVE TC - Harvard Medical School'  => 'HIVE TC - Harvard Medical School',
-					'NIH' => 'NIH',
+					'NIH - National Institutes of Health' => 'NIH - National Institutes of Health',
 					'TMC - California Institute of Technology' => 'TMC - California Institute of Technology',
 					'TMC - Stanford University' => 'TMC - Stanford University',
 					'TMC - University of California, San Diego' => 'TMC - University of California, San Diego',
