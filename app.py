@@ -927,23 +927,12 @@ def edit_connection(user_obj, wp_user, connection, new_user = False):
     
     connection.first_name = user_obj.first_name
     connection.last_name = user_obj.last_name
+
     
-    # Organization, Component, Role have meta fileds due to the fact of "Other"
-    # We need the meta fileds to show "Other" in registration/profile system
-    if user_obj.organization == 'Other':
-        connection.organization = user_obj.other_organization
-    else:
-        connection.organization = user_obj.organization
-    # Note: we put role as title value for wordpress display purposes only
-    if user_obj.role == 'Other':
-        connection.title = user_obj.other_role
-    else:
-        connection.title = user_obj.role
-    # Note: we put award/component as the department value just for wordpress display purposes only
-    if user_obj.component == 'Other':
-        connection.department = user_obj.other_component
-    else:
-        connection.department = user_obj.component
+    connection.department = user_obj.component
+    connection.organization = user_obj.organization
+    connection.title = user_obj.role
+    
 
     # Pass in the connection.id to decide if the user has updated first/last name which resuling a new slug with number
     connection.slug = unique_connection_slug(user_obj.first_name, user_obj.last_name, connection.id)
