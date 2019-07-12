@@ -1469,15 +1469,18 @@ def profile():
             # Parsing the json(from schema dump) to get initial user profile data
             connection_data = wp_user['connection'][0]
             initial_data = {
+                # Data pulled from the `wp_connections` table
                 'first_name': connection_data['first_name'],
                 'last_name': connection_data['last_name'],
+                'component': connection_data['department'], # Store the component value in department field
+                'organization': connection_data['organization'], 
+                'role': connection_data['title'], # Store the role value in title field
+                # email is pulled from the `wp_users` table that is linked with Globus login
                 'email': wp_user['user_email'],
+                # Values pulled from `wp_connections_meta` table as customized fileds
                 'phone': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'phone'), {'meta_value': ''})['meta_value'],
-                'component': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'component'), {'meta_value': ''})['meta_value'],
                 'other_component': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'other_component'), {'meta_value': ''})['meta_value'],
-                'organization': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'organization'), {'meta_value': ''})['meta_value'],
                 'other_organization': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'other_organization'), {'meta_value': ''})['meta_value'],
-                'role': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'role'), {'meta_value': ''})['meta_value'],
                 'other_role': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'other_role'), {'meta_value': ''})['meta_value'],
                 'working_group': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'working_group'), {'meta_value': ''})['meta_value'],
                 'access_requests': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'access_requests'), {'meta_value': ''})['meta_value'],
