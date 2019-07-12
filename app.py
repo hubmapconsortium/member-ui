@@ -1471,9 +1471,7 @@ def profile():
             initial_data = {
                 'first_name': connection_data['first_name'],
                 'last_name': connection_data['last_name'],
-                #'email': connection_data['email'],
                 'email': wp_user['user_email'],
-                #'phone': phpserialize.loads(connection_data['phone_numbers'].encode())[0][b'number'].decode(),
                 'phone': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'phone'), {'meta_value': ''})['meta_value'],
                 'component': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'component'), {'meta_value': ''})['meta_value'],
                 'other_component': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'other_component'), {'meta_value': ''})['meta_value'],
