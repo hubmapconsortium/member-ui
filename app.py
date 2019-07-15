@@ -434,7 +434,7 @@ def user_is_approved(globus_user_id):
     result = wp_users_schema.dump(users)
     user = result[0][0]
     capabilities = next((meta for meta in user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
-    if (('meta_value' in capabilities) and ('member' in capabilities['meta_value'])):
+    if (('meta_value' in capabilities) and ('member' in capabilities['meta_value'] or 'administrator' in capabilities['meta_value'])):
         return True
     else:
         return False
