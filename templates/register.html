@@ -184,14 +184,14 @@
                 $("div.pm-email").hide();
             }
         });
-        $("#id_expertise").keyup(function() {
+        $("#id_bio").keyup(function() {
             if($(this).val().length > biography_length_limit) {
-                $("#id_expertise").nextAll().remove();
-                $("#id_expertise").addClass('is-invalid');
-                $("#id_expertise").after("<div class='invalid-feedback'>Biography is too long. Please limit the length to " + biography_length_limit + " characters.</div>");
+                $("#id_bio").nextAll().remove();
+                $("#id_bio").addClass('is-invalid');
+                $("#id_bio").after("<div class='invalid-feedback'>Biography is too long. Please limit the length to " + biography_length_limit + " characters.</div>");
             } else {
-                $("#id_expertise").removeClass('is-invalid');
-                $("#id_expertise").nextAll().remove();
+                $("#id_bio").removeClass('is-invalid');
+                $("#id_bio").nextAll().remove();
             }
         })
         
@@ -279,10 +279,10 @@
                 $("#id_slack_username").addClass('is-invalid');
                 $("#id_slack_username").after("<div class='invalid-feedback'>Slack username is required.</div>");
             }
-            if($("#id_expertise").val().length > biography_length_limit){
+            if($("#id_bio").val().length > biography_length_limit){
                 valid = false;
-                $("#id_expertise").addClass('is-invalid');
-                $("#id_expertise").after("<div class='invalid-feedback'>Biography is too long. Please limit the length to " + biography_length_limit + " characters.</div>");
+                $("#id_bio").addClass('is-invalid');
+                $("#id_bio").after("<div class='invalid-feedback'>Biography is too long. Please limit the length to " + biography_length_limit + " characters.</div>");
             }
             if($("#id_pm_0").is(':checked') && $.trim($("#id_pm_name").val()) === ''){
                 valid = false;
@@ -572,8 +572,8 @@
 
                         
                         <div class="form-group">
-                            <label for="expertise">Biography: Please provide any biographical information that you'd like to share. This information may be shared publicly.</label>
-                            <textarea name="expertise" cols="40" rows="6" class="form-control" id="id_expertise">
+                            <label for="bio">Biography: Please provide any biographical information that you'd like to share. This information may be shared publicly.</label>
+                            <textarea name="bio" cols="40" rows="6" class="form-control" id="id_bio">
 </textarea>
                         </div>
                         <div class="form-group">
