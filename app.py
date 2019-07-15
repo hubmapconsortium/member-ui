@@ -114,7 +114,7 @@ class StageUserSchema(ma.Schema):
     class Meta:
         fields = ('id', 'globus_user_id', 'email', 'first_name', 'last_name', 'component', 'other_component', 'organization', 'other_organization',
                     'role', 'other_role', 'working_group', 'photo', 'photo_url', 'access_requests', 'google_email', 'github_username', 'slack_username', 'phone', 'website',
-                    'orcid', 'pm', 'pm_name', 'pm_email', 'created_at', 'deny')
+                    'bio', 'orcid', 'pm', 'pm_name', 'pm_email', 'created_at', 'deny')
 
 # WPUserMeta Class/Model
 class WPUserMeta(db.Model):
@@ -1454,20 +1454,20 @@ def profile():
                 # email is pulled from the `wp_users` table that is linked with Globus login
                 'email': wp_user['user_email'],
                 # Values pulled from `wp_connections_meta` table as customized fileds
-                'phone': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'phone'), {'meta_value': ''})['meta_value'],
-                'other_component': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'other_component'), {'meta_value': ''})['meta_value'],
-                'other_organization': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'other_organization'), {'meta_value': ''})['meta_value'],
-                'other_role': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'other_role'), {'meta_value': ''})['meta_value'],
-                'working_group': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'working_group'), {'meta_value': ''})['meta_value'],
-                'access_requests': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'access_requests'), {'meta_value': ''})['meta_value'],
-                'google_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'google_email'), {'meta_value': ''})['meta_value'],
-                'github_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'github_username'), {'meta_value': ''})['meta_value'],
-                'slack_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'slack_username'), {'meta_value': ''})['meta_value'],
-                'website': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'website'), {'meta_value': ''})['meta_value'],
-                'orcid': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'orcid'), {'meta_value': ''})['meta_value'],
-                'pm': 'Yes' if next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'pm'), {'meta_value': ''})['meta_value'] == '1' else 'No',
-                'pm_name': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'pm_name'), {'meta_value': ''})['meta_value'],
-                'pm_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'pm_email'), {'meta_value': ''})['meta_value'],
+                'phone': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_phone'), {'meta_value': ''})['meta_value'],
+                'other_component': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_other_component'), {'meta_value': ''})['meta_value'],
+                'other_organization': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_other_organization'), {'meta_value': ''})['meta_value'],
+                'other_role': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_other_role'), {'meta_value': ''})['meta_value'],
+                'working_group': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_working_group'), {'meta_value': ''})['meta_value'],
+                'access_requests': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_access_requests'), {'meta_value': ''})['meta_value'],
+                'google_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_google_email'), {'meta_value': ''})['meta_value'],
+                'github_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_github_username'), {'meta_value': ''})['meta_value'],
+                'slack_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_slack_username'), {'meta_value': ''})['meta_value'],
+                'website': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_website'), {'meta_value': ''})['meta_value'],
+                'orcid': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_orcid'), {'meta_value': ''})['meta_value'],
+                'pm': 'Yes' if next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_pm'), {'meta_value': ''})['meta_value'] == '1' else 'No',
+                'pm_name': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_pm_name'), {'meta_value': ''})['meta_value'],
+                'pm_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_pm_email'), {'meta_value': ''})['meta_value'],
             }
 
             # Convert string representation to dict
