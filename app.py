@@ -1094,7 +1094,7 @@ def edit_connection(user_obj, wp_user, connection, new_user = False):
     else:
         connection_meta_pm_name = ConnectionMeta()
         connection_meta_pm_name.meta_key = 'hm_pm_name'
-        connection_meta_pm_name.meta_value = stage_user.pm_name
+        connection_meta_pm_name.meta_value = user_obj.pm_name
         connection.metas.append(connection_meta_pm_name)
 
     connection_meta_pm_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_pm_email', ConnectionMeta.entry_id == connection.id).first()
