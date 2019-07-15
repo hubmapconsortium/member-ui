@@ -17,6 +17,7 @@
 First name: {{ data.stage_user.first_name }} <br />
 Last name: {{ data.stage_user.last_name }} <br />
 Email: {{ data.stage_user.email }} <br />
+Phone: {{ data.stage_user.phone }} <br />
 
 Component: {{ data.stage_user.component }} <br />
 {% if data.stage_user.other_component %}
@@ -33,6 +34,7 @@ Role: {{ data.stage_user.role }}<br />
 Other Role: {{ data.stage_user.other_role }} <br />
 {% endif %}
 
+{#
 <br />
 Working group(s): <br />
 <ul>
@@ -40,6 +42,7 @@ Working group(s): <br />
 <li>{{ grp }} </li>
 {% endfor %}
 </ul>
+#}
 
 <br />
 HuBMAP service(s) access requested: <br />

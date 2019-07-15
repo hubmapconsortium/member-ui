@@ -2,6 +2,7 @@ HuBMAP new user registered. <br /><br />
 
 Name: {{ data['first_name'] }} {{ data['last_name'] }} <br />
 Email: {{ data['email'] }} <br />
+Phone: {{ data['phone'] }} <br />
 
 Component: {{ data['component'] }} <br />
 {% if data['other_component'] %}
@@ -18,6 +19,7 @@ Role: {{ data['role'] }}<br />
 Other Role: {{ data['other_role'] }} <br />
 {% endif %}
 
+{#
 <br />
 Working group(s): <br />
 <ul>
@@ -25,6 +27,7 @@ Working group(s): <br />
 <li>{{ grp }} </li>
 {% endfor %}
 </ul>
+#}
 
 <br />
 HuBMAP service(s) access requested: <br />

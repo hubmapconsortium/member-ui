@@ -15,7 +15,7 @@ function cn_register_custom_metabox_and_text_field() {
                 'id'         => 'hm_component', // Change this so it is unique to you project. Each field id MUST be unique.
                 'type'       => 'select',  // This is the field type being added.
                 'options'    => array(
-                	'Please Select' => '',
+                	'' => '',
                     'HIVE IEC - Carnegie Mellon University'   => 'HIVE IEC - Carnegie Mellon University',
                     'HIVE MC - Indiana University Bloomington'   => 'HIVE MC - Indiana University Bloomington',
                     'HIVE MC - New York Genome Center' => 'HIVE MC - New York Genome Center',
@@ -67,7 +67,7 @@ function cn_register_custom_metabox_and_text_field() {
                 'id'         => 'hm_organization', // Change this so it is unique to you project. Each field id MUST be unique.
                 'type'       => 'select',  // This is the field type being added.
                 'options'    => array(
-                    'Please Select' => '',
+                    '' => '',
                     'California Institute of Technology'   => 'California Institute of Technology',
                     'Carnegie Mellon University'   => 'Carnegie Mellon University',
                     'Department of Biomedical Informatics (DBMI)/Unversity of Pittsburgh(Pitt)' => 'Department of Biomedical Informatics (DBMI)/Unversity of Pittsburgh(Pitt)',
@@ -141,7 +141,7 @@ function cn_register_custom_metabox_and_text_field() {
                 'id'         => 'hm_role', // Change this so it is unique to you project. Each field id MUST be unique.
                 'type'       => 'select',  // This is the field type being added.
                 'options'    => array(
-                	'Please Select' => '',
+                	'' => '',
                     'Administrative Assistant'   => 'Administrative Assistant',
                     'Agreement Specialist'   => 'Agreement Specialist',
                     'Co-Investigator' => 'Co-Investigator',

@@ -756,17 +756,8 @@ def create_new_connection(stage_user_obj, new_wp_user):
 
     db.session.commit()
 
-    # Need to handle email and phone metas first
-    connection_meta_email = ConnectionMeta()
-    connection_meta_email.meta_key = 'hm_email'
-    connection_meta_email.meta_value = stage_user_obj.email
-    connection.metas.append(connection_meta_email)
-    
-    connection_meta_phone = ConnectionMeta()
-    connection_meta_phone.meta_key = 'hm_phone'
-    connection_meta_phone.meta_value = stage_user_obj.phone
-    connection.metas.append(connection_meta_phone)
-
+    # Then update the rest and add metas
+    # Now get the id for email and phone to compose the email and phone for connections
     connection.email = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:{connection.emails[0].id};s:4:\"type\";s:4:\"work\";s:4:\"name\";s:10:\"Work Email\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:7:\"address\";s:{len(connection.emails[0].address)}:\"{connection.emails[0].address}\";}}}}"
     connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:{connection.phones[0].id};s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(connection.phones[0].number)}:\"{connection.phones[0].number}\";}}}}"
 
@@ -1114,25 +1105,6 @@ def edit_connection(user_obj, wp_user, connection, new_user = False):
         connection_meta_pm_email.meta_value = user_obj.pm_email
         connection.metas.append(connection_meta_pm_email)
 
-    # The email and phone is connections meta are customized fields
-    connection_meta_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_email', ConnectionMeta.entry_id == connection.id).first()
-    if connection_meta_email:
-        connection_meta_email.meta_value = user_obj.email
-    else:
-        connection_meta_email = ConnectionMeta()
-        connection_meta_email.meta_key = 'hm_email'
-        connection_meta_email.meta_value = user_obj.email
-        connection.metas.append(connection_meta_email)
-
-    connection_meta_phone = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_phone', ConnectionMeta.entry_id == connection.id).first()
-    if connection_meta_phone:
-        connection_meta_phone.meta_value = user_obj.phone
-    else:
-        connection_meta_phone = ConnectionMeta()
-        connection_meta_phone.meta_key = 'hm_phone'
-        connection_meta_phone.meta_value = user_obj.phone
-        connection.metas.append(connection_meta_phone)
-
     # Also update the wp_user record
     wp_user.user_login = user_obj.email
     wp_user.user_email = user_obj.email
@@ -1353,7 +1325,7 @@ def register():
                 result = json.loads(response.read().decode())
 
                 # For testing only
-                #result['success'] = True
+                result['success'] = True
 
                 # Currently no backend form validation
                 # Only front end validation and reCAPTCHA
@@ -1443,6 +1415,15 @@ def profile():
 
             # Parsing the json(from schema dump) to get initial user profile data
             connection_data = wp_user['connection'][0]
+
+            # Deserialize the phone number value to a python dict
+            deserilized_phone = ''
+            pprint(connection_data)
+            deserilized_phone_dict = phpserialize.loads(connection_data['phone_numbers'].encode('utf-8'), decode_strings=True)
+            # Add another new property for display only
+            if deserilized_phone_dict:
+                deserilized_phone = (deserilized_phone_dict[0])['number']
+            pprint(deserilized_phone_dict)
             initial_data = {
                 # Data pulled from the `wp_connections` table
                 'first_name': connection_data['first_name'],
@@ -1451,10 +1432,10 @@ def profile():
                 'organization': connection_data['organization'], 
                 'role': connection_data['title'], # Store the role value in title field
                 'bio': connection_data['bio'],
-                # email is pulled from the `wp_users` table that is linked with Globus login
+                # email is pulled from the `wp_users` table that is linked with Globus login so no need to deserialize the wp_connections.email filed
                 'email': wp_user['user_email'],
-                # Values pulled from `wp_connections_meta` table as customized fileds
-                'phone': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_phone'), {'meta_value': ''})['meta_value'],
+                # Other values pulled from `wp_connections_meta` table as customized fileds
+                'phone': deserilized_phone,
                 'other_component': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_other_component'), {'meta_value': ''})['meta_value'],
                 'other_organization': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_other_organization'), {'meta_value': ''})['meta_value'],
                 'other_role': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_other_role'), {'meta_value': ''})['meta_value'],
