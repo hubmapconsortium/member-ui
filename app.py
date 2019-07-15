@@ -212,7 +212,7 @@ class Connection(db.Model):
 # Connection Schema
 class ConnectionSchema(ma.Schema):
     class Meta:
-        fields = ('id', 'email', 'first_name', 'last_name', 'organization', 'options', 'phone_numbers', 'metas')
+        fields = ('id', 'first_name', 'last_name', 'email', 'phone_numbers', 'organization', 'department', 'title', 'bio', 'options', 'metas')
 
     metas = ma.Nested(ConnectionMetaSchema, many=True)
 
@@ -610,11 +610,10 @@ def approve_stage_user_by_creating_new(stage_user):
     if not wp_user:
         # Create new user and meta
         new_wp_user = create_new_user(stage_user)
-
+        # MUST do this before create_new_connection()
+        db.session.add(new_wp_user)
         # Create profile in `wp_connections`
         create_new_connection(stage_user, new_wp_user)
-
-        db.session.add(new_wp_user)
     else:
         edit_wp_user(stage_user)
         create_new_connection(stage_user, wp_user)
@@ -748,6 +747,8 @@ def create_new_connection(stage_user_obj, new_wp_user):
     connection.owner = admin_id
     connection.user = 0
     connection.status = 'approved'
+    
+    # Initial values use empty then update later
     connection.email = ''
     connection.phone_numbers = ''
     connection.options = ''
@@ -1325,7 +1326,7 @@ def register():
                 result = json.loads(response.read().decode())
 
                 # For testing only
-                result['success'] = True
+                #result['success'] = True
 
                 # Currently no backend form validation
                 # Only front end validation and reCAPTCHA
@@ -1411,19 +1412,16 @@ def profile():
                 print(e)
                 return show_user_error("Oops! The system failed to query your profile data!")
 
-            #pprint(wp_user['connection'] )
-
             # Parsing the json(from schema dump) to get initial user profile data
             connection_data = wp_user['connection'][0]
 
             # Deserialize the phone number value to a python dict
             deserilized_phone = ''
-            pprint(connection_data)
             deserilized_phone_dict = phpserialize.loads(connection_data['phone_numbers'].encode('utf-8'), decode_strings=True)
             # Add another new property for display only
             if deserilized_phone_dict:
                 deserilized_phone = (deserilized_phone_dict[0])['number']
-            pprint(deserilized_phone_dict)
+
             initial_data = {
                 # Data pulled from the `wp_connections` table
                 'first_name': connection_data['first_name'],
