@@ -1273,7 +1273,8 @@ def login():
         session['isAuthenticated'] = True
         session['globus_user_id'] = user_info['sub']
         session['name'] = user_info['name']
-        session['email'] = user_info['email']
+        # Normalize email to lowercase
+        session['email'] = user_info['email'].lower()
         session['auth_token'] = auth_token
         session['nexus_token'] = nexus_token
         session['transfer_token'] = transfer_token

@@ -315,9 +315,7 @@
                         <label for="first-name">First Name <span class="text-danger">*</span></label>
                         
                         <input type="text" name="first_name" value="{{ data.first_name }}" class="form-control" maxlength="100" id="id_first_name">
-                        <div class="invalid-feedback">
-                            
-                        </div>
+
                     </div>
                 </div>
                 <div class="col">
@@ -325,9 +323,6 @@
                         <label for="last-name">Last Name <span class="text-danger">*</span></label>
                         
                         <input type="text" name="last_name" value="{{ data.last_name }}" class="form-control" maxlength="100" id="id_last_name">
-                        <div class="invalid-feedback">
-                            
-                        </div>
                     </div>
                 </div>
             </div>
@@ -335,20 +330,15 @@
                 <div class="col">
                     <div class="form-group">
                         <label for="email">Email address <span class="text-danger">*</span></label>
-                        
-                        <input type="email" name="email" value="{{ data.email }}" class="form-control" maxlength="100" id="id_email">
-                        <div class="invalid-feedback">
-                            
-                        </div>
+                        <!-- Disallow edit email since it's used with globus login -->
+                        <input type="email" name="email" value="{{ data.email }}" class="form-control" id="id_email" disabled>
+                        <input type="hidden" name="email" value="{{ data.email }}">
                     </div>
                 </div>
                 <div class="col">
                     <div class="form-group">
                         <label for="phone">Phone number <span class="text-danger">*</span></label>
                         <input type="text" name="phone" class="form-control" maxlength="13" id="id_phone">
-                        <div class="invalid-feedback">
-                            
-                        </div>
                     </div>
                 </div>
             </div>
