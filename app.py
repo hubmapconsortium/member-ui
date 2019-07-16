@@ -1138,6 +1138,15 @@ def get_wp_user(globus_user_id):
     wp_user = WPUser.query.filter(WPUser.id == wp_user_meta.user_id).first()
     return wp_user
 
+# Get a list of connections IDs that are already connected to a user
+def get_linked_connection_ids():
+    users = WPUser.query.filter(WPUser.connection != None).all()
+    connection_ids = list()
+    for user in users:
+        connection_ids.append(user.connection[0].id)
+    
+    return connection_ids
+
 # Find the matching profiles of a given user from the `wp_connections` table
 # Scoring: last_name(6), first_name(4), email(10), organization(2)
 def get_matching_profiles(last_name, first_name, email, organization):
@@ -1146,11 +1155,14 @@ def get_matching_profiles(last_name, first_name, email, organization):
     email_match_score = 10
     organization_match_score = 2
 
+    # Get a list of connections IDs that are already connected to a user
+    connections_ids = get_linked_connection_ids()
+
     # Use user email to search for matching profiles
-    profiles_by_last_name = Connection.query.filter(Connection.last_name.like(f'%{last_name}%')).all()
-    profiles_by_first_name = Connection.query.filter(Connection.first_name.like(f'%{first_name}%')).all()
-    profiles_by_email = Connection.query.filter(Connection.email.like(f'%{email}%')).all()
-    profiles_by_organization = Connection.query.filter(Connection.organization.like(f'%{organization}%')).all()
+    profiles_by_last_name = Connection.query.filter(Connection.id.notin_(connections_ids), Connection.last_name.like(f'%{last_name}%')).all()
+    profiles_by_first_name = Connection.query.filter(Connection.id.notin_(connections_ids), Connection.first_name.like(f'%{first_name}%')).all()
+    profiles_by_email = Connection.query.filter(Connection.id.notin_(connections_ids), Connection.email.like(f'%{email}%')).all()
+    profiles_by_organization = Connection.query.filter(Connection.id.notin_(connections_ids), Connection.organization.like(f'%{organization}%')).all()
     
     # Now merge the above lists into one big list and pass into a set to remove duplicates
     profiles_set = set(profiles_by_last_name + profiles_by_first_name + profiles_by_email + profiles_by_organization)
@@ -1160,7 +1172,6 @@ def get_matching_profiles(last_name, first_name, email, organization):
     filtered_profiles = list()
     if len(profiles_list) > 0:
         for profile in profiles_list:
-            pprint(profile)
             # Add a new aroperty
             profile.score = 0
 
