@@ -1393,10 +1393,10 @@ def profile():
                     return show_user_error("Oops! The system failed to update your profile changes!")
                 else:
                     old_access_requests_dict = {
-                        'access_requests': ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_access_requests', ConnectionMeta.entry_id == connection.id).first(),
-                        'google_email': ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_google_email', ConnectionMeta.entry_id == connection.id).first(),
-                        'github_username': ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_github_username', ConnectionMeta.entry_id == connection.id).first(),
-                        'slack_username': ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_slack_username', ConnectionMeta.entry_id == connection.id).first()
+                        'access_requests': ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_access_requests', ConnectionMeta.entry_id == connection_id).first(),
+                        'google_email': ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_google_email', ConnectionMeta.entry_id == connection_id).first(),
+                        'github_username': ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_github_username', ConnectionMeta.entry_id == connection_id).first(),
+                        'slack_username': ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_slack_username', ConnectionMeta.entry_id == connection_id).first()
                     }
 
                     # Convert list string respresentation to list
