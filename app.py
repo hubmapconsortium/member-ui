@@ -1397,9 +1397,10 @@ def profile():
                 connection_id = request.form['connection_id']
                 
                 # Get this before calling update_user_profile()
+                access_requests_value = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_access_requests', ConnectionMeta.entry_id == connection_id).first().meta_value
                 old_access_requests_dict = {
-                    # Convert list string respresentation to list
-                    'access_requests': ast.literal_eval(ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_access_requests', ConnectionMeta.entry_id == connection_id).first().meta_value),
+                    # Convert list string respresentation to list, if empty string, empty list()
+                    'access_requests': ast.literal_eval(access_requests_value) if (access_requests_value != '') else list(),
                     'google_email': ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_google_email', ConnectionMeta.entry_id == connection_id).first().meta_value,
                     'github_username': ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_github_username', ConnectionMeta.entry_id == connection_id).first().meta_value,
                     'slack_username': ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_slack_username', ConnectionMeta.entry_id == connection_id).first().meta_value
