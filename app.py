@@ -257,9 +257,10 @@ def send_new_user_registered_mail(data):
     mail.send(msg)
 
 # Send email to admins once user profile updated
-def send_user_profile_updated_mail(data):
+# Only email when the access requests has changed
+def send_user_profile_updated_mail(data, old_access_requests_data):
     msg = Message('User profile updated', app.config['MAIL_ADMIN_LIST'])
-    msg.html = render_template('email/user_profile_updated_email.html', data = data)
+    msg.html = render_template('email/user_profile_updated_email.html', data = data, old_access_requests_data = old_access_requests_data)
     mail.send(msg)
 
 # Once admin approves the new user registration, email the new user as well as the admins
@@ -1382,7 +1383,7 @@ def profile():
                 user_info, profile_pic_option, img_to_upload = construct_user(request)
                 # Also get the connection_id
                 connection_id = request.form['connection_id']
-                
+
                 try:
                     # Update user profile in database
                     update_user_profile(connection_id, user_info, profile_pic_option, img_to_upload)
@@ -1391,14 +1392,27 @@ def profile():
                     print(e)
                     return show_user_error("Oops! The system failed to update your profile changes!")
                 else:
-                    try:
-                        # Send email to admin for user profile update
-                        # so the admin can do furtuer changes in globus
-                        send_user_profile_updated_mail(user_info)
-                    except Exception as e: 
-                        print("Failed to send user profile update email to admin.")
-                        print(e)
-                        return show_user_error("Your profile has been updated but the system failed to send confirmation email to admin. No worries, no action needed from you.")
+                    old_access_requests_dict = {
+                        'access_requests': ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_access_requests', ConnectionMeta.entry_id == connection.id).first(),
+                        'google_email': ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_google_email', ConnectionMeta.entry_id == connection.id).first(),
+                        'github_username': ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_github_username', ConnectionMeta.entry_id == connection.id).first(),
+                        'slack_username': ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_slack_username', ConnectionMeta.entry_id == connection.id).first()
+                    }
+
+                    # Convert list string respresentation to list
+                    old_access_requests_list = ast.literal_eval(old_access_requests_dict['access_requests']) 
+                    # Is already a list
+                    new_access_requests_list = user_info['access_requests'] 
+                    # Only email admin when access requests list changed
+                    if new_access_requests_list != old_access_requests_list: 
+                        try:
+                            # Send email to admin for user profile update
+                            # so the admin can do furtuer changes in globus
+                            send_user_profile_updated_mail(user_info, old_access_requests_dict)
+                        except Exception as e: 
+                            print("Failed to send user profile update email to admin.")
+                            print(e)
+                            return show_user_error("Your profile has been updated but the system failed to send confirmation email to admin. No worries, no action needed from you.")
 
                 # Also notify the user
                 return show_user_confirmation("Your profile information has been updated successfully. The admin will handle additional changes to your account as needed.")
