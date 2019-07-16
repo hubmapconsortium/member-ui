@@ -320,11 +320,11 @@ def construct_user(request):
         "role": request.form['role'],
         "other_role": request.form['other_role'],
         # multiple checkboxes
-        "working_group": request.form.getlist('working_group'),
+        "working_group": request.form.getlist('working_group').sort(),
         "photo": '',
         "photo_url": request.form['photo_url'],
         # multiple checkboxes
-        "access_requests": request.form.getlist('access_requests'),
+        "access_requests": request.form.getlist('access_requests').sort(),
         "google_email": request.form['google_email'],
         "github_username": request.form['github_username'],
         "slack_username": request.form['slack_username'],
@@ -1399,7 +1399,7 @@ def profile():
                 # Get this before calling update_user_profile()
                 old_access_requests_dict = {
                     # Convert list string respresentation to list
-                    'access_requests': ast.literal_eval(ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_access_requests', ConnectionMeta.entry_id == connection_id).first().meta_value),
+                    'access_requests': ast.literal_eval(ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_access_requests', ConnectionMeta.entry_id == connection_id).first().meta_value).sort(),
                     'google_email': ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_google_email', ConnectionMeta.entry_id == connection_id).first().meta_value,
                     'github_username': ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_github_username', ConnectionMeta.entry_id == connection_id).first().meta_value,
                     'slack_username': ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_slack_username', ConnectionMeta.entry_id == connection_id).first().meta_value
@@ -1414,7 +1414,7 @@ def profile():
                     return show_user_error("Oops! The system failed to update your profile changes!")
                 else:
                     # Only email admin when access requests list changed
-                    # Compare list to list
+                    # Compare sorted list to list
                     if user_info['access_requests'] != old_access_requests_dict['access_requests']: 
                         try:
                             # Send email to admin for user profile update
