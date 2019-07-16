@@ -817,7 +817,7 @@ def create_new_connection(stage_user_obj, new_wp_user):
     connection.metas.append(connection_meta_other_role)
 
     connection_meta_working_group = ConnectionMeta()
-    connection_meta_working_group.meta_key = 'working_group'
+    connection_meta_working_group.meta_key = 'hm_working_group'
     connection_meta_working_group.meta_value = stage_user_obj.working_group
     connection.metas.append(connection_meta_working_group)
 
