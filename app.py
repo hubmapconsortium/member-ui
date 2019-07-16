@@ -1383,6 +1383,15 @@ def profile():
                 user_info, profile_pic_option, img_to_upload = construct_user(request)
                 # Also get the connection_id
                 connection_id = request.form['connection_id']
+                
+                # Get this before calling update_user_profile()
+                old_access_requests_dict = {
+                    # Convert list string respresentation to list
+                    'access_requests': ast.literal_eval(ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_access_requests', ConnectionMeta.entry_id == connection_id).first().meta_value),
+                    'google_email': ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_google_email', ConnectionMeta.entry_id == connection_id).first().meta_value,
+                    'github_username': ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_github_username', ConnectionMeta.entry_id == connection_id).first().meta_value,
+                    'slack_username': ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_slack_username', ConnectionMeta.entry_id == connection_id).first().meta_value
+                }
 
                 try:
                     # Update user profile in database
@@ -1392,19 +1401,9 @@ def profile():
                     print(e)
                     return show_user_error("Oops! The system failed to update your profile changes!")
                 else:
-                    old_access_requests_dict = {
-                        'access_requests': ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_access_requests', ConnectionMeta.entry_id == connection_id).first(),
-                        'google_email': ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_google_email', ConnectionMeta.entry_id == connection_id).first(),
-                        'github_username': ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_github_username', ConnectionMeta.entry_id == connection_id).first(),
-                        'slack_username': ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_slack_username', ConnectionMeta.entry_id == connection_id).first()
-                    }
-
-                    # Convert list string respresentation to list
-                    old_access_requests_list = ast.literal_eval(old_access_requests_dict['access_requests']) 
-                    # Is already a list
-                    new_access_requests_list = user_info['access_requests'] 
                     # Only email admin when access requests list changed
-                    if new_access_requests_list != old_access_requests_list: 
+                    # Compare list to list
+                    if user_info['access_requests'] != old_access_requests_dict['access_requests']: 
                         try:
                             # Send email to admin for user profile update
                             # so the admin can do furtuer changes in globus

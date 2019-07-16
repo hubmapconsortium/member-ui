@@ -633,7 +633,7 @@ HuBMAP ID System</label>
                                             
                                             {% if data.google_email %}
                                             <input type="email" name="google_email" value="{{ data.google_email }}" class="form-control" maxlength="100" id="id_google_email" disabled>
-                                            <input type="hidden" name="google_email" value="{{ data.google_email }}" class="form-control" maxlength="100" id="id_google_email">
+                                            <input type="hidden" name="google_email" value="{{ data.google_email }}">
                                             {% else %}
                                             <input type="email" name="google_email" value="{{ data.google_email }}" class="form-control" maxlength="100" id="id_google_email">
                                             {% endif %}
@@ -646,9 +646,9 @@ HuBMAP ID System</label>
                                     <div class="col-sm-12">
                                         <div class="form-group form-group-sm" id="github-username">
                                             <label for="github_username">Your GitHub username: <span class="text-danger">*</span></label>
-                                            {% if data.google_email %}
+                                            {% if data.github_username %}
                                             <input type="text" name="github_username" value="{{ data.github_username }}" class="form-control" maxlength="100" id="id_github_username" disabled>
-                                            <input type="hidden" name="github_username" value="{{ data.github_username }}" class="form-control" maxlength="100" id="id_github_username">
+                                            <input type="hidden" name="github_username" value="{{ data.github_username }}">
                                             {% else %}
                                             <input type="text" name="github_username" value="{{ data.github_username }}" class="form-control" maxlength="100" id="id_github_username">
                                             {% endif %}
@@ -661,9 +661,9 @@ HuBMAP ID System</label>
                                     <div class="col-sm-12">
                                         <div class="form-group form-group-sm" id="slack-username">
                                             <label for="slack_username">Your email address for the slack invitation: <span class="text-danger">*</span></label>
-                                            {% if data.google_email %}
+                                            {% if data.slack_username %}
                                             <input type="text" name="slack_username" value="{{ data.slack_username }}" class="form-control" maxlength="100" id="id_slack_username" disabled>
-                                            <input type="hidden" name="slack_username" value="{{ data.slack_username }}" class="form-control" maxlength="100" id="id_slack_username">
+                                            <input type="hidden" name="slack_username" value="{{ data.slack_username }}">
                                             {% else %}
                                             <input type="text" name="slack_username" value="{{ data.slack_username }}" class="form-control" maxlength="100" id="id_slack_username">
                                             {% endif %}
