@@ -134,6 +134,8 @@ No project manager for this user
     
 
 {% if data.matching_profiles|length > 0 %}
+
+{#
 <div class="alert alert-info" role="alert">
 Matching profiles found from `wp_connections` table and sorted by the total matching score. Scoring:
 
@@ -159,6 +161,8 @@ Matching profiles found from `wp_connections` table and sorted by the total matc
 The following results only show total score that is greater than the first name match score (4).
 
 </div>
+#}
+
 <table class="table table-sm">
   <thead>
     <tr>
@@ -167,7 +171,10 @@ The following results only show total score that is greater than the first name 
       <th scope="col">Last Name</th>
       <th scope="col">Email</th>
       <th scope="col">Organization</th>
-      <th scope="col">Match Score</th>
+      <th scope="col">HuBMAP Component</th>
+
+      {#<th scope="col">Match Score</th>#}
+
       <th scope="col">Action</th>
     </tr>
   </thead>
@@ -179,7 +186,10 @@ The following results only show total score that is greater than the first name 
       <td>{{ profile.last_name }}</td>
       <td>{{ profile.deserilized_email }}</td>
       <td>{{ profile.organization }}</td>
-      <td>{{ profile.score }}</td>
+      <td>{{ profile.department }}</td>
+
+      {#<td>{{ profile.score }}</td>#}
+
       <td><button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#approve_by_match_modal_{{ loop.index }}">Approve by using this profile</button></td>
     </tr>
 
