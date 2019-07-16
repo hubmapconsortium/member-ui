@@ -8,7 +8,7 @@
   </ol>
 </nav>
 
-<h1>{{ 'Denied' if data.stage_user.deny else 'New' }} Registration: {{ data.stage_user.first_name }} {{ data.stage_user.last_name }}</h1>
+<h1>{{ 'Denied' if data.stage_user.deny else 'New' }} Registration: {{ data.stage_user.email }}</h1>
 
 <div class="card">
   <h5 class="card-header">Registration Detail</h5>
@@ -163,7 +163,7 @@ The following results only show total score that is greater than the first name 
 </div>
 #}
 
-<table class="table table-sm">
+<table class="table table-sm table-hover">
   <thead>
     <tr>
       <th scope="col">#</th>
