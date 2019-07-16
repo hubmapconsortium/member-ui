@@ -1456,7 +1456,7 @@ def profile():
                 'role': connection_data['title'], # Store the role value in title field
                 'bio': connection_data['bio'],
                 # email is pulled from the `wp_users` table that is linked with Globus login so no need to deserialize the wp_connections.email filed
-                'email': wp_user['user_email'],
+                'email': wp_user['user_email'].lower(),
                 # Other values pulled from `wp_connections_meta` table as customized fileds
                 'phone': deserilized_phone,
                 'other_component': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_other_component'), {'meta_value': ''})['meta_value'],
