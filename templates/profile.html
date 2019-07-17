@@ -105,6 +105,12 @@
             $("#slack-username").toggle(this.checked);
         });
         
+        id = $("#id_component").children("option:selected").val();
+        if(id==='Other'){ // other selected
+            $(".oth-cmpnt").show();
+        } else {
+            $(".oth-cmpnt").hide();
+        }
         id = $('#id_organization').children("option:selected").val();
         if(id==='Other'){ // other selected
             $(".oth-org").show();
@@ -170,7 +176,7 @@
             $('#id_photo').val('');
             $('#id_photo_url').val('');
             // Reset thumbnail
-            $('#profile_picture').attr('src', "{{ url_for('static', filename = 'images/default_profile.jpg') }}");
+            $('#profile_picture').attr('src', "{{ url_for('static', filename = 'images/default_profile.png') }}");
         });
 
         function readURL(input) {
@@ -196,7 +202,7 @@
             readURL(this);
         });
         $("#id_photo_url").keyup(delay(function(e) {
-            $('#profile_picture').attr('src', "{{ url_for('static', filename = 'images/default_profile.jpg') }}");
+            $('#profile_picture').attr('src', "{{ url_for('static', filename = 'images/default_profile.png') }}");
             $('#profile_picture').attr('src', e.target.value);
         }, 500));
         $(":radio[id^='id_pm_']").change(function() {
@@ -210,14 +216,14 @@
                 $("div.pm-email").hide();
             }
         });
-        $("#id_expertise").keyup(function() {
+        $("#id_bio").keyup(function() {
             if($(this).val().length > biography_length_limit) {
-                $("#id_expertise").nextAll().remove();
-                $("#id_expertise").addClass('is-invalid');
-                $("#id_expertise").after("<div class='invalid-feedback'>Biography is too long. Please limit the length to " + biography_length_limit + " characters.</div>");
+                $("#id_bio").nextAll().remove();
+                $("#id_bio").addClass('is-invalid');
+                $("#id_bio").after("<div class='invalid-feedback'>Biography is too long. Please limit the length to " + biography_length_limit + " characters.</div>");
             } else {
-                $("#id_expertise").removeClass('is-invalid');
-                $("#id_expertise").nextAll().remove();
+                $("#id_bio").removeClass('is-invalid');
+                $("#id_bio").nextAll().remove();
             }
         })
         
@@ -305,10 +311,10 @@
                 $("#id_slack_username").addClass('is-invalid');
                 $("#id_slack_username").after("<div class='invalid-feedback'>Slack username is required.</div>");
             }
-            if($("#id_expertise").val().length > biography_length_limit){
+            if($("#id_bio").val().length > biography_length_limit){
                 valid = false;
-                $("#id_expertise").addClass('is-invalid');
-                $("#id_expertise").after("<div class='invalid-feedback'>Biography is too long. Please limit the length to " + biography_length_limit + " characters.</div>");
+                $("#id_bio").addClass('is-invalid');
+                $("#id_bio").after("<div class='invalid-feedback'>Biography is too long. Please limit the length to " + biography_length_limit + " characters.</div>");
             }
             if($("#id_pm_0").is(':checked') && $.trim($("#id_pm_name").val()) === ''){
                 valid = false;
@@ -334,6 +340,7 @@
     <div class="col-sm-12">
         <form id="registration-form" method="POST" action="/profile" enctype="multipart/form-data">
 			<input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+            <input type="hidden" name="connection_id" value="{{ data.connection_id }}">
 
             <div class="row">
                 <div class="col">
@@ -341,9 +348,6 @@
                         <label for="first-name">First Name <span class="text-danger">*</span></label>
                         
                         <input type="text" name="first_name" value="{{ data.first_name }}" class="form-control" maxlength="100" id="id_first_name">
-                        <div class="invalid-feedback">
-                            
-                        </div>
                     </div>
                 </div>
                 <div class="col">
@@ -351,9 +355,6 @@
                         <label for="last-name">Last Name <span class="text-danger">*</span></label>
                         
                         <input type="text" name="last_name" value="{{ data.last_name }}" class="form-control" maxlength="100" id="id_last_name">
-                        <div class="invalid-feedback">
-                            
-                        </div>
                     </div>
                 </div>
             </div>
@@ -361,20 +362,15 @@
                 <div class="col">
                     <div class="form-group">
                         <label for="email">Email address <span class="text-danger">*</span></label>
-                        
-                        <input type="email" name="email" value="{{ data.email }}" class="form-control" maxlength="100" id="id_email">
-                        <div class="invalid-feedback">
-                            
-                        </div>
+                        <!-- Disallow edit email since it's used with globus login -->
+                        <input type="email" name="email" value="{{ data.email }}" class="form-control" id="id_email" disabled>
+                        <input type="hidden" name="email" value="{{ data.email }}">
                     </div>
                 </div>
                 <div class="col">
                     <div class="form-group">
                         <label for="phone">Phone number <span class="text-danger">*</span></label>
                         <input type="text" name="phone" value="{{ data.phone }}"class="form-control" maxlength="13" id="id_phone">
-                        <div class="invalid-feedback">
-                            
-                        </div>
                     </div>
                 </div>
             </div>
@@ -384,18 +380,12 @@
                         <label for="component">Award/component <span class="text-danger">*</span></label>
                         {% include 'component_selection.html' %}
 
-                                    <div class="invalid-feedback">
-                                        
-                                    </div>
                                 </div>
                                 <div class="row">
                                     <div class="col-sm-12">
                                         <div class="form-group oth-cmpnt">
                                             <label for="other_component">Component: What component are you with? <span class="text-danger">*</span></label>
                                             <input type="text" name="other_component" value="{{ data.other_component}}" class="form-control" maxlength="100" id="id_other_component">
-                                            <div class="invalid-feedback">
-                                                
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -404,19 +394,12 @@
                                 <div class="form-group">
                                     <label for="organization">Organization <span class="text-danger">*</span></label>
                                     {% include 'organization_selection.html' %}
-
-                                    <div class="invalid-feedback">
-                                        
-                                    </div>
                                 </div>
                                 <div class="row">
                                     <div class="col-sm-12">
                                         <div class="form-group oth-org">
                                             <label for="other_organization">Organization: What organization are you with? <span class="text-danger">*</span></label>
                                             <input type="text" name="other_organization" value="{{ data.other_organization}}" class="form-control" maxlength="100" id="id_other_organization">
-                                            <div class="invalid-feedback">
-                                                
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -437,18 +420,13 @@
                             <label for="role">Role in HuBMAP <span class="text-danger">*</span></label>
                             {% include 'role_selection.html' %}
 
-                            <div class="invalid-feedback">
-                                
-                            </div>
 </div>
                         <div class="row">
                             <div class="col-sm-12">
                                 <div class="form-group oth-role">
-                                    <label for="other_role">Role: What is your role in HuBMAP?</label>
+                                    <label for="other_role">Role: What is your role in HuBMAP? <span class="text-danger">*</span></label>
                                     <input type="text" name="other_role" value="{{ data.other_role }}" class="form-control" maxlength="100" id="id_other_role">
-                                    <div class="invalid-feedback">
-                                        
-                                    </div>
+                                   
                                 </div>
                             </div>
                         </div>
@@ -500,36 +478,36 @@
                             </div>
                         </div>
 
-                     <div class="row">
-                        <div class="col-sm-12">
-                        <div class="form-group">
-                            <label for="working_group">What HuBMAP working groups are you a member of?</label>
-                            <ul id="id_working_group">
-    <li><label for="id_working_group_0"><input type="checkbox" name="working_group" value="Communications &amp; Engagement" id="id_working_group_0">
- Communications &amp; Engagement</label>
+<!-- Note: disabled currently -->
+{#
+<div class="row">
+<div class="col-sm-12">
+<div class="form-group">
+<label for="working_group">What HuBMAP Working Groups would you like to join?</label>
+<ul id="id_working_group">
+<li><label for="id_working_group_0"><input type="checkbox" name="working_group" value="Communications &amp; Engagement" id="id_working_group_0">
+Communications &amp; Engagement</label>
 
 </li>
-    <li><label for="id_working_group_1"><input type="checkbox" name="working_group" value="Data Science" id="id_working_group_1">
- Data Science</label>
+<li><label for="id_working_group_1"><input type="checkbox" name="working_group" value="Data Science" id="id_working_group_1">
+Data Science</label>
 
 </li>
-    <li><label for="id_working_group_2"><input type="checkbox" name="working_group" value="Policies" id="id_working_group_2">
- Policies</label>
+<li><label for="id_working_group_2"><input type="checkbox" name="working_group" value="Policies" id="id_working_group_2">
+Policies</label>
 
 </li>
-    <li><label for="id_working_group_3"><input type="checkbox" name="working_group" value="Tissue, Technology &amp; Data Collection" id="id_working_group_3">
- Tissue, Technology &amp; Data Collection</label>
+<li><label for="id_working_group_3"><input type="checkbox" name="working_group" value="Tissue, Technology &amp; Data Collection" id="id_working_group_3">
+Tissue, Technology &amp; Data Collection</label>
 
 </li>
-    <li><label for="id_working_group_4"><input type="checkbox" name="working_group" value="Tools &amp; Models" id="id_working_group_4">
- Tools &amp; Models</label>
 
-</li>
 </ul>
-                  
-                        </div>
-                    </div>
-                </div>
+
+</div>
+</div>
+</div>
+#}
 
                         <!-- Note: disabled checkbox will not be posted -->
                         <div class="row mb-2">
@@ -537,7 +515,7 @@
                                 <div class="form-group">
                                     <label for="access_requests">Which HuBMAP resources will you need to access?</label>
                                     <div class="alert alert-warning" role="alert">
-Note: you can't edit resources access we've already approved.
+Note: You can't edit resources that you've been approved to use.
 </div>
                                     <ul id="id_access_requests">
     <li><label for="id_access_requests_0"><input type="checkbox" name="access_requests" value="Collaboration Portal" id="id_access_requests_0" disabled checked>
@@ -557,14 +535,14 @@ Note: you can't edit resources access we've already approved.
 
 </li>
     <li><label for="id_access_requests_2">
-{% if "HuBMAP Data Portal" in data.access_requests %}
-    <input type="checkbox" name="access_requests" value="HuBMAP Data Portal" id="id_access_requests_2" disabled checked />
-    <input type="hidden" name="access_requests" value="HuBMAP Data Portal" />
+{% if "HuBMAP ID System" in data.access_requests %}
+    <input type="checkbox" name="access_requests" value="HuBMAP ID System" id="id_access_requests_2" disabled checked />
+    <input type="hidden" name="access_requests" value="HuBMAP ID System" />
 {% else %}
-    <input type="checkbox" name="access_requests" value="HuBMAP Data Portal" id="id_access_requests_2" />
+    <input type="checkbox" name="access_requests" value="HuBMAP ID System" id="id_access_requests_2" />
 {% endif %}
     
-HuBMAP Data Portal</label>
+HuBMAP ID System</label>
 
 </li>
     <li><label for="id_access_requests_3">
@@ -626,7 +604,7 @@ HuBMAP Data Portal</label>
                                             
                                             {% if data.google_email %}
                                             <input type="email" name="google_email" value="{{ data.google_email }}" class="form-control" maxlength="100" id="id_google_email" disabled>
-                                            <input type="hidden" name="google_email" value="{{ data.google_email }}" class="form-control" maxlength="100" id="id_google_email">
+                                            <input type="hidden" name="google_email" value="{{ data.google_email }}">
                                             {% else %}
                                             <input type="email" name="google_email" value="{{ data.google_email }}" class="form-control" maxlength="100" id="id_google_email">
                                             {% endif %}
@@ -639,9 +617,9 @@ HuBMAP Data Portal</label>
                                     <div class="col-sm-12">
                                         <div class="form-group form-group-sm" id="github-username">
                                             <label for="github_username">Your GitHub username: <span class="text-danger">*</span></label>
-                                            {% if data.google_email %}
+                                            {% if data.github_username %}
                                             <input type="text" name="github_username" value="{{ data.github_username }}" class="form-control" maxlength="100" id="id_github_username" disabled>
-                                            <input type="hidden" name="github_username" value="{{ data.github_username }}" class="form-control" maxlength="100" id="id_github_username">
+                                            <input type="hidden" name="github_username" value="{{ data.github_username }}">
                                             {% else %}
                                             <input type="text" name="github_username" value="{{ data.github_username }}" class="form-control" maxlength="100" id="id_github_username">
                                             {% endif %}
@@ -654,9 +632,9 @@ HuBMAP Data Portal</label>
                                     <div class="col-sm-12">
                                         <div class="form-group form-group-sm" id="slack-username">
                                             <label for="slack_username">Your email address for the slack invitation: <span class="text-danger">*</span></label>
-                                            {% if data.google_email %}
+                                            {% if data.slack_username %}
                                             <input type="text" name="slack_username" value="{{ data.slack_username }}" class="form-control" maxlength="100" id="id_slack_username" disabled>
-                                            <input type="hidden" name="slack_username" value="{{ data.slack_username }}" class="form-control" maxlength="100" id="id_slack_username">
+                                            <input type="hidden" name="slack_username" value="{{ data.slack_username }}">
                                             {% else %}
                                             <input type="text" name="slack_username" value="{{ data.slack_username }}" class="form-control" maxlength="100" id="id_slack_username">
                                             {% endif %}
@@ -689,8 +667,8 @@ HuBMAP Data Portal</label>
 
                         
                         <div class="form-group">
-                            <label for="expertise">Biography: Please provide any biographical information that you'd like to share. This information may be shared publicly.</label>
-                            <textarea name="expertise" cols="40" rows="6" class="form-control" id="id_expertise">{{ data.expertise}}
+                            <label for="bio">Biography: Please provide any biographical information that you'd like to share. This information may be shared publicly.</label>
+                            <textarea name="bio" cols="40" rows="6" class="form-control" id="id_bio">{{ data.bio}}
 </textarea>
                         </div>
                         <div class="form-group">

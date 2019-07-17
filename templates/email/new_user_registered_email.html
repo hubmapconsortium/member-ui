@@ -2,11 +2,24 @@ HuBMAP new user registered. <br /><br />
 
 Name: {{ data['first_name'] }} {{ data['last_name'] }} <br />
 Email: {{ data['email'] }} <br />
+Phone: {{ data['phone'] }} <br />
 
 Component: {{ data['component'] }} <br />
-Organization: {{ data['organization'] }} <br />
-Role: {{ data['role'] }}<br />
+{% if data['other_component'] %}
+Other Component: {{ data['other_component'] }} <br />
+{% endif %}
 
+Organization: {{ data['organization'] }} <br />
+{% if data['other_organization'] %}
+Other Rrganization: {{ data['other_organization'] }} <br />
+{% endif %}
+
+Role: {{ data['role'] }}<br />
+{% if data['other_role'] %}
+Other Role: {{ data['other_role'] }} <br />
+{% endif %}
+
+{#
 <br />
 Working group(s): <br />
 <ul>
@@ -14,6 +27,7 @@ Working group(s): <br />
 <li>{{ grp }} </li>
 {% endfor %}
 </ul>
+#}
 
 <br />
 HuBMAP service(s) access requested: <br />

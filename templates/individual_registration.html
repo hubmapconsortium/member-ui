@@ -8,7 +8,7 @@
   </ol>
 </nav>
 
-<h1>{{ 'Denied' if data.stage_user.deny else 'New' }} Registration: {{ data.stage_user.first_name }} {{ data.stage_user.last_name }}</h1>
+<h1>{{ 'Denied' if data.stage_user.deny else 'New' }} Registration: {{ data.stage_user.email }}</h1>
 
 <div class="card">
   <h5 class="card-header">Registration Detail</h5>
@@ -17,11 +17,24 @@
 First name: {{ data.stage_user.first_name }} <br />
 Last name: {{ data.stage_user.last_name }} <br />
 Email: {{ data.stage_user.email }} <br />
+Phone: {{ data.stage_user.phone }} <br />
 
 Component: {{ data.stage_user.component }} <br />
-Organization: {{ data.stage_user.organization }} <br />
-Role: {{ data.stage_user.role }}<br />
+{% if data.stage_user.other_component %}
+Other Component: {{ data.stage_user.other_component }} <br />
+{% endif %}
 
+Organization: {{ data.stage_user.organization }} <br />
+{% if data.stage_user.other_organization %}
+Other Rrganization: {{ data.stage_user.other_organization }} <br />
+{% endif %}
+
+Role: {{ data.stage_user.role }}<br />
+{% if data.stage_user.other_role %}
+Other Role: {{ data.stage_user.other_role }} <br />
+{% endif %}
+
+{#
 <br />
 Working group(s): <br />
 <ul>
@@ -29,6 +42,7 @@ Working group(s): <br />
 <li>{{ grp }} </li>
 {% endfor %}
 </ul>
+#}
 
 <br />
 HuBMAP service(s) access requested: <br />
@@ -120,6 +134,8 @@ No project manager for this user
     
 
 {% if data.matching_profiles|length > 0 %}
+
+{#
 <div class="alert alert-info" role="alert">
 Matching profiles found from `wp_connections` table and sorted by the total matching score. Scoring:
 
@@ -145,7 +161,9 @@ Matching profiles found from `wp_connections` table and sorted by the total matc
 The following results only show total score that is greater than the first name match score (4).
 
 </div>
-<table class="table table-sm">
+#}
+
+<table class="table table-sm table-hover">
   <thead>
     <tr>
       <th scope="col">#</th>
@@ -153,7 +171,10 @@ The following results only show total score that is greater than the first name 
       <th scope="col">Last Name</th>
       <th scope="col">Email</th>
       <th scope="col">Organization</th>
-      <th scope="col">Match Score</th>
+      <th scope="col">HuBMAP Component</th>
+
+      {#<th scope="col">Match Score</th>#}
+
       <th scope="col">Action</th>
     </tr>
   </thead>
@@ -165,7 +186,10 @@ The following results only show total score that is greater than the first name 
       <td>{{ profile.last_name }}</td>
       <td>{{ profile.deserilized_email }}</td>
       <td>{{ profile.organization }}</td>
-      <td>{{ profile.score }}</td>
+      <td>{{ profile.department }}</td>
+
+      {#<td>{{ profile.score }}</td>#}
+
       <td><button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#approve_by_match_modal_{{ loop.index }}">Approve by using this profile</button></td>
     </tr>
 
