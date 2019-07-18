@@ -583,8 +583,13 @@ def update_user_profile(connection_id, user_info, profile_pic_option, img_to_upl
     current_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], current_slug)
     new_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], new_slug)
 
-    current_image_path = json.loads(connection_profile.options)['image']['meta']['original']['path']
-    current_image_filename = current_image_path.split('/')[-1]
+    # In case no such dir for new slug
+    pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
+
+    current_image_filename = 'default_profile.png'
+    if 'image' in json.loads(connection_profile.options):
+        current_image_path = json.loads(connection_profile.options)['image']['meta']['original']['path']
+        current_image_filename = current_image_path.split('/')[-1]
 
     # Handle the profile image and save/copy it to new dir
     if new_slug != current_slug:
@@ -1481,12 +1486,20 @@ def profile():
             if not initial_data['access_requests'].strip() == '':
                 initial_data['access_requests'] = ast.literal_eval(initial_data['access_requests'])
        
+            # Connections created in WP connections plugin without uploading image won't have the 'image' field
+            # Use empty and display the default profile image
+            profile_pic_url = ''
+            t = json.loads(connection_data['options'])
+            pprint(t)
+            if 'image' in json.loads(connection_data['options']):
+            	profile_pic_url = json.loads(connection_data['options'])['image']['meta']['original']['url']
+
             context = {
                 'isAuthenticated': True,
                 'username': session['name'],
                 'csrf_token': generate_csrf_token(),
                 'connection_id': connection_data['id'],
-                'profile_pic_url': json.loads(connection_data['options'])['image']['meta']['original']['url']
+                'profile_pic_url': profile_pic_url
             }
             
             # Merge initial_data and context as one dict 
