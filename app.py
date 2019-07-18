@@ -583,7 +583,7 @@ def update_user_profile(connection_id, user_info, profile_pic_option, img_to_upl
     current_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], current_slug)
     new_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], new_slug)
 
-    # In case no such dir for new slug
+    # In case no such dir for users who are created in connections plugin without image
     pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
 
     current_image_filename = 'default_profile.png'
@@ -1489,8 +1489,6 @@ def profile():
             # Connections created in WP connections plugin without uploading image won't have the 'image' field
             # Use empty and display the default profile image
             profile_pic_url = ''
-            t = json.loads(connection_data['options'])
-            pprint(t)
             if 'image' in json.loads(connection_data['options']):
             	profile_pic_url = json.loads(connection_data['options'])['image']['meta']['original']['url']
 
