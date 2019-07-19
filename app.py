@@ -1509,7 +1509,11 @@ def profile():
             # Use empty and display the default profile image
             profile_pic_url = ''
             if 'image' in json.loads(connection_data['options']):
-            	profile_pic_url = json.loads(connection_data['options'])['image']['meta']['original']['url']
+                # Also check if the file exists, otherwise profile_pic_url = '' still
+                # It's possible the path and url in database but the actual file or dir not on the disk
+                profile_pic_path = json.loads(connection_data['options'])['image']['meta']['original']['path']
+                if pathlib.Path(profile_pic_path).exists():
+                    profile_pic_url = json.loads(connection_data['options'])['image']['meta']['original']['url']
 
             context = {
                 'isAuthenticated': True,
