@@ -582,14 +582,21 @@ def update_user_profile(connection_id, user_info, profile_pic_option, img_to_upl
 
     current_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], current_slug)
     new_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], new_slug)
-
-    # In case no such dir for users who are created in connections plugin without image
-    pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
-
-    current_image_filename = 'default_profile.png'
+    
+    # If we see 'image' field in options, it means this user is added either via registration or WP connections plugin with an image
+    # thus there's an image folder with an image
     if 'image' in json.loads(connection_profile.options):
         current_image_path = json.loads(connection_profile.options)['image']['meta']['original']['path']
         current_image_filename = current_image_path.split('/')[-1]
+    # Otherwise, this connection entry is created directly from WP connections plugin without uploading an image
+    # thus there's no image folder created
+    else:
+    	# We create the image folder
+    	pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
+    	# Copy over the default image
+    	current_image_filename = 'default_profile.png'
+        save_path = os.path.join(current_image_dir, secure_filename(f"{user_info['globus_user_id']}.png"))
+        copyfile(os.path.join(app.root_path, 'static', 'images', current_image_filename), save_path)
 
     # Handle the profile image and save/copy it to new dir
     if new_slug != current_slug:
