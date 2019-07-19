@@ -493,12 +493,17 @@ def unique_connection_slug(first_name, last_name, connection_id = None):
     last_name = last_name.lower()
     slug = slugify(first_name + '-' + last_name)
 
+    # If exisiting user updates first name and last name, make sure the new slug is not used
     if connection_id:
         # Filter conditions: different connection ID but the same first/last name
         # Meaning the same user won't get a new slug
         connections = Connection.query.filter(Connection.id != connection_id, db.func.lower(Connection.first_name) == first_name, db.func.lower(Connection.last_name) == last_name)
-        if connections.count() > 0:
-            slug = slug + '-' + str(connections.count())
+    # If a new user's first name and last name the same as an exisiting user, also create a unique slug
+    else:
+        connections = Connection.query.filter(db.func.lower(Connection.first_name) == first_name, db.func.lower(Connection.last_name) == last_name)
+        
+    if connections.count() > 0:
+        slug = slug + '-' + str(connections.count())
 
     return slug
 
