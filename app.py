@@ -7,7 +7,7 @@ import phpserialize
 import json
 import os
 import random
-from shutil import copyfile, move
+from shutil import copyfile, copy2, rmtree
 from datetime import datetime
 import pathlib
 import sys, traceback
@@ -584,11 +584,8 @@ def update_user_profile(connection_id, user_info, profile_pic_option, img_to_upl
     # There won't be an existing dir due to unique_connection_slug()
     # Copy old image to new image dir if user changed first/last name, AKA new unique slug name
     current_slug = connection_profile.slug
-    new_slug = unique_connection_slug(user_info['first_name'], user_info['last_name'], connection_id)
-
     current_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], current_slug)
-    new_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], new_slug)
-    
+
     # If we see 'image' field in options, it means this user is added either via registration or WP connections plugin with an image
     # thus there's an image folder with an image
     if 'image' in json.loads(connection_profile.options):
@@ -599,19 +596,37 @@ def update_user_profile(connection_id, user_info, profile_pic_option, img_to_upl
     else:
         # We create the image folder
         pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
-        # Copy over the default image
+        # Copy over the default image       
         current_image_filename = 'default_profile.png'
         save_path = os.path.join(current_image_dir, secure_filename(f"{user_info['globus_user_id']}.png"))
         copyfile(os.path.join(app.root_path, 'static', 'images', current_image_filename), save_path)
 
-    # Handle the profile image and save/copy it to new dir
-    if new_slug != current_slug:
-        # Recursively move an entire directory tree rooted at current dir to new dir
-        move(current_image_dir, new_image_dir)
-        user_info['photo'] = update_user_profile_pic(user_info, profile_pic_option, img_to_upload, new_image_dir, current_image_filename)
-    else:
+    # This exisiting user doesn't change first name and last name, so no need to get new unique slug
+    if (user_info['first_name'].lower() == connection_profile.first_name.lower()) and (user_info['last_name'].lower() == connection_profile.last_name.lower()):
+        # Update profile image directly
         user_info['photo'] = update_user_profile_pic(user_info, profile_pic_option, img_to_upload, current_image_dir, current_image_filename)
-        
+    # Otherwise, we need a new slug and create the new image folder and copy old images to this new location
+    else:
+        new_slug = unique_connection_slug(user_info['first_name'], user_info['last_name'], connection_id)
+        new_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], new_slug)
+
+        # Create the new image folder
+        pathlib.Path(new_image_dir).mkdir(parents=True, exist_ok=True)
+        # Copy all old images to this new folder
+        for file in os.listdir(current_image_dir):
+            file_path = os.path.join(current_image_dir, file)
+            
+            if os.path.isfile(file_path):
+                copy2(file_path, new_image_dir)
+        # Finally delete the old image folder        
+        try:
+            rmtree(current_image_dir)
+        except Exception as e:
+            print("Failed to delete the old profile image folder due to new slug: " + current_image_dir)
+            print(e)
+
+        user_info['photo'] = update_user_profile_pic(user_info, profile_pic_option, img_to_upload, new_image_dir, current_image_filename)
+
     # Convert the user_info dict into object via StageUser() model
     # So edit_connection() can be reused for approcing new user by editing matched and updating exisiting approved user
     user_obj = StageUser(user_info)
