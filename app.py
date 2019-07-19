@@ -592,10 +592,10 @@ def update_user_profile(connection_id, user_info, profile_pic_option, img_to_upl
     # Otherwise, this connection entry is created directly from WP connections plugin without uploading an image
     # thus there's no image folder created
     else:
-    	# We create the image folder
-    	pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
-    	# Copy over the default image
-    	current_image_filename = 'default_profile.png'
+        # We create the image folder
+        pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
+        # Copy over the default image
+        current_image_filename = 'default_profile.png'
         save_path = os.path.join(current_image_dir, secure_filename(f"{user_info['globus_user_id']}.png"))
         copyfile(os.path.join(app.root_path, 'static', 'images', current_image_filename), save_path)
 
