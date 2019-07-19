@@ -7,7 +7,7 @@ import phpserialize
 import json
 import os
 import random
-from shutil import copyfile, move
+from shutil import copyfile, copy2, rmtree
 from datetime import datetime
 import pathlib
 import sys, traceback
@@ -22,6 +22,7 @@ import string
 import random
 from flask_mail import Mail, Message
 from functools import wraps
+from slugify import slugify
 
 # For debugging
 from pprint import pprint
@@ -305,35 +306,36 @@ def construct_user(request):
             img.save(imgByteArr, format=img.format)
             imgByteArr = imgByteArr.getvalue()
 
+    # strip() removes any leading and trailing whitespaces including tabs (\t)
     user_info = {
         # Get the globus user id from session data
         "globus_user_id": session['globus_user_id'],
         # All others are from the form data
-        "email": request.form['email'],
-        "first_name": request.form['first_name'],
-        "last_name": request.form['last_name'],
-        "phone": request.form['phone'],
+        "email": request.form['email'].strip(),
+        "first_name": request.form['first_name'].strip(),
+        "last_name": request.form['last_name'].strip(),
+        "phone": request.form['phone'].strip(),
         "component": request.form['component'],
-        "other_component": request.form['other_component'],
+        "other_component": request.form['other_component'].strip(),
         "organization": request.form['organization'],
-        "other_organization": request.form['other_organization'],
+        "other_organization": request.form['other_organization'].strip(),
         "role": request.form['role'],
-        "other_role": request.form['other_role'],
+        "other_role": request.form['other_role'].strip(),
         # multiple checkboxes
         "working_group": request.form.getlist('working_group'),
         "photo": '',
-        "photo_url": request.form['photo_url'],
+        "photo_url": request.form['photo_url'].strip(),
         # multiple checkboxes
         "access_requests": request.form.getlist('access_requests'),
-        "google_email": request.form['google_email'],
-        "github_username": request.form['github_username'],
-        "slack_username": request.form['slack_username'],
-        "website": request.form['website'],
+        "google_email": request.form['google_email'].strip(),
+        "github_username": request.form['github_username'].strip(),
+        "slack_username": request.form['slack_username'].strip(),
+        "website": request.form['website'].strip(),
         "bio": request.form['bio'],
-        "orcid": request.form['orcid'],
+        "orcid": request.form['orcid'].strip(),
         "pm": get_pm_selection(request.form['pm']),
-        "pm_name": request.form['pm_name'],
-        "pm_email": request.form['pm_email']
+        "pm_name": request.form['pm_name'].strip(),
+        "pm_email": request.form['pm_email'].strip()
     }
 
     img_to_upload = photo_file if photo_file is not None else imgByteArr if imgByteArr is not None else None
@@ -490,14 +492,19 @@ def add_new_stage_user(user_info, profile_pic_option, img_to_upload):
 def unique_connection_slug(first_name, last_name, connection_id = None):
     first_name = first_name.lower()
     last_name = last_name.lower()
-    slug = first_name + '-' + last_name
+    slug = slugify(first_name + '-' + last_name)
 
+    # If exisiting user updates first name and last name, make sure the new slug is not used
     if connection_id:
         # Filter conditions: different connection ID but the same first/last name
         # Meaning the same user won't get a new slug
         connections = Connection.query.filter(Connection.id != connection_id, db.func.lower(Connection.first_name) == first_name, db.func.lower(Connection.last_name) == last_name)
-        if connections.count() > 0:
-            slug = first_name + '-' + last_name + '-' + str(connections.count())
+    # If a new user's first name and last name the same as an exisiting user, also create a unique slug
+    else:
+        connections = Connection.query.filter(db.func.lower(Connection.first_name) == first_name, db.func.lower(Connection.last_name) == last_name)
+        
+    if connections.count() > 0:
+        slug = slug + '-' + str(connections.count())
 
     return slug
 
@@ -578,22 +585,52 @@ def update_user_profile(connection_id, user_info, profile_pic_option, img_to_upl
     # There won't be an existing dir due to unique_connection_slug()
     # Copy old image to new image dir if user changed first/last name, AKA new unique slug name
     current_slug = connection_profile.slug
-    new_slug = unique_connection_slug(user_info['first_name'], user_info['last_name'], connection_id)
-
     current_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], current_slug)
-    new_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], new_slug)
 
-    current_image_path = json.loads(connection_profile.options)['image']['meta']['original']['path']
-    current_image_filename = current_image_path.split('/')[-1]
-
-    # Handle the profile image and save/copy it to new dir
-    if new_slug != current_slug:
-        # Recursively move an entire directory tree rooted at current dir to new dir
-        move(current_image_dir, new_image_dir)
-        user_info['photo'] = update_user_profile_pic(user_info, profile_pic_option, img_to_upload, new_image_dir, current_image_filename)
+    # If we see 'image' field in options, it means this user is added either via registration or WP connections plugin with an image
+    # thus there's an image folder with an image
+    if 'image' in json.loads(connection_profile.options):
+        current_image_path = json.loads(connection_profile.options)['image']['meta']['original']['path']
+        current_image_filename = current_image_path.split('/')[-1]
+        # In case the image folder is gone if someone manually deleted it, we check to make and create one to avoid unknown errors
+        if not pathlib.Path(current_image_dir).exists():
+            pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
+    # Otherwise, this connection entry is created directly from WP connections plugin without uploading an image
+    # thus there's no image folder created
     else:
+        # We create the image folder
+        pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
+        # Copy over the default image       
+        current_image_filename = 'default_profile.png'
+        save_path = os.path.join(current_image_dir, secure_filename(f"{user_info['globus_user_id']}.png"))
+        copyfile(os.path.join(app.root_path, 'static', 'images', current_image_filename), save_path)
+
+    # This exisiting user doesn't change first name and last name, so no need to get new unique slug
+    if (user_info['first_name'].lower() == connection_profile.first_name.lower()) and (user_info['last_name'].lower() == connection_profile.last_name.lower()):
+        # Update profile image directly
         user_info['photo'] = update_user_profile_pic(user_info, profile_pic_option, img_to_upload, current_image_dir, current_image_filename)
-        
+    # Otherwise, we need a new slug and create the new image folder and copy old images to this new location
+    else:
+        new_slug = unique_connection_slug(user_info['first_name'], user_info['last_name'], connection_id)
+        new_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], new_slug)
+
+        # Create the new image folder
+        pathlib.Path(new_image_dir).mkdir(parents=True, exist_ok=True)
+        # Copy all old images to this new folder
+        for file in os.listdir(current_image_dir):
+            file_path = os.path.join(current_image_dir, file)
+            
+            if os.path.isfile(file_path):
+                copy2(file_path, new_image_dir)
+        # Finally delete the old image folder        
+        try:
+            rmtree(current_image_dir)
+        except Exception as e:
+            print("Failed to delete the old profile image folder due to new slug: " + current_image_dir)
+            print(e)
+
+        user_info['photo'] = update_user_profile_pic(user_info, profile_pic_option, img_to_upload, new_image_dir, current_image_filename)
+
     # Convert the user_info dict into object via StageUser() model
     # So edit_connection() can be reused for approcing new user by editing matched and updating exisiting approved user
     user_obj = StageUser(user_info)
@@ -703,22 +740,9 @@ def create_new_connection(stage_user_obj, new_wp_user):
     connection.first_name = stage_user_obj.first_name
     connection.last_name = stage_user_obj.last_name
 
-    # Organization, Component, Role have meta fileds due to the fact of "Other"
-    # We need the meta fileds to show "Other" in registration/profile system
-    if stage_user_obj.organization == 'Other':
-        connection.organization = stage_user_obj.other_organization
-    else:
-        connection.organization = stage_user_obj.organization
-    # Note: we put role as title value for wordpress display purposes only
-    if stage_user_obj.role == 'Other':
-        connection.title = stage_user_obj.other_role
-    else:
-        connection.title = stage_user_obj.role
-    # Note: we put award/component as the department value just for wordpress display purposes only
-    if stage_user_obj.component == 'Other':
-        connection.department = stage_user_obj.other_component
-    else:
-        connection.department = stage_user_obj.component
+    connection.organization = stage_user_obj.organization
+    connection.department = stage_user_obj.component
+    connection.title = stage_user_obj.role
 
     connection.date_added = str(datetime.today().timestamp())
     connection.entry_type = 'individual'
@@ -869,8 +893,10 @@ def create_new_connection(stage_user_obj, new_wp_user):
 
 # Overwrite the existing fields with the ones from user registration or profile update
 def edit_connection(user_obj, wp_user, connection, new_user = False):
-    # First get the id of admin user in `wp_usermeta` table
-    admin_id = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == session['globus_user_id']).first().user_id
+    # First get the id of user in `wp_usermeta` table
+    # If this profile is approved by using a matching connection, the edit_user_id is the admin user id
+    # If this profile is updated by the user after approval, it's the user's id
+    edit_user_id = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == session['globus_user_id']).first().user_id
 
     # Handle the connections email and phone first
     connection_email = ConnectionEmail()
@@ -909,23 +935,23 @@ def edit_connection(user_obj, wp_user, connection, new_user = False):
 
     db.session.commit()
 
+    # If this exisiting user doesn't change first name and last name, no need to get new unique slug
+    # Otherwise, we need to update the first/last name and create a new slug
+    if (user_obj.first_name.lower() != connection.first_name.lower()) or (user_obj.last_name.lower() != connection.last_name.lower()):
+        connection.first_name = user_obj.first_name
+        connection.last_name = user_obj.last_name
+        connection.slug = unique_connection_slug(user_obj.first_name, user_obj.last_name, connection.id)
+
     # Get the id for connection email and phone
     connection.email = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:{connection.emails[0].id};s:4:\"type\";s:4:\"work\";s:4:\"name\";s:10:\"Work Email\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:7:\"address\";s:{len(connection.emails[0].address)}:\"{connection.emails[0].address}\";}}}}"
     connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:{connection.phones[0].id};s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(connection.phones[0].number)}:\"{connection.phones[0].number}\";}}}}"
     
-    connection.first_name = user_obj.first_name
-    connection.last_name = user_obj.last_name
-
-    
     connection.department = user_obj.component
     connection.organization = user_obj.organization
     connection.title = user_obj.role
-    
 
-    # Pass in the connection.id to decide if the user has updated first/last name which resuling a new slug with number
-    connection.slug = unique_connection_slug(user_obj.first_name, user_obj.last_name, connection.id)
     connection.bio = user_obj.bio
-    connection.edited_by = admin_id
+    connection.edited_by = edit_user_id
 
     # Handle profile image
     # user_obj.photo is the image file path when pic option is (One of "existing", "default", "upload", or "url")
@@ -1481,12 +1507,22 @@ def profile():
             if not initial_data['access_requests'].strip() == '':
                 initial_data['access_requests'] = ast.literal_eval(initial_data['access_requests'])
        
+            # Connections created in WP connections plugin without uploading image won't have the 'image' field
+            # Use empty and display the default profile image
+            profile_pic_url = ''
+            if 'image' in json.loads(connection_data['options']):
+                # Also check if the file exists, otherwise profile_pic_url = '' still
+                # It's possible the path and url in database but the actual file or dir not on the disk
+                profile_pic_path = json.loads(connection_data['options'])['image']['meta']['original']['path']
+                if pathlib.Path(profile_pic_path).exists():
+                    profile_pic_url = json.loads(connection_data['options'])['image']['meta']['original']['url']
+
             context = {
                 'isAuthenticated': True,
                 'username': session['name'],
                 'csrf_token': generate_csrf_token(),
                 'connection_id': connection_data['id'],
-                'profile_pic_url': json.loads(connection_data['options'])['image']['meta']['original']['url']
+                'profile_pic_url': profile_pic_url
             }
             
             # Merge initial_data and context as one dict 

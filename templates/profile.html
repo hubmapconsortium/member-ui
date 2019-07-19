@@ -144,6 +144,11 @@
         }
         
         // Profile image use exisiting, upload, pull from URL, or use default
+        let image_src = "{{ url_for('static', filename = 'images/default_profile.png') }}"
+        {% if data.profile_pic_url != '' %}
+        image_src = "{{ data.profile_pic_url }}"
+        {% endif %}
+
         $('#profile_pic_option_existing').click(function() {
             $("#pic_upload").hide();
             $("#pic_url").hide();
@@ -151,7 +156,7 @@
             $('#id_photo').val('');
             $('#id_photo_url').val('');
             // Reset thumbnail
-            $('#profile_picture').attr('src', "{{ data.profile_pic_url }}");
+            $('#profile_picture').attr('src', image_src);
         });
         $('#profile_pic_option_upload').click(function() {
             $("#pic_upload").show();
@@ -159,7 +164,7 @@
             // Clear the url
             $('#id_photo_url').val('');
             // Reset thumbnail
-            $('#profile_picture').attr('src', "{{ data.profile_pic_url }}");
+            $('#profile_picture').attr('src', image_src);
         });
         $('#profile_pic_option_url').click(function() {
             $("#pic_upload").hide();
@@ -167,7 +172,7 @@
             // Clear file
             $('#id_photo').val('');
             // Reset thumbnail
-            $('#profile_picture').attr('src', "{{ data.profile_pic_url }}");
+            $('#profile_picture').attr('src', image_src);
         });
         $('#profile_pic_option_default').click(function() {
             $("#pic_upload").hide();
@@ -433,11 +438,27 @@
                         
                         <div class="row mb-3">
                             <div class="col-xs-12 col-sm-3">
+                                {% if data.profile_pic_url == '' %}
+                                <img src="{{ url_for('static', filename = 'images/default_profile.png') }}" alt="Profile image" width="200" height="200" class="img-thumbnail" id="profile_picture">
+                                {% else %}
                                 <img src="{{ data.profile_pic_url }}" alt="Profile image" width="200" height="200" class="img-thumbnail" id="profile_picture">
+                                {% endif %}
+                                
                             </div>
                             
                             <div class="col-xs-12 col-sm-9">
                                 <label for="file">Profile Picture: </label>
+
+                                {% if data.profile_pic_url == '' %}
+
+                                <div class="form-check form-check-inline">
+                                  <input class="form-check-input" type="radio" name="profile_pic_option" id="profile_pic_option_default" value="default" checked>
+                                  <label class="form-check-label" for="profile_pic_option_default">
+                                    Use default image
+                                  </label>
+                                </div>
+
+                                {% else %}
 
                                 <div class="form-check form-check-inline">
                                   <input class="form-check-input" type="radio" name="profile_pic_option" id="profile_pic_option_existing" value="existing" checked>
@@ -452,6 +473,8 @@
                                     Use default image
                                   </label>
                                 </div>
+
+                                {% endif %}
 
                                 <div class="form-check form-check-inline">
                                   <input class="form-check-input" type="radio" name="profile_pic_option" id="profile_pic_option_upload" value="upload">

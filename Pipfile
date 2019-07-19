@@ -17,6 +17,7 @@ requests = "*"
 pillow = "*"
 globus-sdk = "*"
 flask-mail = "*"
+python-slugify = "*"
 
 [requires]
 python_version = "3.6"
