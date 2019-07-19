@@ -306,35 +306,36 @@ def construct_user(request):
             img.save(imgByteArr, format=img.format)
             imgByteArr = imgByteArr.getvalue()
 
+    # strip() removes any leading and trailing whitespaces including tabs (\t)
     user_info = {
         # Get the globus user id from session data
         "globus_user_id": session['globus_user_id'],
         # All others are from the form data
-        "email": request.form['email'],
-        "first_name": request.form['first_name'],
-        "last_name": request.form['last_name'],
-        "phone": request.form['phone'],
+        "email": request.form['email'].strip(),
+        "first_name": request.form['first_name'].strip(),
+        "last_name": request.form['last_name'].strip(),
+        "phone": request.form['phone'].strip(),
         "component": request.form['component'],
-        "other_component": request.form['other_component'],
+        "other_component": request.form['other_component'].strip(),
         "organization": request.form['organization'],
-        "other_organization": request.form['other_organization'],
+        "other_organization": request.form['other_organization'].strip(),
         "role": request.form['role'],
-        "other_role": request.form['other_role'],
+        "other_role": request.form['other_role'].strip(),
         # multiple checkboxes
         "working_group": request.form.getlist('working_group'),
         "photo": '',
-        "photo_url": request.form['photo_url'],
+        "photo_url": request.form['photo_url'].strip(),
         # multiple checkboxes
         "access_requests": request.form.getlist('access_requests'),
-        "google_email": request.form['google_email'],
-        "github_username": request.form['github_username'],
-        "slack_username": request.form['slack_username'],
-        "website": request.form['website'],
+        "google_email": request.form['google_email'].strip(),
+        "github_username": request.form['github_username'].strip(),
+        "slack_username": request.form['slack_username'].strip(),
+        "website": request.form['website'].strip(),
         "bio": request.form['bio'],
-        "orcid": request.form['orcid'],
+        "orcid": request.form['orcid'].strip(),
         "pm": get_pm_selection(request.form['pm']),
-        "pm_name": request.form['pm_name'],
-        "pm_email": request.form['pm_email']
+        "pm_name": request.form['pm_name'].strip(),
+        "pm_email": request.form['pm_email'].strip()
     }
 
     img_to_upload = photo_file if photo_file is not None else imgByteArr if imgByteArr is not None else None
