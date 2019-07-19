@@ -22,6 +22,7 @@ import string
 import random
 from flask_mail import Mail, Message
 from functools import wraps
+from slugify import slugify
 
 # For debugging
 from pprint import pprint
@@ -490,14 +491,14 @@ def add_new_stage_user(user_info, profile_pic_option, img_to_upload):
 def unique_connection_slug(first_name, last_name, connection_id = None):
     first_name = first_name.lower()
     last_name = last_name.lower()
-    slug = first_name + '-' + last_name
+    slug = slugify(first_name + '-' + last_name)
 
     if connection_id:
         # Filter conditions: different connection ID but the same first/last name
         # Meaning the same user won't get a new slug
         connections = Connection.query.filter(Connection.id != connection_id, db.func.lower(Connection.first_name) == first_name, db.func.lower(Connection.last_name) == last_name)
         if connections.count() > 0:
-            slug = first_name + '-' + last_name + '-' + str(connections.count())
+            slug = slug + '-' + str(connections.count())
 
     return slug
 
