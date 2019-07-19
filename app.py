@@ -893,8 +893,10 @@ def create_new_connection(stage_user_obj, new_wp_user):
 
 # Overwrite the existing fields with the ones from user registration or profile update
 def edit_connection(user_obj, wp_user, connection, new_user = False):
-    # First get the id of admin user in `wp_usermeta` table
-    admin_id = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == session['globus_user_id']).first().user_id
+    # First get the id of user in `wp_usermeta` table
+    # If this profile is approved by using a matching connection, the edit_user_id is the admin user id
+    # If this profile is updated by the user after approval, it's the user's id
+    edit_user_id = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == session['globus_user_id']).first().user_id
 
     # Handle the connections email and phone first
     connection_email = ConnectionEmail()
@@ -933,23 +935,23 @@ def edit_connection(user_obj, wp_user, connection, new_user = False):
 
     db.session.commit()
 
+    # If this exisiting user doesn't change first name and last name, no need to get new unique slug
+    # Otherwise, we need to update the first/last name and create a new slug
+    if (user_obj.first_name.lower() != connection.first_name.lower()) or (user_obj.last_name.lower() != connection.last_name.lower()):
+        connection.first_name = user_obj.first_name
+        connection.last_name = user_obj.last_name
+        connection.slug = unique_connection_slug(user_obj.first_name, user_obj.last_name, connection.id)
+
     # Get the id for connection email and phone
     connection.email = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:{connection.emails[0].id};s:4:\"type\";s:4:\"work\";s:4:\"name\";s:10:\"Work Email\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:7:\"address\";s:{len(connection.emails[0].address)}:\"{connection.emails[0].address}\";}}}}"
     connection.phone_numbers = f"a:1:{{i:0;a:7:{{s:2:\"id\";i:{connection.phones[0].id};s:4:\"type\";s:9:\"workphone\";s:4:\"name\";s:10:\"Work Phone\";s:10:\"visibility\";s:6:\"public\";s:5:\"order\";i:0;s:9:\"preferred\";b:0;s:6:\"number\";s:{len(connection.phones[0].number)}:\"{connection.phones[0].number}\";}}}}"
     
-    connection.first_name = user_obj.first_name
-    connection.last_name = user_obj.last_name
-
-    
     connection.department = user_obj.component
     connection.organization = user_obj.organization
     connection.title = user_obj.role
-    
 
-    # Pass in the connection.id to decide if the user has updated first/last name which resuling a new slug with number
-    connection.slug = unique_connection_slug(user_obj.first_name, user_obj.last_name, connection.id)
     connection.bio = user_obj.bio
-    connection.edited_by = admin_id
+    connection.edited_by = edit_user_id
 
     # Handle profile image
     # user_obj.photo is the image file path when pic option is (One of "existing", "default", "upload", or "url")
