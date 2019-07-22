@@ -1429,7 +1429,7 @@ def profile():
                     access_requests_value = access_requests_record.meta_value
 
                 google_email_value = ''
-                    google_email_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_google_email', ConnectionMeta.entry_id == connection_id).first()
+                google_email_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_google_email', ConnectionMeta.entry_id == connection_id).first()
                 if google_email_record:
                     google_email_value = google_email_record.meta_value
 
