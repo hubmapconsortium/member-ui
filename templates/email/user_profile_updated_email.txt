@@ -1,0 +1,48 @@
+The following HuBMAP user has updated access requests list:
+
+Name: {{ data['first_name'] }} {{ data['last_name'] }} 
+Email: {{ data['email'] }}
+
+
+Old access requests:
+
+{% for old_req in old_access_requests_data['access_requests'] %}
+- {{ old_req }}
+{% endfor %}
+
+
+{% if 'HuBMAP Google Drive Share' in old_access_requests_data['access_requests'] %}
+Google account for HuBMAP Google Drive Share: {{ old_access_requests_data['google_email'] }}
+{% endif %}
+
+{% if 'HuBMAP GitHub Repository' in old_access_requests_data['access_requests'] %}
+Github username: {{ old_access_requests_data['github_username'] }}
+{% endif %}
+
+{% if 'HuBMAP Slack Workspace' in old_access_requests_data['access_requests'] %}
+Email for HuBMAP Slack Workspace: {{ old_access_requests_data['slack_username'] }}
+{% endif %}
+
+
+New access requests:
+
+{% for new_req in data['access_requests'] %}
+- {{ new_req }}
+{% endfor %}
+
+
+{% if 'HuBMAP Google Drive Share' in data['access_requests'] %}
+Google account for HuBMAP Google Drive Share: {{ data['google_email'] }}
+{% endif %}
+
+{% if 'HuBMAP GitHub Repository' in data['access_requests'] %}
+Github username: {{ data['github_username'] }}
+{% endif %}
+
+{% if 'HuBMAP Slack Workspace' in data['access_requests'] %}
+Email for HuBMAP Slack Workspace: {{ data['slack_username'] }}
+{% endif %}
+
+
+
+HuBMAP User Registration and Profile

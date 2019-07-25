@@ -253,26 +253,30 @@ connections_schema = ConnectionSchema(many=True, strict=True)
 
 # Send email confirmation of new user registration to admins
 def send_new_user_registered_mail(data):
-    msg = Message('New user registration submitted', app.config['MAIL_ADMIN_LIST'])
+    msg = Message('New user registration submitted', recipients=app.config['MAIL_ADMIN_LIST'])
+    msg.body = render_template('email/new_user_registered_email.txt', data = data)
     msg.html = render_template('email/new_user_registered_email.html', data = data)
     mail.send(msg)
 
 # Send email to admins once user profile updated
 # Only email when the access requests has changed
 def send_user_profile_updated_mail(data, old_access_requests_data):
-    msg = Message('User profile updated', app.config['MAIL_ADMIN_LIST'])
+    msg = Message('User profile updated', recipients=app.config['MAIL_ADMIN_LIST'])
+    msg.body = render_template('email/user_profile_updated_email.txt', data = data, old_access_requests_data = old_access_requests_data)
     msg.html = render_template('email/user_profile_updated_email.html', data = data, old_access_requests_data = old_access_requests_data)
     mail.send(msg)
 
 # Once admin approves the new user registration, email the new user as well as the admins
 def send_new_user_approved_mail(recipient, data):
-    msg = Message('New user registration approved', [recipient] + app.config['MAIL_ADMIN_LIST'])
+    msg = Message('New user registration approved', recipients=[recipient] + app.config['MAIL_ADMIN_LIST'])
+    msg.body = render_template('email/new_user_approved_email.txt', data = data)
     msg.html = render_template('email/new_user_approved_email.html', data = data)
     mail.send(msg)
 
 # Send user email once registration is denied
 def send_new_user_denied_mail(recipient, data):
-    msg = Message('New user registration denied', [recipient] + app.config['MAIL_ADMIN_LIST'])
+    msg = Message('New user registration denied', recipients=[recipient] + app.config['MAIL_ADMIN_LIST'])
+    msg.body = render_template('email/new_user_denied_email.txt', data = data)
     msg.html = render_template('email/new_user_denied_email.html', data = data)
     mail.send(msg)
 
