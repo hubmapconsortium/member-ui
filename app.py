@@ -1710,6 +1710,7 @@ def match(globus_user_id, connection_id):
 @app.route("/ismember/<globus_user_id>")
 @cross_origin(origins=[app.config['UUID_URL']], methods=['GET'])
 def ismember(globus_user_id):
+    user_meta = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == globus_user_id).first()
     if not user_meta:
         return jsonify(False)
     users = [user_meta.user]
