@@ -1708,19 +1708,9 @@ def match(globus_user_id, connection_id):
     return show_admin_info("This registration has been approved successfully by using an exisiting mathcing profile!")
 
 @app.route("/ismember/<globus_user_id>")
-@cross_origin(origins=[app.config['UUID_URL']], methods=['GET'])
+@cross_origin(origins=app.config['UUID_URL'], methods=['GET'])
 def ismember(globus_user_id):
-    user_meta = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == globus_user_id).first()
-    if not user_meta:
-        return jsonify(False)
-    users = [user_meta.user]
-    result = wp_users_schema.dump(users)
-    user = result[0][0]
-    capabilities = next((meta for meta in user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
-    if (('meta_value' in capabilities) and ('member' in capabilities['meta_value'] or 'administrator' in capabilities['meta_value'])):
-        return jsonify(True)
-    else:
-        return jsonify(False)
+    return jsonify(user_is_approved(globus_user_id))
 
 
 # Run Server
