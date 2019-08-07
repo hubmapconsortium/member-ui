@@ -62,6 +62,8 @@ MAIL_DEBUG = False
 
 # Admin emails, not part of Flask-Mail configuration
 MAIL_ADMIN_LIST = []
+# UUID URLs
+UUID_URL = ['http://localhost:3000', 'https://uuid.dev.hubmapconsortium.org']
 ````
 
 There's an example configuration file named `app.cfg.example` for your quick start.
