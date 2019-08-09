@@ -15,11 +15,21 @@
 
 <body id="body">
 
-<header id="header" class="navbar navbar-light bg-light">
+<header id="header" class="navbar navbar-expand-lg navbar-light bg-light">
 <nav class="container">
 <a class="navbar-brand" href="/">
 <img src="https://hubmapconsortium.org/wp-content/uploads/2019/01/HuBMAP-Retina-Logo-Color-300x110.png" width="300" height="110" class="d-inline-block align-top"
 alt="HuBMAP logo" /></a>
+
+<div class="collapse navbar-collapse">
+<ul class="navbar-nav">
+<li class="nav-item">
+<a class="nav-link" href="https://hubmapconsortium.org/" target="_blank">Collaboration Portal</a>
+</li>
+
+</ul>
+</div>
+
 <div class="float-right">
 <span class="username">{{data.username}}</span>
 <a href="{{ config['FLASK_APP_BASE_URI'] }}/logout" class="btn btn btn-outline-danger">Logout</a>
@@ -29,6 +39,11 @@ alt="HuBMAP logo" /></a>
 
 <div class="page-content">
 <div id="content" class="container">
+
+<div class="alert alert-warning">
+For the best experience using this application, we recommend using Google Chrome as your browser.
+</div>
+
 {% block content %}{% endblock %}
 </div>
 </div>
