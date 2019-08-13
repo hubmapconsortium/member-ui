@@ -13,9 +13,9 @@
         var biography_length_limit = 50000;
         
         // Hide these by default
-        $(".oth-cmpnt").hide();
-        $(".oth-org").hide();
-        $(".oth-role").hide();
+        $("#oth-cmpnt").hide();
+        $("#oth-org").hide();
+        $("#oth-role").hide();
         $("#google-email").hide();
         $("#slack-username").hide();
         $("#github-username").hide();
@@ -36,10 +36,10 @@
                 $("#active_card").html(target_card);
 
                 if(id==='Other'){ // other selected
-                    $(".oth-cmpnt").show();
+                    $("#oth-cmpnt").show();
                 } else {
                     $("#id_other_component").val('');
-                    $(".oth-cmpnt").hide();
+                    $("#oth-cmpnt").hide();
                 }
             }
         });
@@ -47,19 +47,19 @@
         $("#id_organization").change(function() {
             let id = $(this).children("option:selected").val();
             if(id==='Other'){ // other selected
-                $(".oth-org").show();
+                $("#oth-org").show();
             } else {
                 $("#id_other_organization").val('');
-                $(".oth-org").hide();
+                $("#oth-org").hide();
             }
         });
         $("#id_role").change(function() {
             let id = $(this).children("option:selected").val();
             if(id==='Other'){ // other selected
-                $(".oth-role").show();
+                $("#oth-role").show();
             } else {
                 $("#id_other_role").val('');
-                $(".oth-role").hide();
+                $("#oth-role").hide();
             }
         });
         $("#id_access_requests_3").change(function() {
@@ -83,21 +83,21 @@
 
         id = $("#id_component").children("option:selected").val();
         if(id==='Other'){ // other selected
-            $(".oth-cmpnt").show();
+            $("#oth-cmpnt").show();
         } else {
-            $(".oth-cmpnt").hide();
+            $("#oth-cmpnt").hide();
         }
         id = $('#id_organization').children("option:selected").val();
         if(id==='Other'){ // other selected
-            $(".oth-org").show();
+            $("#oth-org").show();
         } else {
-            $(".oth-org").hide();
+            $("#oth-org").hide();
         }
         id = $("#id_role").children("option:selected").val();
         if(id==='Other'){ // other selected
-            $(".oth-role").show();
+            $("#oth-role").show();
         } else {
-            $(".oth-role").hide();
+            $("#oth-role").hide();
         }
 
         // All users need access to Collabration Portal
@@ -351,7 +351,7 @@
                                 </div>
                                 <div class="row">
                                     <div class="col-sm-12">
-                                        <div class="form-group oth-cmpnt">
+                                        <div class="form-group" id="oth-cmpnt">
                                             <label for="other_component">Component: What component are you with? <span class="text-danger">*</span></label>
                                             <input type="text" name="other_component" class="form-control" maxlength="100" id="id_other_component">
                                            
@@ -367,7 +367,7 @@
                                 </div>
                                 <div class="row">
                                     <div class="col-sm-12">
-                                        <div class="form-group oth-org">
+                                        <div class="form-group" id="oth-org">
                                             <label for="other_organization">Organization: What organization are you with? <span class="text-danger">*</span></label>
                                             <input type="text" name="other_organization" class="form-control" maxlength="100" id="id_other_organization">
                                            
@@ -392,7 +392,7 @@
                         </div>
                         <div class="row">
                             <div class="col-sm-12">
-                                <div class="form-group oth-role">
+                                <div class="form-group" id="oth-role">
                                     <label for="other_role">Role: What is your role in HuBMAP? <span class="text-danger">*</span></label>
                                     <input type="text" name="other_role" class="form-control" maxlength="100" id="id_other_role">
                                
