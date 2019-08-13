@@ -806,7 +806,7 @@ def create_new_connection(stage_user_obj, new_wp_user):
     image = Image.open(os.path.join(target_image_dir, photo_file_name))
     content_type = Image.MIME[image.format]
 
-    image_path = app.config['CONNECTION_IMAGE_DIR'] + "/" + connection.slug + "/" + photo_file_name
+    image_path = os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug, photo_file_name)
     image_url = app.config['CONNECTION_IMAGE_URL'] + "/" + connection.slug + "/" + photo_file_name
     connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + image_path + "\",\"url\": \"" + image_url + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"" + content_type + "\",\"type\":2}}}}"
 
@@ -989,7 +989,7 @@ def edit_connection(user_obj, wp_user, connection, new_user = False):
     image = Image.open(os.path.join(target_image_dir, photo_file_name))
     content_type = Image.MIME[image.format]
 
-    image_path = app.config['CONNECTION_IMAGE_DIR'] + "/" + connection.slug + "/" + photo_file_name
+    image_path = os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug, photo_file_name)
     image_url = app.config['CONNECTION_IMAGE_URL'] + "/" + connection.slug + "/" + photo_file_name
     connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + image_path + "\",\"url\": \"" + image_url + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"" + content_type + "\",\"type\":2}}}}"
 
