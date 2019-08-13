@@ -128,17 +128,17 @@
         // Disallow them to uncheck this option
         // Disabled in HTML, no need to handle it in js here
 
-        if ($("#id_access_requests_3").is(':checked')){
+        if ($("#id_access_requests_3").prop('checked')){
             $("#google-email").show();
         }
-        if ($("#id_access_requests_4").is(':checked')){
+        if ($("#id_access_requests_4").prop('checked')){
             $("#github-username").show();
         }
-        if ($("#id_access_requests_5").is(':checked')){
+        if ($("#id_access_requests_5").prop('checked')){
             $("#slack-username").show();
         }
 
-        if($(":radio[id^='id_pm_0']").is(':checked')){
+        if($(":radio[id^='id_pm_0']").prop('checked')){
             $("div.pm-name").show();
             $("div.pm-email").show();
         }
@@ -290,28 +290,28 @@
             }
 
             // Show users error if profile pic option is upload but no file, or url is selected but no valida url
-            if($("#profile_pic_option_upload").is(':checked') && ($("#id_photo").get(0).files.length === 0)) {
+            if($("#profile_pic_option_upload").prop('checked') && ($("#id_photo").get(0).files.length === 0)) {
                 valid = false;
                 $("#id_photo").addClass('is-invalid');
                 $("#id_photo").after("<div class='invalid-feedback'>Please choose profile image to upload.</div>");
             }
-            if($("#profile_pic_option_url").is(':checked') && ($("#id_photo_url").val() === '')) {
+            if($("#profile_pic_option_url").prop('checked') && ($("#id_photo_url").val() === '')) {
                 valid = false;
                 $("#id_photo_url").addClass('is-invalid');
                 $("#id_photo_url").after("<div class='invalid-feedback'>Please specify the image URL.</div>");
             }
 
-            if($("#id_access_requests_3").is(':checked') && $.trim($("#id_google_email").val()) === ''){
+            if($("#id_access_requests_3").prop('checked') && $.trim($("#id_google_email").val()) === ''){
                 valid = false;
                 $("#id_google_email").addClass('is-invalid');
                 $("#id_google_email").after("<div class='invalid-feedback'>Google account is required.</div>");
             }
-            if($("#id_access_requests_4").is(':checked') && $.trim($("#id_github_username").val()) === ''){
+            if($("#id_access_requests_4").prop('checked') && $.trim($("#id_github_username").val()) === ''){
                 valid = false;
                 $("#id_github_username").addClass('is-invalid');
                 $("#id_github_username").after("<div class='invalid-feedback'>GitHub username is required.</div>");
             }
-            if($("#id_access_requests_5").is(':checked') && $.trim($("#id_slack_username").val()) === ''){
+            if($("#id_access_requests_5").prop('checked') && $.trim($("#id_slack_username").val()) === ''){
                 valid = false;
                 $("#id_slack_username").addClass('is-invalid');
                 $("#id_slack_username").after("<div class='invalid-feedback'>Slack username is required.</div>");
@@ -321,12 +321,12 @@
                 $("#id_bio").addClass('is-invalid');
                 $("#id_bio").after("<div class='invalid-feedback'>Biography is too long. Please limit the length to " + biography_length_limit + " characters.</div>");
             }
-            if($("#id_pm_0").is(':checked') && $.trim($("#id_pm_name").val()) === ''){
+            if($("#id_pm_0").prop('checked') && $.trim($("#id_pm_name").val()) === ''){
                 valid = false;
                 $("#id_pm_name").addClass('is-invalid');
                 $("#id_pm_name").after("<div class='invalid-feedback'>Project Manager's name is required.</div>");
             }
-            if($("#id_pm_0").is(':checked') && $.trim($("#id_pm_email").val()) === ''){
+            if($("#id_pm_0").prop('checked') && $.trim($("#id_pm_email").val()) === ''){
                 valid = false;
                 $("#id_pm_email").addClass('is-invalid');
                 $("#id_pm_email").after("<div class='invalid-feedback'>Project Manager's email is required.</div>");
