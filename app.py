@@ -1302,6 +1302,8 @@ def login():
 
         # Store the resulting tokens in server session
         session['isAuthenticated'] = True
+        # For rendering admin menu 
+        session['isAdmin'] = user_is_admin(user_info['sub'])
         session['globus_user_id'] = user_info['sub']
         session['name'] = user_info['name']
         # Normalize email to lowercase

@@ -26,7 +26,11 @@ alt="HuBMAP logo" /></a>
 <li class="nav-item">
 <a class="nav-link" href="https://hubmapconsortium.org/collaboration-portal/" target="_blank">Collaboration Portal</a>
 </li>
-
+{% if session['isAdmin'] %}
+<li class="nav-item">
+<a class="nav-link" href="{{ config['FLASK_APP_BASE_URI'] }}/registrations">Admin Dashboard</a>
+</li>
+{% endif %}
 </ul>
 </div>
 
