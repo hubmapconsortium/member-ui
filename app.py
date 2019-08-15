@@ -1267,8 +1267,8 @@ def admin_required(f):
 @app.route("/")
 @login_required
 def index():
-    if user_is_admin(session['globus_user_id']):
-        return redirect(url_for('registrations'))
+    if user_is_approved(session['globus_user_id']):
+        return redirect(url_for('profile'))
     else:
         return redirect(url_for('register'))
 
