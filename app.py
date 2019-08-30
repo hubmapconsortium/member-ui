@@ -1535,12 +1535,17 @@ def profile():
             # Connections created in WP connections plugin without uploading image won't have the 'image' field
             # Use empty and display the default profile image
             profile_pic_url = ''
-            if 'image' in json.loads(connection_data['options']):
-                # Also check if the file exists, otherwise profile_pic_url = '' still
-                # It's possible the path and url in database but the actual file or dir not on the disk
-                profile_pic_path = json.loads(connection_data['options'])['image']['meta']['original']['path']
-                if pathlib.Path(profile_pic_path).exists():
-                    profile_pic_url = json.loads(connection_data['options'])['image']['meta']['original']['url']
+            options = json.loads(connection_data['options'])
+            if 'image' in options:
+                if 'meta' in options['image']:
+                    if 'original' in options['image']['meta']:
+                        if 'path' in options['image']['meta']['original']:
+                            # Also check if the file exists, otherwise profile_pic_url = '' still
+                            # It's possible the path and url in database but the actual file or dir not on the disk
+                            profile_pic_path = options['image']['meta']['original']['path']
+                            if pathlib.Path(profile_pic_path).exists():
+                                if 'url' in options['image']['meta']['original']:
+                                    profile_pic_url = options['image']['meta']['original']['url']
 
             context = {
                 'isAuthenticated': True,
