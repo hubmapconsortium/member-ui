@@ -594,12 +594,16 @@ def update_user_profile(connection_id, user_info, profile_pic_option, img_to_upl
 
     # If we see 'image' field in options, it means this user is added either via registration or WP connections plugin with an image
     # thus there's an image folder with an image
-    if 'image' in json.loads(connection_profile.options):
-        current_image_path = json.loads(connection_profile.options)['image']['meta']['original']['path']
-        current_image_filename = current_image_path.split('/')[-1]
-        # In case the image folder is gone if someone manually deleted it, we check to make and create one to avoid unknown errors
-        if not pathlib.Path(current_image_dir).exists():
-            pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
+    options = json.loads(connection_profile.options)
+    if 'image' in options:
+        if 'meta' in options['image']:
+            if 'original' in options['image']['meta']:
+                if 'path' in options['image']['meta']['original']:
+                    current_image_path = options['image']['meta']['original']['path']
+                    current_image_filename = current_image_path.split('/')[-1]
+                    # In case the image folder is gone if someone manually deleted it, we check to make and create one to avoid unknown errors
+                    if not pathlib.Path(current_image_dir).exists():
+                        pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
     # Otherwise, this connection entry is created directly from WP connections plugin without uploading an image
     # thus there's no image folder created
     else:
