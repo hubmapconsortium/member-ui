@@ -604,15 +604,15 @@ def update_user_profile(connection_id, user_info, profile_pic_option, img_to_upl
                     # In case the image folder is gone if someone manually deleted it, we check to make and create one to avoid unknown errors
                     if not pathlib.Path(current_image_dir).exists():
                         pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
-    # Otherwise, this connection entry is created directly from WP connections plugin without uploading an image
-    # thus there's no image folder created
-    else:
-        # We create the image folder
-        pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
-        # Copy over the default image       
-        current_image_filename = 'default_profile.png'
-        save_path = os.path.join(current_image_dir, secure_filename(f"{user_info['globus_user_id']}.png"))
-        copyfile(os.path.join(app.root_path, 'static', 'images', current_image_filename), save_path)
+                # Otherwise, this connection entry is created directly from WP connections plugin without uploading an image
+                # thus there's no image folder created
+                else:
+                    # We create the image folder
+                    pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
+                    # Copy over the default image       
+                    current_image_filename = 'default_profile.png'
+                    save_path = os.path.join(current_image_dir, secure_filename(f"{user_info['globus_user_id']}.png"))
+                    copyfile(os.path.join(app.root_path, 'static', 'images', current_image_filename), save_path)
 
     # This exisiting user doesn't change first name and last name, so no need to get new unique slug
     if (user_info['first_name'].lower() == connection_profile.first_name.lower()) and (user_info['last_name'].lower() == connection_profile.last_name.lower()):
