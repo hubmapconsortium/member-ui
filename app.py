@@ -1304,6 +1304,9 @@ def login():
         # Also get the user info (sub, email, name, preferred_username) using the AuthClient with the auth token
         user_info = get_globus_user_info(auth_token)
 
+        pprint("=========user_info=========="user_info)
+        pprint(user_info)
+
         # Store the resulting tokens in server session
         session['isAuthenticated'] = True
         # For rendering admin menu 
