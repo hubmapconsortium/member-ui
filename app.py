@@ -367,12 +367,17 @@ def generate_csrf_token(stringLength = 10):
 
 
 def show_registration_form():
+    # If user registered with their direct globus ID, we can't gurentee the "Full name" contains a space
+    # Because it's possible the users only entered firstname in "Full name" during globus ID registration on globus site
+    name_words = session['name'].split(" ")
+
     context = {
         'isAuthenticated': True,
         'username': session['name'],
         'csrf_token': generate_csrf_token(),
-        'first_name': session['name'].split(" ")[0],
-        'last_name': session['name'].split(" ")[1],
+        'first_name': name_words[0],
+        # Use empty for last name if not present
+        'last_name': name_words[1] if (len(name_words) > 1) else "",
         'email': session['email'],
         'recaptcha_site_key': app.config['GOOGLE_RECAPTCHA_SITE_KEY']
     }
@@ -1303,9 +1308,6 @@ def login():
 
         # Also get the user info (sub, email, name, preferred_username) using the AuthClient with the auth token
         user_info = get_globus_user_info(auth_token)
-
-        pprint("=========user_info==========")
-        pprint(user_info)
 
         # Store the resulting tokens in server session
         session['isAuthenticated'] = True
