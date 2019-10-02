@@ -599,25 +599,22 @@ def update_user_profile(connection_id, user_info, profile_pic_option, img_to_upl
 
     # If we see 'image' field in options, it means this user is added either via registration or WP connections plugin with an image
     # thus there's an image folder with an image
-    options = json.loads(connection_profile.options)
-    if 'image' in options:
-        if 'meta' in options['image']:
-            if 'original' in options['image']['meta']:
-                if 'path' in options['image']['meta']['original']:
-                    current_image_path = options['image']['meta']['original']['path']
-                    current_image_filename = current_image_path.split('/')[-1]
-                    # In case the image folder is gone if someone manually deleted it, we check to make and create one to avoid unknown errors
-                    if not pathlib.Path(current_image_dir).exists():
-                        pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
-                # Otherwise, this connection entry is created directly from WP connections plugin without uploading an image
-                # thus there's no image folder created
-                else:
-                    # We create the image folder
-                    pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
-                    # Copy over the default image       
-                    current_image_filename = 'default_profile.png'
-                    save_path = os.path.join(current_image_dir, secure_filename(f"{user_info['globus_user_id']}.png"))
-                    copyfile(os.path.join(app.root_path, 'static', 'images', current_image_filename), save_path)
+    try:
+        options = json.loads(connection_profile.options)
+        current_image_path = options['image']['meta']['original']['path']
+        current_image_filename = current_image_path.split('/')[-1]
+        # In case the image folder is gone if someone manually deleted it, we check to make and create one to avoid unknown errors
+        if not pathlib.Path(current_image_dir).exists():
+            pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
+    # Otherwise, this connection entry is created directly from WP connections plugin without uploading an image
+    # thus there's no image folder created
+    except KeyError:
+        # We create the image folder
+        pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
+        # Copy over the default image       
+        current_image_filename = 'default_profile.png'
+        save_path = os.path.join(current_image_dir, secure_filename(f"{user_info['globus_user_id']}.png"))
+        copyfile(os.path.join(app.root_path, 'static', 'images', current_image_filename), save_path)
 
     # This exisiting user doesn't change first name and last name, so no need to get new unique slug
     if (user_info['first_name'].lower() == connection_profile.first_name.lower()) and (user_info['last_name'].lower() == connection_profile.last_name.lower()):
@@ -1544,17 +1541,18 @@ def profile():
             # Connections created in WP connections plugin without uploading image won't have the 'image' field
             # Use empty and display the default profile image
             profile_pic_url = ''
-            options = json.loads(connection_data['options'])
-            if 'image' in options:
-                if 'meta' in options['image']:
-                    if 'original' in options['image']['meta']:
-                        if 'path' in options['image']['meta']['original']:
-                            # Also check if the file exists, otherwise profile_pic_url = '' still
-                            # It's possible the path and url in database but the actual file or dir not on the disk
-                            profile_pic_path = options['image']['meta']['original']['path']
-                            if pathlib.Path(profile_pic_path).exists():
-                                if 'url' in options['image']['meta']['original']:
-                                    profile_pic_url = options['image']['meta']['original']['url']
+
+            try:
+                options = json.loads(connection_data['options'])
+                profile_pic_path = options['image']['meta']['original']['path']
+
+                # Also check if the file exists, otherwise profile_pic_url = '' still
+                # It's possible the path and url in database but the actual file or dir not on the disk
+                if pathlib.Path(profile_pic_path).exists():
+                    if 'url' in options['image']['meta']['original']:
+                        profile_pic_url = options['image']['meta']['original']['url']
+            except KeyError:
+                profile_pic_url = ''
 
             context = {
                 'isAuthenticated': True,
