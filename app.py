@@ -23,7 +23,6 @@ import random
 from flask_mail import Mail, Message
 from functools import wraps
 from slugify import slugify
-from flask_cors import CORS, cross_origin
 
 # For debugging
 from pprint import pprint
@@ -1721,10 +1720,6 @@ def match(globus_user_id, connection_id):
 
     return show_admin_info("This registration has been approved successfully by using an exisiting mathcing profile!")
 
-@app.route("/ismember/<globus_user_id>")
-@cross_origin(origins=app.config['UUID_URL'], methods=['GET'])
-def ismember(globus_user_id):
-    return jsonify(user_is_approved(globus_user_id))
 
 
 # Run Server
