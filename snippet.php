@@ -156,6 +156,7 @@ function cn_register_custom_metabox_and_text_field() {
                     'Computer Scientist'  => 'Computer Scientist',
 					'Data Analysis Core' => 'Data Analysis Core',
 					'Data Architect' => 'Data Architect',
+					'Data Curator' => 'Data Curator',
 					'Data Manager' => 'Data Manager',
 					'Data Scientist' => 'Data Scientist',
 					'Designer' => 'Designer',
