@@ -241,7 +241,6 @@ function cn_register_custom_metabox_and_text_field() {
                 'id'         => 'hm_access_requests', // Change this so it is unique to you project. Each field id MUST be unique.
                 'type'       => 'checkboxgroup',  // This is the field type being added.
                 'options'    => array(
-                    'Sample Data Portal'   => 'Sample Data Portal',
                     'HuBMAP Data'   => 'HuBMAP Data',
                     'HuBMAP ID System'   => 'HuBMAP ID System',
                     'Collaboration Portal' => 'Collaboration Portal',
