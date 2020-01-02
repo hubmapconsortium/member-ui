@@ -45,7 +45,7 @@ db = SQLAlchemy(app)
 # Init MA
 ma = Marshmallow(app)
 
-
+# User-Connection mapping table
 connects = db.Table('user_connection',
         db.Column('user_id', db.Integer, db.ForeignKey('wp_users.id')),
         db.Column('connection_id', db.Integer, db.ForeignKey('wp_connections.id'))
