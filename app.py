@@ -51,7 +51,7 @@ connects = db.Table('user_connection',
         db.Column('connection_id', db.Integer, db.ForeignKey('wp_connections.id'))
 )
 
-# WPUser Class/Model
+# StageUser Class/Model
 class StageUser(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     globus_user_id = db.Column(db.String(100), unique=True)
@@ -1150,6 +1150,32 @@ def edit_connection(user_obj, wp_user, connection, new_user = False):
     if not wp_user in connection.owners:
         connection.owners.append(wp_user)
 
+# Get a list of all approved members (not including admins)
+def get_all_members():
+    members = list()
+    wp_users = WPUser.query.all()
+    for user in wp_users:
+        # Check if this target user is a member (capabilities will be empty dict if not member role)
+        capabilities = next((meta for meta in user.metas if (meta.meta_key == 'wp_capabilities') and ('member' in meta.meta_value)), {})
+        if capabilities:
+            # Note user.connection returns a list of connections (should be only one though)
+            connection_data = user.connection[0]
+            # Also get the globus_user_id
+            wp_user_meta = WPUserMeta.query.filter(WPUserMeta.user_id == user.id, WPUserMeta.meta_key.like('openid-connect-generic-subject-identity')).first()
+            #pprint(vars(wp_user_meta))
+            # Construct a new member dict and add to the members list
+            member = {
+                'globus_user_id': wp_user_meta.meta_value,
+                'first_name': connection_data.first_name,
+                'last_name': connection_data.last_name,
+                'email': user.user_email
+            }
+
+            members.append(member)
+    
+    return members
+
+
 # Deny the new user registration
 def deny_stage_user(globus_user_id):
     stage_user = get_stage_user(globus_user_id)
@@ -1575,6 +1601,110 @@ def profile():
                 return show_user_info("Sorry, you don't have a profile because your registration has been denied.")
         else:
             return show_user_info('You have not registered, please click <a href="/register">here</a> to register.')
+
+# Only for admin to see a list of all the approved members (not including admins)
+# Currently only handle deleting a member
+# globus_user_id is optional
+@app.route("/members/", defaults={'globus_user_id': None}, methods=['GET']) # need the trailing slash
+@app.route("/members/<globus_user_id>", methods=['GET'])
+@login_required
+@admin_required
+def members(globus_user_id):
+    # Show a list of all members if globus_user_id not present
+    if not globus_user_id:
+        members = get_all_members()
+        context = {
+            'isAuthenticated': True,
+            'username': session['name'],
+            'members': members
+        }
+
+        return render_template('all_members.html', data = context)
+    else:
+        # Fetch user profile data
+        try:
+            wp_user = get_user_profile(globus_user_id)
+        except Exception as e: 
+            print("Failed to get user profile for globus_user_id: " + globus_user_id)
+            print(e)
+            return show_user_error("Oops! The system failed to query the target member's profile data!")
+
+        # Below is the same code as GET /profile
+        # Parsing the json(from schema dump) to get initial user profile data
+        connection_data = wp_user['connection'][0]
+
+        # Deserialize the phone number value to a python dict
+        deserilized_phone = ''
+        deserilized_phone_dict = phpserialize.loads(connection_data['phone_numbers'].encode('utf-8'), decode_strings=True)
+        # Add another new property for display only
+        if deserilized_phone_dict:
+            deserilized_phone = (deserilized_phone_dict[0])['number']
+
+        initial_data = {
+            # Data pulled from the `wp_connections` table
+            'first_name': connection_data['first_name'],
+            'last_name': connection_data['last_name'],
+            'component': connection_data['department'], # Store the component value in department field
+            'organization': connection_data['organization'], 
+            'role': connection_data['title'], # Store the role value in title field
+            'bio': connection_data['bio'],
+            # email is pulled from the `wp_users` table that is linked with Globus login so no need to deserialize the wp_connections.email filed
+            'email': wp_user['user_email'].lower(),
+            # Other values pulled from `wp_connections_meta` table as customized fileds
+            'phone': deserilized_phone,
+            'other_component': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_other_component'), {'meta_value': ''})['meta_value'],
+            'other_organization': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_other_organization'), {'meta_value': ''})['meta_value'],
+            'other_role': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_other_role'), {'meta_value': ''})['meta_value'],
+            'working_group': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_working_group'), {'meta_value': ''})['meta_value'],
+            'access_requests': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_access_requests'), {'meta_value': ''})['meta_value'],
+            'google_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_google_email'), {'meta_value': ''})['meta_value'],
+            'github_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_github_username'), {'meta_value': ''})['meta_value'],
+            'slack_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_slack_username'), {'meta_value': ''})['meta_value'],
+            'website': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_website'), {'meta_value': ''})['meta_value'],
+            'orcid': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_orcid'), {'meta_value': ''})['meta_value'],
+            # This is slightly different from the GET /profile
+            'pm': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_pm'), {'meta_value': ''})['meta_value'] == '1',
+            'pm_name': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_pm_name'), {'meta_value': ''})['meta_value'],
+            'pm_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_pm_email'), {'meta_value': ''})['meta_value'],
+        }
+
+
+        # Connections created in WP connections plugin without uploading image won't have the 'image' field
+        # Use empty and display the default profile image
+        profile_pic_url = ''
+
+        try:
+            options = json.loads(connection_data['options'])
+            profile_pic_path = options['image']['meta']['original']['path']
+
+            # Also check if the file exists, otherwise profile_pic_url = '' still
+            # It's possible the path and url in database but the actual file or dir not on the disk
+            if pathlib.Path(profile_pic_path).exists():
+                if 'url' in options['image']['meta']['original']:
+                    profile_pic_url = options['image']['meta']['original']['url']
+        except KeyError:
+            profile_pic_url = ''
+
+        # The above initial_data wil be merged with this context
+        context = {
+            'isAuthenticated': True,
+            'username': session['name'],
+            'profile_pic_url': profile_pic_url,
+            # user_id and connection_id will be used to delete the member records
+            'user_id': wp_user['id'],
+            'connection_id': connection_data['id'],
+            # Need to convert string representation of list to Python list
+            'working_group_list': ast.literal_eval(initial_data['working_group']),
+            'access_requests_list': ast.literal_eval(initial_data['access_requests'])
+        }
+        
+        # Merge initial_data and context as one dict 
+        data = {**context, **initial_data}
+
+        # Populate the user data in profile
+        return render_template('individual_member.html', data = data)
+
+
 
 # Only for admin to see a list of pending new registrations
 # Currently only handle approve and deny actions
