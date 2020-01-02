@@ -1629,7 +1629,7 @@ def members(globus_user_id):
             print(e)
             return show_user_error("Oops! The system failed to query the target member's profile data!")
 
-        # Below is the same code as GET /profile
+        # Below is the same code as GET /profile (with minor modifications)
         # Parsing the json(from schema dump) to get initial user profile data
         connection_data = wp_user['connection'][0]
 
@@ -1668,31 +1668,11 @@ def members(globus_user_id):
             'pm_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_pm_email'), {'meta_value': ''})['meta_value'],
         }
 
-
-        # Connections created in WP connections plugin without uploading image won't have the 'image' field
-        # Use empty and display the default profile image
-        profile_pic_url = ''
-
-        try:
-            options = json.loads(connection_data['options'])
-            profile_pic_path = options['image']['meta']['original']['path']
-
-            # Also check if the file exists, otherwise profile_pic_url = '' still
-            # It's possible the path and url in database but the actual file or dir not on the disk
-            if pathlib.Path(profile_pic_path).exists():
-                if 'url' in options['image']['meta']['original']:
-                    profile_pic_url = options['image']['meta']['original']['url']
-        except KeyError:
-            profile_pic_url = ''
-
         # The above initial_data wil be merged with this context
         context = {
             'isAuthenticated': True,
             'username': session['name'],
-            'profile_pic_url': profile_pic_url,
-            # user_id and connection_id will be used to delete the member records
-            'user_id': wp_user['id'],
-            'connection_id': connection_data['id'],
+            'globus_user_id': globus_user_id,
             # Need to convert string representation of list to Python list
             'working_group_list': ast.literal_eval(initial_data['working_group']),
             'access_requests_list': ast.literal_eval(initial_data['access_requests'])
@@ -1704,6 +1684,31 @@ def members(globus_user_id):
         # Populate the user data in profile
         return render_template('individual_member.html', data = data)
 
+# Delete target member records from database and image files
+@app.route("/delete_member/<globus_user_id>", methods=['GET']) # need the trailing slash
+@login_required
+@admin_required
+def delete_member(globus_user_id):
+    wp_user = get_wp_user(globus_user_id)
+
+    # First, delete the connection images from file system before deleting any database records
+    image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], wp_user.connection[0].slug)
+    
+    try:
+        rmtree(image_dir)
+    except Exception as e:
+        print("Failed to delete the target user's profile image folder: " + image_dir + ", please manually delete that directory.")
+        print(e)
+
+    # Delete the wp user record, this also deletes the mapping record in `user_connection` table
+    db.session.delete(wp_user)
+    
+    # Delete the connection record
+    db.session.delete(wp_user.connection[0])
+
+    db.session.commit()
+
+    return show_admin_info("The records of this member have been deleted successfully!")
 
 
 # Only for admin to see a list of pending new registrations

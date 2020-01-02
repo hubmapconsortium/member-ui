@@ -11,7 +11,6 @@
 <div class="card">
   <h5 class="card-header">Member Detail</h5>
   <div class="card-body">
-    
 First name: {{ data.first_name }} <br />
 Last name: {{ data.last_name }} <br />
 Email: {{ data.email }} <br />
@@ -91,7 +90,7 @@ No project manager for this user
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-        <a href="{{ config['FLASK_APP_BASE_URI'] }}/delete_member/{{ data.user_id }}/{{ data.connection_id }}" class="btn btn-danger">Delete</a>
+        <a href="{{ config['FLASK_APP_BASE_URI'] }}/delete_member/{{ data.globus_user_id }}" class="btn btn-danger">Delete</a>
       </div>
     </div>
   </div>
