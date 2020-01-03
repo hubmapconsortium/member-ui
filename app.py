@@ -55,6 +55,7 @@ connects = db.Table('user_connection',
 class StageUser(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     globus_user_id = db.Column(db.String(100), unique=True)
+    globus_username = db.Column(db.String(100))
     email = db.Column(db.String(100), unique=True)
     first_name = db.Column(db.String(200))
     last_name = db.Column(db.String(200))
@@ -84,6 +85,7 @@ class StageUser(db.Model):
     def __init__(self, a_dict):
         try:
             self.globus_user_id = a_dict['globus_user_id'] if 'globus_user_id' in a_dict else ''
+            self.globus_username = a_dict['globus_username'] if 'globus_username' in a_dict else ''
             self.email = a_dict['email'] if 'email' in a_dict else ''
             self.first_name = a_dict['first_name'] if 'first_name' in a_dict else ''
             self.last_name = a_dict['last_name'] if 'last_name' in a_dict else ''
@@ -113,7 +115,7 @@ class StageUser(db.Model):
 # Define output format with marshmallow schema
 class StageUserSchema(ma.Schema):
     class Meta:
-        fields = ('id', 'globus_user_id', 'email', 'first_name', 'last_name', 'component', 'other_component', 'organization', 'other_organization',
+        fields = ('id', 'globus_user_id', 'globus_username', 'email', 'first_name', 'last_name', 'component', 'other_component', 'organization', 'other_organization',
                     'role', 'other_role', 'working_group', 'photo', 'photo_url', 'access_requests', 'google_email', 'github_username', 'slack_username', 'phone', 'website',
                     'bio', 'orcid', 'pm', 'pm_name', 'pm_email', 'created_at', 'deny')
 
@@ -280,8 +282,6 @@ def send_new_user_denied_mail(recipient, data):
     msg.html = render_template('email/new_user_denied_email.html', data = data)
     mail.send(msg)
 
-
-
 # Get user info from globus with the auth access token
 def get_globus_user_info(token):
     auth_client = AuthClient(authorizer=AccessTokenAuthorizer(token))
@@ -312,8 +312,9 @@ def construct_user(request):
 
     # strip() removes any leading and trailing whitespaces including tabs (\t)
     user_info = {
-        # Get the globus user id from session data
+        # Get the globus user id and globus username from session data
         "globus_user_id": session['globus_user_id'],
+        "globus_username": session['globus_username'],
         # All others are from the form data
         "email": request.form['email'].strip(),
         "first_name": request.form['first_name'].strip(),
@@ -374,6 +375,8 @@ def show_registration_form():
         'isAuthenticated': True,
         'username': session['name'],
         'csrf_token': generate_csrf_token(),
+        'globus_user_id': session['globus_user_id'],
+        'globus_username': session['globus_username'],
         'first_name': name_words[0],
         # Use empty for last name if not present
         'last_name': name_words[1] if (len(name_words) > 1) else "",
@@ -717,6 +720,12 @@ def create_new_user(stage_user_obj):
     meta_globus_user_id = WPUserMeta()
     meta_globus_user_id.meta_key = "openid-connect-generic-subject-identity"
     meta_globus_user_id.meta_value = stage_user_obj.globus_user_id
+    new_wp_user.metas.append(meta_globus_user_id)
+
+    # Create new usermeta for globus username
+    meta_globus_username = WPUserMeta()
+    meta_globus_username.meta_key = "openid-connect-generic-subject-username"
+    meta_globus_username.meta_value = stage_user_obj.globus_username
     new_wp_user.metas.append(meta_globus_user_id)
 
     return new_wp_user
@@ -1160,12 +1169,19 @@ def get_all_members():
         if capabilities:
             # Note user.connection returns a list of connections (should be only one though)
             connection_data = user.connection[0]
-            # Also get the globus_user_id
-            wp_user_meta = WPUserMeta.query.filter(WPUserMeta.user_id == user.id, WPUserMeta.meta_key.like('openid-connect-generic-subject-identity')).first()
-            #pprint(vars(wp_user_meta))
+            # Also get the globus_user_id and globus_username
+            wp_user_meta_globus_user_id = WPUserMeta.query.filter(WPUserMeta.user_id == user.id, WPUserMeta.meta_key.like('openid-connect-generic-subject-identity')).first()
+            wp_user_meta_globus_username = WPUserMeta.query.filter(WPUserMeta.user_id == user.id, WPUserMeta.meta_key.like('openid-connect-generic-subject-username')).first()
+            # The system didn't store globus_username for old members
+            # In such cases, we use empty string
+            globus_username = ''
+            if wp_user_meta_globus_username:
+                globus_username = wp_user_meta_globus_username.meta_value
+
             # Construct a new member dict and add to the members list
             member = {
-                'globus_user_id': wp_user_meta.meta_value,
+                'globus_user_id': wp_user_meta_globus_user_id.meta_value,
+                'globus_username': globus_username,
                 'first_name': connection_data.first_name,
                 'last_name': connection_data.last_name,
                 'email': user.user_email
@@ -1330,12 +1346,14 @@ def login():
 
         # Also get the user info (sub, email, name, preferred_username) using the AuthClient with the auth token
         user_info = get_globus_user_info(auth_token)
-
+        pprint(user_info)
         # Store the resulting tokens in server session
         session['isAuthenticated'] = True
         # For rendering admin menu 
         session['isAdmin'] = user_is_admin(user_info['sub'])
+        # Globus ID and username parsed from login
         session['globus_user_id'] = user_info['sub']
+        session['globus_username'] = user_info['preferred_username']
         session['name'] = user_info['name']
         # Normalize email to lowercase
         session['email'] = user_info['email'].lower()
@@ -1403,7 +1421,7 @@ def register():
                 result = json.loads(response.read().decode())
 
                 # For testing only
-                #result['success'] = True
+                result['success'] = True
 
                 # Currently no backend form validation
                 # Only front end validation and reCAPTCHA
@@ -1582,6 +1600,9 @@ def profile():
             context = {
                 'isAuthenticated': True,
                 'username': session['name'],
+                'globus_user_id': session['globus_user_id'],
+                # For individual user profile, use the globus_username from session
+                'globus_username': session['globus_username'],
                 'csrf_token': generate_csrf_token(),
                 'connection_id': connection_data['id'],
                 'profile_pic_url': profile_pic_url
@@ -1668,11 +1689,17 @@ def members(globus_user_id):
             'pm_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_pm_email'), {'meta_value': ''})['meta_value'],
         }
 
+        # Get the globus_username for individual user
+        # The system didn't store globus username for old members
+        # Use meta_value (either actual value if present or empty string as default)
+        globus_username = next((meta for meta in wp_user['metas'] if meta['meta_key'] == 'openid-connect-generic-subject-username'), {'meta_value': ''})['meta_value']
+
         # The above initial_data wil be merged with this context
         context = {
             'isAuthenticated': True,
             'username': session['name'],
             'globus_user_id': globus_user_id,
+            'globus_username': globus_username,
             # Need to convert string representation of list to Python list
             'working_group_list': ast.literal_eval(initial_data['working_group']),
             'access_requests_list': ast.literal_eval(initial_data['access_requests'])

@@ -31,12 +31,23 @@ services:
     container_name: member-mysql
     environment:
       MYSQL_ROOT_PASSWORD: 123
-    # Use the same port mapping for dev and prod
     ports:
       - "3306:3306"
     networks:
       - hubmap
 
+  # Only used by local development
+  member-phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    hostname: member-phpmyadmin
+    container_name: member-phpmyadmin
+    environment:
+      PMA_HOST: member-mysql
+      PMA_PORT: 3306
+    ports:
+      - "8888:80"
+    networks:
+      - hubmap
 
 networks:
   hubmap:

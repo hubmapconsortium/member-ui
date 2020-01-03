@@ -14,7 +14,7 @@
       <th scope="col">First Name</th>
       <th scope="col">Last Name</th>
       <th scope="col">Email</th>
-      <th scope="col">Globus ID Used for Login</th>
+      <th scope="col">Globus ID and Username</th>
     </tr>
   </thead>
   <tbody>
@@ -24,7 +24,7 @@
       <td>{{ member.first_name }}</td>
       <td>{{ member.last_name }}</td>
       <td>{{ member.email }}</td>
-      <td>{{ member.globus_user_id }}</td>
+      <td>ID: {{ member.globus_user_id }}<br />Username: {{ member.globus_username }}</td>
     </tr>
 	{% endfor %}
   </tbody>

@@ -312,7 +312,26 @@
             <div class="row">
                 <div class="col">
                     <div class="form-group">
-                        <label for="first-name">First Name <span class="text-danger">*</span></label>
+                        <label for="globus_user_id">Globus user ID used for login<span class="text-danger">*</span></label>
+                        <!-- Disallow edit since it's used with globus login -->
+                        <input type="text" name="globus_user_id" value="{{ data.globus_user_id }}" class="form-control" maxlength="100" id="id_globus_user_id" disabled>
+                        <input type="hidden" name="globus_user_id" value="{{ data.globus_user_id }}">
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="form-group">
+                        <label for="globus_username">Globus username used for login<span class="text-danger">*</span></label>
+                        <!-- Disallow edit since it's used with globus login -->
+                        <input type="text" name="globus_username" value="{{ data.globus_username }}" class="form-control" maxlength="100" id="id_globus_username" disabled>
+                        <input type="hidden" name="globus_username" value="{{ data.globus_username }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col">
+                    <div class="form-group">
+                        <label for="first_name">First Name <span class="text-danger">*</span></label>
                         
                         <input type="text" name="first_name" value="{{ data.first_name }}" class="form-control" maxlength="100" id="id_first_name">
 
@@ -320,7 +339,7 @@
                 </div>
                 <div class="col">
                     <div class="form-group">
-                        <label for="last-name">Last Name <span class="text-danger">*</span></label>
+                        <label for="last_name">Last Name <span class="text-danger">*</span></label>
                         
                         <input type="text" name="last_name" value="{{ data.last_name }}" class="form-control" maxlength="100" id="id_last_name">
                     </div>
@@ -609,7 +628,7 @@
             </div>
 
 
-            <button type="submit" id="submitBtn" class="btn btn-primary btn-lg" disabled>Submit</button>
+            <button type="submit" id="submitBtn" class="btn btn-primary btn-lg" >Submit</button>
         </form>
 
         <script src="https://www.google.com/recaptcha/api.js" async defer></script>
