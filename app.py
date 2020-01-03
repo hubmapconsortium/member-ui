@@ -1689,26 +1689,41 @@ def members(globus_user_id):
 @login_required
 @admin_required
 def delete_member(globus_user_id):
-    wp_user = get_wp_user(globus_user_id)
-
-    # First, delete the connection images from file system before deleting any database records
-    image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], wp_user.connection[0].slug)
-    
     try:
-        rmtree(image_dir)
-    except Exception as e:
-        print("Failed to delete the target user's profile image folder: " + image_dir + ", please manually delete that directory.")
+        wp_user = get_wp_user(globus_user_id)
+    except Exception as e: 
+        print("The system could not find the target member based on the provided globus_user_id: " + globus_user_id)
+        print(e)
+        return show_user_error("Oops! The system could not find the target member based on the provided Globus ID!")
+
+    try:
+        # Delete the wp user record, this also deletes the mapping record in `user_connection` table
+        db.session.delete(wp_user)
+        
+        # Delete the connection record
+        db.session.delete(wp_user.connection[0])
+
+        db.session.commit()
+
+        # Delete the connection images from file system after database records being deleted successfully
+        image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], wp_user.connection[0].slug)
+        
+        try:
+            rmtree(image_dir)
+        except Exception as e:
+            print("Failed to delete the target user's profile image folder: " + image_dir + ", please manually delete that directory.")
+            print(e)
+
+        return show_admin_info("The records of this member have been deleted successfully!")
+    except Exception as e: 
+        db.session.rollback()
+        
+        # Add error to logging
+        print("The system failed to delete the records of this member!")
         print(e)
 
-    # Delete the wp user record, this also deletes the mapping record in `user_connection` table
-    db.session.delete(wp_user)
-    
-    # Delete the connection record
-    db.session.delete(wp_user.connection[0])
-
-    db.session.commit()
-
-    return show_admin_info("The records of this member have been deleted successfully!")
+        # Notify end users
+        return show_admin_error("The system failed to delete the records of this member!")
 
 
 # Only for admin to see a list of pending new registrations
