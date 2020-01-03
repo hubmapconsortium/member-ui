@@ -313,17 +313,15 @@
                 <div class="col">
                     <div class="form-group">
                         <label for="globus_user_id">Globus user ID used for login<span class="text-danger">*</span></label>
-                        <!-- Disallow edit since it's used with globus login -->
+                        <!-- Disallow edit and won't submit (no need of hidden value) the value since the value can be found in session -->
                         <input type="text" name="globus_user_id" value="{{ data.globus_user_id }}" class="form-control" maxlength="100" id="id_globus_user_id" disabled>
-                        <input type="hidden" name="globus_user_id" value="{{ data.globus_user_id }}">
                     </div>
                 </div>
                 <div class="col">
                     <div class="form-group">
                         <label for="globus_username">Globus username used for login<span class="text-danger">*</span></label>
-                        <!-- Disallow edit since it's used with globus login -->
+                        <!-- Disallow edit and won't submit (no need of hidden value) the value since the value can be found in session -->
                         <input type="text" name="globus_username" value="{{ data.globus_username }}" class="form-control" maxlength="100" id="id_globus_username" disabled>
-                        <input type="hidden" name="globus_username" value="{{ data.globus_username }}">
                     </div>
                 </div>
             </div>

@@ -1,5 +1,8 @@
 HuBMAP new user registered.
 
+Globus ID: {{ data['globus_user_id'] }}
+Globus Username: {{ data['globus_username'] }}
+
 Name: {{ data['first_name'] }} {{ data['last_name'] }}
 Email: {{ data['email'] }}
 Phone: {{ data['phone'] }}
@@ -61,4 +64,4 @@ URL to approve this user: {{ config['FLASK_APP_BASE_URI'] }}/registrations/{{ da
 
 
 
-HuBMAP User Registration and Profile
+HuBMAP Member Registration and Profile

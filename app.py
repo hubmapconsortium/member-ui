@@ -443,7 +443,7 @@ def show_admin_info(message):
 def user_is_approved(globus_user_id):
     user_meta = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == globus_user_id).first()
     if not user_meta:
-        print('No user found with globus_user_id: ' + globus_user_id)
+        print('user_is_approved(): No user found with globus_user_id: ' + globus_user_id)
         return False
     users = [user_meta.user]
     result = wp_users_schema.dump(users)
@@ -458,7 +458,7 @@ def user_is_approved(globus_user_id):
 def user_is_admin(globus_user_id):
     user_meta = WPUserMeta.query.filter(WPUserMeta.meta_key.like('openid-connect-generic-subject-identity'), WPUserMeta.meta_value == globus_user_id).first()
     if not user_meta:
-        print('No user found with globus_user_id: ' + globus_user_id)
+        print('user_is_admin(): No user found with globus_user_id: ' + globus_user_id)
         return False
     users = [user_meta.user]
     result = wp_users_schema.dump(users)
@@ -724,9 +724,9 @@ def create_new_user(stage_user_obj):
 
     # Create new usermeta for globus username
     meta_globus_username = WPUserMeta()
-    meta_globus_username.meta_key = "openid-connect-generic-subject-username"
+    meta_globus_username.meta_key = "globus_username"
     meta_globus_username.meta_value = stage_user_obj.globus_username
-    new_wp_user.metas.append(meta_globus_user_id)
+    new_wp_user.metas.append(meta_globus_username)
 
     return new_wp_user
 
@@ -1162,7 +1162,8 @@ def edit_connection(user_obj, wp_user, connection, new_user = False):
 # Get a list of all approved members (not including admins)
 def get_all_members():
     members = list()
-    wp_users = WPUser.query.all()
+    # Order members by ID DESC
+    wp_users = WPUser.query.order_by(WPUser.id.desc()).all()
     for user in wp_users:
         # Check if this target user is a member (capabilities will be empty dict if not member role)
         capabilities = next((meta for meta in user.metas if (meta.meta_key == 'wp_capabilities') and ('member' in meta.meta_value)), {})
@@ -1171,7 +1172,7 @@ def get_all_members():
             connection_data = user.connection[0]
             # Also get the globus_user_id and globus_username
             wp_user_meta_globus_user_id = WPUserMeta.query.filter(WPUserMeta.user_id == user.id, WPUserMeta.meta_key.like('openid-connect-generic-subject-identity')).first()
-            wp_user_meta_globus_username = WPUserMeta.query.filter(WPUserMeta.user_id == user.id, WPUserMeta.meta_key.like('openid-connect-generic-subject-username')).first()
+            wp_user_meta_globus_username = WPUserMeta.query.filter(WPUserMeta.user_id == user.id, WPUserMeta.meta_key.like('globus_username')).first()
             # The system didn't store globus_username for old members
             # In such cases, we use empty string
             globus_username = ''
@@ -1200,7 +1201,8 @@ def deny_stage_user(globus_user_id):
 
 # Get a list of all the pending registrations
 def get_all_stage_users():
-    stage_users = StageUser.query.order_by(StageUser.created_at).all()
+    # Order by submission date DESC
+    stage_users = StageUser.query.order_by(StageUser.created_at.desc()).all()
     return stage_users
 
 # Get a stage user new registration by a given globus_user_id
@@ -1346,7 +1348,7 @@ def login():
 
         # Also get the user info (sub, email, name, preferred_username) using the AuthClient with the auth token
         user_info = get_globus_user_info(auth_token)
-        pprint(user_info)
+
         # Store the resulting tokens in server session
         session['isAuthenticated'] = True
         # For rendering admin menu 
@@ -1692,7 +1694,7 @@ def members(globus_user_id):
         # Get the globus_username for individual user
         # The system didn't store globus username for old members
         # Use meta_value (either actual value if present or empty string as default)
-        globus_username = next((meta for meta in wp_user['metas'] if meta['meta_key'] == 'openid-connect-generic-subject-username'), {'meta_value': ''})['meta_value']
+        globus_username = next((meta for meta in wp_user['metas'] if meta['meta_key'] == 'globus_username'), {'meta_value': ''})['meta_value']
 
         # The above initial_data wil be merged with this context
         context = {

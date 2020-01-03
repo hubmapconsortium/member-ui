@@ -21,6 +21,9 @@ services:
       - "../member-ui:/usr/src/app/src"
       # Mount conf.d-dev to the nginx conf.d on container
       - "./nginx/conf.d:/etc/nginx/conf.d"
+      # Image directories
+      - "/home/zhy19/HuBMAP/reg/stage:/home/zhy19/HuBMAP/reg/stage"
+      - "/home/zhy19/HuBMAP/reg/connections-images:/home/zhy19/HuBMAP/reg/connections-images"
   
   # Only used by local development
   member-mysql:
