@@ -1423,7 +1423,7 @@ def register():
                 result = json.loads(response.read().decode())
 
                 # For testing only
-                result['success'] = True
+                #result['success'] = True
 
                 # Currently no backend form validation
                 # Only front end validation and reCAPTCHA
