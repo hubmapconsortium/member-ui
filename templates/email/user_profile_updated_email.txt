@@ -45,4 +45,4 @@ Email for HuBMAP Slack Workspace: {{ data['slack_username'] }}
 
 
 
-HuBMAP User Registration and Profile
+HuBMAP Member Registration and Profile

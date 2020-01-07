@@ -1,0 +1,56 @@
+version: "3.7"
+
+# Will use the hostname when talking between services on the same network
+services:
+  
+  member-ui:
+    build: .
+    # Build the image with name and tag
+    image: member-ui:1.0
+    hostname: member-ui
+    container_name: member-ui
+    # Map post 5000 on host machine to 80 on container
+    ports:
+      - "5000:80"
+    networks:
+      - hubmap
+    volumes:
+      # Make the uwsgi logging generated on container available through from host
+      - "./log:/usr/src/app/log"
+       # Mount the source code to container
+      - "../member-ui:/usr/src/app/src"
+      # Mount conf.d-dev to the nginx conf.d on container
+      - "./nginx/conf.d:/etc/nginx/conf.d"
+      # Image directories
+      - "/home/zhy19/HuBMAP/reg/stage:/home/zhy19/HuBMAP/reg/stage"
+      - "/home/zhy19/HuBMAP/reg/connections-images:/home/zhy19/HuBMAP/reg/connections-images"
+  
+  # Only used by local development
+  member-mysql:
+    build: ./member-mysql
+    # Build the image with name and tag
+    image: member-mysql:1.0
+    hostname: member-mysql
+    container_name: member-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 123
+    ports:
+      - "3306:3306"
+    networks:
+      - hubmap
+
+  # Only used by local development
+  member-phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    hostname: member-phpmyadmin
+    container_name: member-phpmyadmin
+    environment:
+      PMA_HOST: member-mysql
+      PMA_PORT: 3306
+    ports:
+      - "8888:80"
+    networks:
+      - hubmap
+
+networks:
+  hubmap:

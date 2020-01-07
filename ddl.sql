@@ -1,6 +1,7 @@
 CREATE TABLE `stage_user` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `globus_user_id` varchar(100) DEFAULT NULL,
+  `globus_username` varchar(100) DEFAULT NULL,
   `email` varchar(100) DEFAULT NULL,
   `first_name` varchar(200) DEFAULT NULL,
   `last_name` varchar(200) DEFAULT NULL,

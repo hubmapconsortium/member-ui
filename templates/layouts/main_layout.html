@@ -28,7 +28,10 @@ alt="HuBMAP logo" /></a>
 </li>
 {% if session['isAdmin'] %}
 <li class="nav-item">
-<a class="nav-link" href="{{ config['FLASK_APP_BASE_URI'] }}/registrations">Admin Dashboard</a>
+<a class="nav-link" href="{{ config['FLASK_APP_BASE_URI'] }}/registrations">Registrations</a>
+</li>
+<li class="nav-item">
+<a class="nav-link" href="{{ config['FLASK_APP_BASE_URI'] }}/members">Members</a>
 </li>
 {% endif %}
 </ul>

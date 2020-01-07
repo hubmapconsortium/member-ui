@@ -1,5 +1,8 @@
 HuBMAP new user registered. <br /><br />
 
+Globus ID: {{ data['globus_user_id'] }} <br />
+Globus Username: {{ data['globus_username'] }} <br />
+
 Name: {{ data['first_name'] }} {{ data['last_name'] }} <br />
 Email: {{ data['email'] }} <br />
 Phone: {{ data['phone'] }} <br />
@@ -64,4 +67,4 @@ No project manager for this user
 URL to approve this user: <a href="{{ config['FLASK_APP_BASE_URI'] }}/registrations/{{ data['globus_user_id'] }}">{{ config['FLASK_APP_BASE_URI'] }}/registrations/{{ data['globus_user_id'] }}</a><br />
 
 <br />
-HuBMAP User registration and Profile
+HuBMAP Member Registration and Profile
