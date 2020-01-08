@@ -21,8 +21,11 @@ SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://root:123@member-mysql/hm_wpdb'
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 # IMAGE DIRECTORIES, works regardless the trailing slash /
-STAGE_USER_IMAGE_DIR = '/PATH/registration/avatar/'
-CONNECTION_IMAGE_DIR = '/PATH/wp-content/uploads/connections-images/'
+# Default values work for docker deployment
+STAGE_USER_IMAGE_DIR = '/usr/src/app/member-ui-stage-images/'
+CONNECTION_IMAGE_DIR = '/usr/src/app/wp-connections-images/'
+
+# Base URL for displaying connection profile images
 CONNECTION_IMAGE_URL = 'https://hubmapconsortium.org/wp-content/uploads/connections-images/'
 
 # Email settings for Flask-Mail extension
