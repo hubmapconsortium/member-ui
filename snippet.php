@@ -206,29 +206,7 @@ function cn_register_custom_metabox_and_text_field() {
 			),
 		),
 	);
-	
-	$hm_wg_atts = array(
-		'title'    => 'What HuBMAP Working Groups would you like to join?',         // Change this to a name which applies to your project.
-		'id'       => 'hm_working_group',           // Change this so it is unique to you project.
-		'context'  => 'normal',
-		'priority' => 'core',
-		'fields'   => array(
-			array(
-				'name'       => 'working group', // Change this field name to something which applies to you project.
-				'show_label' => TRUE,         // Whether or not to display the 'name'. Changing it to false will suppress the name.
-				'id'         => 'hm_working_group',   // Change this so it is unique to you project. Each field id MUST be unique.
-				'type'       => 'checkboxgroup',       // This is the field type being added.
-				'size'       => 'regular',    // This can be changed to one of the following: 'small', 'regular', 'large'
-				'options'    => array(
-                    'Communications & Engagement'   => 'Communications & Engagement',
-                    'Data Science'   => 'Data Science',
-                    'Policies' => 'Policies',
-                    'Tissue, Technology & Data Collection'  => 'Tissue, Technology & Data Collection'
-                ),
-			),
-		),
-	);
-	
+
 	$hm_ar_atts = array(
         'title'    => 'Which HuBMAP resources will you need to access?', // Change this to a name which applies to your project.
         'id'       => 'hm_access_requests', // Change this so it is unique to you project.
@@ -393,7 +371,6 @@ function cn_register_custom_metabox_and_text_field() {
     cnMetaboxAPI::add( $hm_other_organization_atts);
     cnMetaboxAPI::add( $hm_role_atts );
     cnMetaboxAPI::add( $hm_other_role_atts);
-	cnMetaboxAPI::add( $hm_wg_atts );
     cnMetaboxAPI::add( $hm_ar_atts );
     cnMetaboxAPI::add( $hm_google_email_atts);
     cnMetaboxAPI::add( $hm_github_username_atts);
@@ -403,38 +380,4 @@ function cn_register_custom_metabox_and_text_field() {
     cnMetaboxAPI::add( $hm_pm_atts );
     cnMetaboxAPI::add( $hm_pm_name_atts );
 	cnMetaboxAPI::add( $hm_pm_email_atts );
-}
-
-// Register the custom fields CSV Import mapping options and processing callback.
-add_filter( 'cncsv_map_import_fields', 'cncsv_header_name' );
-add_action( 'cncsv_import_fields', 'cncsv_process_import', 10, 3 );
- 
-function cncsv_header_name( $fields ) {
- 
-	// The field_id should match exactly the field id used when registering the custom field.
-	$fields['hm_working_group'] = 'Working Group';
- 
-	return $fields;
-}
- 
-function cncsv_process_import( $id, $row, $entry ) {
- 
-	$data = array();
- 
-	if ( $entry->arrayKeyExists( $row, 'hm_working_group' ) ) {
- 
-		// The field_id should match exactly the field id used when registering the custom field.
-		$value = $entry->arrayPull( $row, 'hm_working_group', '' );
-		$value = cnFormatting::maybeJSONdecode( stripslashes( $value ) );
- 
-		$data[] = array(
-			'key'   => 'hm_working_group',
-			'value' => $value,
-		);
-	}
- 
-	if ( 0 < count( $data ) ) {
- 
-		cnEntry_Action::meta( 'update', $id, $data );
-	}
 }
