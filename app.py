@@ -1483,7 +1483,7 @@ def profile():
                     slack_username_value = slack_username_record.meta_value
                 
                 old_access_requests_dict = {
-                    # Convert list string respresentation to list, if empty string, empty list()
+                    # Convert list string respresentation to Python list, if empty string, empty list()
                     'access_requests': ast.literal_eval(access_requests_value) if (access_requests_value != '') else list(),
                     'google_email': google_email_value,
                     'github_username': github_username_value,
@@ -1558,7 +1558,7 @@ def profile():
                 'pm_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_pm_email'), {'meta_value': ''})['meta_value'],
             }
 
-            # Convert string representation to dict
+            # Convert string representation to list
             if not initial_data['access_requests'].strip() == '':
                 initial_data['access_requests'] = ast.literal_eval(initial_data['access_requests'])
        
@@ -1673,7 +1673,7 @@ def members(globus_user_id):
         # The system didn't store globus username for old members
         # Use meta_value (either actual value if present or empty string as default)
         globus_username = next((meta for meta in wp_user['metas'] if meta['meta_key'] == 'globus_username'), {'meta_value': ''})['meta_value']
-
+        pprint(initial_data['access_requests'])
         # The above initial_data wil be merged with this context
         context = {
             'isAuthenticated': True,
@@ -1681,7 +1681,7 @@ def members(globus_user_id):
             'globus_user_id': globus_user_id,
             'globus_username': globus_username,
             # Need to convert string representation of list to Python list
-            'access_requests_list': ast.literal_eval(initial_data['access_requests'])
+            'access_requests_list': ast.literal_eval(initial_data['access_requests']) if (initial_data['access_requests'].strip() != '') else list()
         }
         
         # Merge initial_data and context as one dict 
