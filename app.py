@@ -1718,41 +1718,52 @@ def members(globus_user_id):
 @login_required
 @admin_required
 def delete_member(globus_user_id):
+    msg = ""
+
     try:
         wp_user = get_wp_user(globus_user_id)
     except Exception as e: 
-        print("The system could not find the target member based on the provided globus_user_id: " + globus_user_id)
+        msg = "The system could not find the target member based on the provided globus_user_id: " + globus_user_id
+        print(msg)
         print(e)
-        return show_user_error("Oops! The system could not find the target member based on the provided Globus ID!")
+        return show_user_error(msg)
 
     try:
-        # Delete the wp user record, this also deletes the mapping record in `user_connection` table
-        db.session.delete(wp_user)
-        
-        # Delete the connection record
+        # First get the target dir before deleting the connection record
+        image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], wp_user.connection[0].slug)
+
+        # Must delete the connection record before deleting wp_user
         db.session.delete(wp_user.connection[0])
+
+        # Then delete the wp user record, this also deletes the mapping record in `user_connection` table
+        db.session.delete(wp_user)
 
         db.session.commit()
 
         # Delete the connection images from file system after database records being deleted successfully
-        image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], wp_user.connection[0].slug)
-        
-        try:
-            rmtree(image_dir)
-        except Exception as e:
-            print("Failed to delete the target user's profile image folder: " + image_dir + ", please manually delete that directory.")
-            print(e)
-
-        return show_admin_info("The records of this member have been deleted successfully!")
+        if os.path.isdir(image_dir):
+            try:
+                rmtree(image_dir)
+                msg = "The database records and connection images of this member have been deleted successfully!"
+                return show_admin_info(msg)
+            except Exception as e:
+                msg = "The database records of this member have been deleted successfully! But the system failed to delete the member's image directory: " + image_dir + ", please manually delete that directory."
+                print(msg)
+                print(e)
+                return show_admin_error(msg)
+        # Still show the success message if no image dir
+        msg = "The database records of this member have been deleted successfully!"
+        return show_admin_info(msg)
     except Exception as e: 
         db.session.rollback()
         
         # Add error to logging
-        print("The system failed to delete the records of this member!")
+        msg = "The system failed to delete the records of this member!"
+        print(msg)
         print(e)
 
-        # Notify end users
-        return show_admin_error("The system failed to delete the records of this member!")
+        # Notify admin
+        return show_admin_error(msg)
 
 
 # Only for admin to see a list of pending new registrations
