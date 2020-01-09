@@ -65,7 +65,6 @@ class StageUser(db.Model):
     other_organization = db.Column(db.String(200))
     role = db.Column(db.String(100))
     other_role = db.Column(db.String(200))
-    working_group = db.Column(db.String(500)) # Checkboxes
     photo = db.Column(db.String(500))
     photo_url = db.Column(db.String(500))
     access_requests = db.Column(db.String(500)) # Checkboxes
@@ -95,7 +94,6 @@ class StageUser(db.Model):
             self.other_organization = a_dict['other_organization'] if 'other_organization' in a_dict else ''
             self.role = a_dict['role'] if 'role' in a_dict else ''
             self.other_role = a_dict['other_role'] if 'other_role' in a_dict else ''
-            self.working_group = json.dumps(a_dict['working_group']) if 'working_group' in a_dict else ''
             self.photo = a_dict['photo'] if 'photo' in a_dict else ''
             self.photo_url = a_dict['photo_url'] if 'photo_url' in a_dict else ''
             self.access_requests = json.dumps(a_dict['access_requests']) if 'access_requests' in a_dict else ''
@@ -116,7 +114,7 @@ class StageUser(db.Model):
 class StageUserSchema(ma.Schema):
     class Meta:
         fields = ('id', 'globus_user_id', 'globus_username', 'email', 'first_name', 'last_name', 'component', 'other_component', 'organization', 'other_organization',
-                    'role', 'other_role', 'working_group', 'photo', 'photo_url', 'access_requests', 'google_email', 'github_username', 'slack_username', 'phone', 'website',
+                    'role', 'other_role', 'photo', 'photo_url', 'access_requests', 'google_email', 'github_username', 'slack_username', 'phone', 'website',
                     'bio', 'orcid', 'pm', 'pm_name', 'pm_email', 'created_at', 'deny')
 
 # WPUserMeta Class/Model
@@ -326,8 +324,6 @@ def construct_user(request):
         "other_organization": request.form['other_organization'].strip(),
         "role": request.form['role'],
         "other_role": request.form['other_role'].strip(),
-        # multiple checkboxes
-        "working_group": request.form.getlist('working_group'),
         "photo": '',
         "photo_url": request.form['photo_url'].strip(),
         # multiple checkboxes
@@ -859,11 +855,6 @@ def create_new_connection(stage_user_obj, new_wp_user):
     connection_meta_other_role.meta_value = stage_user_obj.other_role
     connection.metas.append(connection_meta_other_role)
 
-    connection_meta_working_group = ConnectionMeta()
-    connection_meta_working_group.meta_key = 'hm_working_group'
-    connection_meta_working_group.meta_value = stage_user_obj.working_group
-    connection.metas.append(connection_meta_working_group)
-
     connection_meta_access_requests = ConnectionMeta()
     connection_meta_access_requests.meta_key = 'hm_access_requests'
     connection_meta_access_requests.meta_value = stage_user_obj.access_requests
@@ -1061,15 +1052,6 @@ def edit_connection(user_obj, wp_user, connection, new_user = False):
         connection_meta_other_role.meta_key = 'hm_other_role'
         connection_meta_other_role.meta_value = user_obj.other_role
         connection.metas.append(connection_meta_other_role)
-
-    connection_meta_working_group = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_working_group', ConnectionMeta.entry_id == connection.id).first()
-    if connection_meta_working_group:
-        connection_meta_working_group.meta_value = user_obj.working_group
-    else:
-        connection_meta_working_group = ConnectionMeta()
-        connection_meta_working_group.meta_key = 'hm_working_group'
-        connection_meta_working_group.meta_value = user_obj.working_group
-        connection.metas.append(connection_meta_working_group)
 
     connection_meta_access_requests = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_access_requests', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_access_requests:
@@ -1565,7 +1547,6 @@ def profile():
                 'other_component': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_other_component'), {'meta_value': ''})['meta_value'],
                 'other_organization': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_other_organization'), {'meta_value': ''})['meta_value'],
                 'other_role': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_other_role'), {'meta_value': ''})['meta_value'],
-                'working_group': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_working_group'), {'meta_value': ''})['meta_value'],
                 'access_requests': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_access_requests'), {'meta_value': ''})['meta_value'],
                 'google_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_google_email'), {'meta_value': ''})['meta_value'],
                 'github_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_github_username'), {'meta_value': ''})['meta_value'],
@@ -1578,8 +1559,6 @@ def profile():
             }
 
             # Convert string representation to dict
-            if not initial_data['working_group'].strip() == '':
-                initial_data['working_group'] = ast.literal_eval(initial_data['working_group'])
             if not initial_data['access_requests'].strip() == '':
                 initial_data['access_requests'] = ast.literal_eval(initial_data['access_requests'])
        
@@ -1678,7 +1657,6 @@ def members(globus_user_id):
             'other_component': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_other_component'), {'meta_value': ''})['meta_value'],
             'other_organization': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_other_organization'), {'meta_value': ''})['meta_value'],
             'other_role': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_other_role'), {'meta_value': ''})['meta_value'],
-            'working_group': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_working_group'), {'meta_value': ''})['meta_value'],
             'access_requests': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_access_requests'), {'meta_value': ''})['meta_value'],
             'google_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_google_email'), {'meta_value': ''})['meta_value'],
             'github_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_github_username'), {'meta_value': ''})['meta_value'],
@@ -1703,7 +1681,6 @@ def members(globus_user_id):
             'globus_user_id': globus_user_id,
             'globus_username': globus_username,
             # Need to convert string representation of list to Python list
-            'working_group_list': ast.literal_eval(initial_data['working_group']),
             'access_requests_list': ast.literal_eval(initial_data['access_requests'])
         }
         
@@ -1799,7 +1776,6 @@ def registrations(globus_user_id):
                 'username': session['name'],
                 'stage_user': stage_user,
                 # Need to convert string representation of list to Python list
-                'working_group_list': ast.literal_eval(stage_user.working_group),
                 'access_requests_list': ast.literal_eval(stage_user.access_requests),
                 'matching_profiles': matching_profiles
             }

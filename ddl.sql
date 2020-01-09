@@ -11,7 +11,6 @@ CREATE TABLE `stage_user` (
   `other_organization` varchar(200) DEFAULT NULL,
   `role` varchar(100) DEFAULT NULL,
   `other_role` varchar(200) DEFAULT NULL,
-  `working_group` varchar(500) DEFAULT NULL,
   `photo` varchar(500) DEFAULT NULL,
   `photo_url` varchar(500) DEFAULT NULL,
   `access_requests` varchar(500) DEFAULT NULL,
