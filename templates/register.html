@@ -308,23 +308,7 @@
     <div class="col-sm-12">
         <form id="registration-form" method="POST" action="/register" enctype="multipart/form-data">
 			<input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
-
-            <div class="row">
-                <div class="col">
-                    <div class="form-group">
-                        <label for="globus_user_id">Globus user ID used for login<span class="text-danger">*</span></label>
-                        <!-- Disallow edit and won't submit (no need of hidden value) the value since the value can be found in session -->
-                        <input type="text" name="globus_user_id" value="{{ data.globus_user_id }}" class="form-control" maxlength="100" id="id_globus_user_id" disabled>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="form-group">
-                        <label for="globus_username">Globus username used for login<span class="text-danger">*</span></label>
-                        <!-- Disallow edit and won't submit (no need of hidden value) the value since the value can be found in session -->
-                        <input type="text" name="globus_username" value="{{ data.globus_username }}" class="form-control" maxlength="100" id="id_globus_username" disabled>
-                    </div>
-                </div>
-            </div>
+			<input type="hidden" name="globus_username" value="{{ data.globus_username }}">
 
             <div class="row">
                 <div class="col">
