@@ -45,7 +45,7 @@ HuBMAP service(s) access requested: <br />
 <br />
 
 {% if 'HuBMAP Data Via Globus' in data.access_requests %}
-Globus username provided by the user: {{ data.stage_user.globus_identity }} <br />
+Globus username provided by the user: {{ data.globus_identity }} <br />
 {% endif %}
 
 {% if 'HuBMAP Google Drive Share' in data.access_requests %}
