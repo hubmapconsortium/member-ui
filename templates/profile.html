@@ -29,6 +29,7 @@
         $("#oth-cmpnt").hide();
         $("#oth-org").hide();
         $("#oth-role").hide();
+        $("#globus-identity").hide();
         $("#google-email").hide();
         $("#slack-username").hide();
         $("#github-username").hide();
@@ -79,7 +80,13 @@
                 $("#oth-role").hide();
             }
         });
-
+        
+        $("#id_access_requests_1").change(function() {
+            if (!this.checked){
+                $("#id_globus_identity").val('');
+            }
+            $("#globus-identity").toggle(this.checked);
+        });
         $("#id_access_requests_3").change(function() {
             if (!this.checked){
                 $("#id_google_email").val('');
@@ -122,6 +129,9 @@
         // Disallow them to uncheck this option
         // Disabled in HTML, no need to handle it in js here
 
+        if ($("#id_access_requests_1").prop('checked')){
+            $("#globus-identity").show();
+        }
         if ($("#id_access_requests_3").prop('checked')){
             $("#google-email").show();
         }
@@ -584,6 +594,22 @@ HuBMAP ID System</label>
                                 </div>
                             </div>
                             <div class="col-sm-6">
+                            	<div class="row">
+                                    <div class="col-sm-12">
+                                        <div class="form-group form-group-sm" id="globus-identity">
+                                            <label for="globus_identity">Your Globus identity: <span class="text-danger">*</span> <button type="button" class="btn btn-link" data-toggle="tooltip" data-placement="right" data-html="true" title="Please enter your globus identity.">what is this?</button></label>
+                                            
+                                            {% if data.google_email %}
+                                            <input type="email" name="globus_identity" value="{{ data.globus_identity }}" class="form-control" maxlength="100" id="id_globus_identity" disabled>
+                                            <input type="hidden" name="globus_identity" value="{{ data.globus_identity }}">
+                                            {% else %}
+                                            <input type="email" name="globus_identity" value="{{ data.globus_identity }}" class="form-control" maxlength="100" id="id_globus_identity">
+                                            {% endif %}
+                                            
+                                            
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="row">
                                     <div class="col-sm-12">
                                         <div class="form-group form-group-sm" id="google-email">

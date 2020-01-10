@@ -1,8 +1,8 @@
 CREATE TABLE `stage_user` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `globus_user_id` varchar(100) DEFAULT NULL,
-  `globus_username` varchar(100) DEFAULT NULL,
-  `email` varchar(100) DEFAULT NULL,
+  `globus_username` varchar(200) DEFAULT NULL,
+  `email` varchar(200) DEFAULT NULL,
   `first_name` varchar(200) DEFAULT NULL,
   `last_name` varchar(200) DEFAULT NULL,
   `component` varchar(200) DEFAULT NULL,
@@ -14,6 +14,7 @@ CREATE TABLE `stage_user` (
   `photo` varchar(500) DEFAULT NULL,
   `photo_url` varchar(500) DEFAULT NULL,
   `access_requests` varchar(500) DEFAULT NULL,
+  `globus_identity` varchar(200) DEFAULT NULL,
   `google_email` varchar(200) DEFAULT NULL,
   `github_username` varchar(200) DEFAULT NULL,
   `slack_username` varchar(200) DEFAULT NULL,

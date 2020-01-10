@@ -231,7 +231,23 @@ function cn_register_custom_metabox_and_text_field() {
             ),
         ),
     );
-	
+
+	$hm_globus_identity_atts = array(
+		'title'    => 'What is your Globus account identity?',         // Change this to a name which applies to your project.
+		'id'       => 'hm_globus_identity',           // Change this so it is unique to you project.
+		'context'  => 'normal',
+		'priority' => 'core',
+		'fields'   => array(
+			array(
+				'name'       => 'globus identity', // Change this field name to something which applies to you project.
+				'show_label' => TRUE,         // Whether or not to display the 'name'. Changing it to false will suppress the name.
+				'id'         => 'hm_globus_identity',   // Change this so it is unique to you project. Each field id MUST be unique.
+				'type'       => 'text',       // This is the field type being added.
+				'size'       => 'regular',    // This can be changed to one of the following: 'small', 'regular', 'large'
+			),
+		),
+    );
+
 	$hm_google_email_atts = array(
 		'title'    => 'What email address is linked to your preferred Google account?',         // Change this to a name which applies to your project.
 		'id'       => 'hm_google_email',           // Change this so it is unique to you project.
@@ -372,6 +388,7 @@ function cn_register_custom_metabox_and_text_field() {
     cnMetaboxAPI::add( $hm_role_atts );
     cnMetaboxAPI::add( $hm_other_role_atts);
     cnMetaboxAPI::add( $hm_ar_atts );
+    cnMetaboxAPI::add( $hm_globus_identity_atts);
     cnMetaboxAPI::add( $hm_google_email_atts);
     cnMetaboxAPI::add( $hm_github_username_atts);
     cnMetaboxAPI::add( $hm_slack_username_atts);

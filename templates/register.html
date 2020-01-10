@@ -16,6 +16,7 @@
         $("#oth-cmpnt").hide();
         $("#oth-org").hide();
         $("#oth-role").hide();
+        $("#globus-identity").hide();
         $("#google-email").hide();
         $("#slack-username").hide();
         $("#github-username").hide();
@@ -62,6 +63,12 @@
                 $("#oth-role").hide();
             }
         });
+        $("#id_access_requests_1").change(function() {
+            if (!this.checked){
+                $("#id_globus_identity").val('');
+            }
+            $("#globus-identity").toggle(this.checked);
+        });
         $("#id_access_requests_3").change(function() {
             if (!this.checked){
                 $("#id_google_email").val('');
@@ -103,7 +110,9 @@
         // All users need access to Collabration Portal
         // Disallow them to uncheck this option
         // Disabled in HTML, no need to handle it in js here
-
+        if ($("#id_access_requests_1").prop('checked')){
+            $("#globus-identity").show();
+        }
         if ($("#id_access_requests_3").prop('checked')){
             $("#google-email").show();
         }
@@ -481,6 +490,15 @@
                                 </div>
                             </div>
                             <div class="col-sm-6">
+                                <div class="row">
+                                    <div class="col-sm-12">
+                                        <div class="form-group form-group-sm" id="globus-identity">
+                                            <label for="globus_identity">Your Globus Identity: <span class="text-danger">*</span> <button type="button" class="btn btn-link" data-toggle="tooltip" data-placement="right" data-html="true" title="Please enter the email address that you use to log into Google.  HuBMAP specific Google documents will be shared with this account.">what is this?</button></label>
+                                            <input type="email" name="globus_identity" class="form-control" maxlength="100" id="id_globus_identity">
+                                         
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="row">
                                     <div class="col-sm-12">
                                         <div class="form-group form-group-sm" id="google-email">
