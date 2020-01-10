@@ -27,6 +27,9 @@
         $("#pic_url").hide();
 
 
+        // Modal for fidning globus identity
+
+
         $("#id_component").change(function() {
             let id = $(this).children("option:selected").val();
             // All cards are hidden by default
@@ -462,8 +465,8 @@
  Collaboration Portal</label>
 
 </li>
-    <li><label for="id_access_requests_1"><input type="checkbox" name="access_requests" value="HuBMAP Data" id="id_access_requests_1">
- HuBMAP Data</label>
+    <li><label for="id_access_requests_1"><input type="checkbox" name="access_requests" value="HuBMAP Data Via Globus" id="id_access_requests_1">
+ HuBMAP Data Via Globus</label>
 
 </li>
     <li><label for="id_access_requests_2"><input type="checkbox" name="access_requests" value="HuBMAP ID System" id="id_access_requests_2">
@@ -493,16 +496,40 @@
                                 <div class="row">
                                     <div class="col-sm-12">
                                         <div class="form-group form-group-sm" id="globus-identity">
-                                            <label for="globus_identity">Your Globus Identity: <span class="text-danger">*</span> <button type="button" class="btn btn-link" data-toggle="tooltip" data-placement="right" data-html="true" title="Please enter the email address that you use to log into Google.  HuBMAP specific Google documents will be shared with this account.">what is this?</button></label>
+                                            <label for="globus_identity">Globus Identity: <span class="text-danger">*</span> <a id="globus_identity_how" href="#" class="text-decoration-none" data-toggle="modal" data-target="#globus_modal">How to find my Globus Identity?</a></label>
                                             <input type="email" name="globus_identity" class="form-control" maxlength="100" id="id_globus_identity">
                                          
                                         </div>
+
+                                        <!-- Modal - How to find my Globus Identity? -->
+										<div class="modal fade" id="globus_modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+										  <div class="modal-dialog modal-dialog-centered" role="document">
+										    <div class="modal-content">
+										      <div class="modal-header">
+										        <h5 class="modal-title" id="exampleModalCenterTitle">How to find my Globus Identity?</h5>
+										        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+										          <span aria-hidden="true">&times;</span>
+										        </button>
+										      </div>
+										      <div class="modal-body">
+										        With Globus, subscribers can move, share, & discover data via a single interface – whether your files live on a supercomputer, lab cluster, tape archive, public cloud or your laptop, you can manage this data from anywhere, using your existing identities, via just a web browser.​
+
+										        <a href="https://app.globus.org/account/identities" target="_blank">https://app.globus.org/account/identities</a>
+										      </div>
+										      <div class="modal-footer">
+										        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+										      </div>
+										    </div>
+										  </div>
+										</div>
+								
                                     </div>
                                 </div>
+
                                 <div class="row">
                                     <div class="col-sm-12">
                                         <div class="form-group form-group-sm" id="google-email">
-                                            <label for="google_email">Your Google account email address: <span class="text-danger">*</span> <button type="button" class="btn btn-link" data-toggle="tooltip" data-placement="right" data-html="true" title="Please enter the email address that you use to log into Google.  HuBMAP specific Google documents will be shared with this account.">what is this?</button></label>
+                                            <label for="google_email">Google account email address: <span class="text-danger">*</span></label>
                                             <input type="email" name="google_email" class="form-control" maxlength="100" id="id_google_email">
                                          
                                         </div>
@@ -511,7 +538,7 @@
                                 <div class="row">
                                     <div class="col-sm-12">
                                         <div class="form-group form-group-sm" id="github-username">
-                                            <label for="github_username">Your GitHub username: <span class="text-danger">*</span></label>
+                                            <label for="github_username">GitHub username: <span class="text-danger">*</span></label>
                                             <input type="text" name="github_username" class="form-control" maxlength="100" id="id_github_username">
                                            
                                         </div>
@@ -520,7 +547,7 @@
                                 <div class="row">
                                     <div class="col-sm-12">
                                         <div class="form-group form-group-sm" id="slack-username">
-                                            <label for="slack_username">Your email address for the slack invitation: <span class="text-danger">*</span></label>
+                                            <label for="slack_username">Email address for Slack invitation: <span class="text-danger">*</span></label>
                                             <input type="text" name="slack_username" class="form-control" maxlength="100" id="id_slack_username">
                                             
                                         </div>
