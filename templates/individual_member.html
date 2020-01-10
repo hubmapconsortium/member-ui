@@ -11,7 +11,7 @@
 <div class="card">
   <h5 class="card-header">Member Detail</h5>
   <div class="card-body">
-Globus Username: {{ data.globus_username }} <br /><br />
+Globus Username captured by the system: {{ data.globus_username }} <br /><br />
 
 First name: {{ data.first_name }} <br />
 Last name: {{ data.last_name }} <br />
@@ -43,6 +43,10 @@ HuBMAP service(s) access requested: <br />
 </ul>
 
 <br />
+
+{% if 'HuBMAP Data Via Globus' in data.access_requests %}
+Globus username provided by the user: {{ data.stage_user.globus_identity }} <br />
+{% endif %}
 
 {% if 'HuBMAP Google Drive Share' in data.access_requests %}
 Google account for HuBMAP Google Drive Share: {{ data.google_email }} <br />

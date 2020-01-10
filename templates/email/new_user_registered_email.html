@@ -1,6 +1,6 @@
 HuBMAP new user registered. <br /><br />
 
-Globus Username: {{ data['globus_username'] }} <br />
+Globus Username captured by the system: {{ data['globus_username'] }} <br />
 
 Name: {{ data['first_name'] }} {{ data['last_name'] }} <br />
 Email: {{ data['email'] }} <br />
@@ -40,6 +40,10 @@ HuBMAP service(s) access requested: <br />
 </ul>
 
 <br />
+
+{% if 'HuBMAP Data Via Globus' in data['access_requests'] %}
+Globus username provided by the user: {{ data['globus_identity'] }} <br />
+{% endif %}
 
 {% if 'HuBMAP Google Drive Share' in data['access_requests'] %}
 Google account for HuBMAP Google Drive Share: {{ data['google_email'] }} <br />
