@@ -16,7 +16,6 @@
       <th scope="col">Last Name</th>
       <th scope="col">Email</th>
       <th scope="col">Registration Date</th>
-      <th scope="col">Globus Username</th>
     </tr>
   </thead>
   <tbody>
@@ -34,7 +33,6 @@
       <td>{{ stage_user.last_name }}</td>
       <td>{{ stage_user.email }}</td>
       <td>{{ stage_user.created_at.strftime('%m/%d/%Y %H:%M:%S') }}</td>
-      <td>{{ stage_user.globus_username }}</td>
     </tr>
 	{% endfor %}
   </tbody>

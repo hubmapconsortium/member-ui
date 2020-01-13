@@ -13,7 +13,7 @@
 <div class="card">
   <h5 class="card-header">Registration Detail</h5>
   <div class="card-body">
-Globus Username captured by the system: {{ data.stage_user.globus_username }} <br /><br />
+Globus Username associated with registration/profile: {{ data.stage_user.globus_username }} <br /><br />
 
 First name: {{ data.stage_user.first_name }} <br />
 Last name: {{ data.stage_user.last_name }} <br />
@@ -46,7 +46,7 @@ HuBMAP service(s) access requested: <br />
 <br />
 
 {% if 'HuBMAP Data Via Globus' in data.stage_user.access_requests %}
-Globus username provided by the user: {{ data.stage_user.globus_identity }} <br />
+Globus username to be used for HuBMAP Data group access: {{ data.stage_user.globus_identity }} <br />
 {% endif %}
 
 {% if 'HuBMAP Google Drive Share' in data.stage_user.access_requests %}

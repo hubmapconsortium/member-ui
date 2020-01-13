@@ -1170,22 +1170,16 @@ def get_all_members():
         if capabilities:
             # Note user.connection returns a list of connections (should be only one though)
             connection_data = user.connection[0]
-            # Also get the globus_user_id and globus_username
+            # Also get the globus_user_id
             wp_user_meta_globus_user_id = WPUserMeta.query.filter(WPUserMeta.user_id == user.id, WPUserMeta.meta_key.like('openid-connect-generic-subject-identity')).first()
-            wp_user_meta_globus_username = WPUserMeta.query.filter(WPUserMeta.user_id == user.id, WPUserMeta.meta_key.like('globus_username')).first()
-            # The system didn't store globus_username for old members
-            # In such cases, we use empty string
-            globus_username = ''
-            if wp_user_meta_globus_username:
-                globus_username = wp_user_meta_globus_username.meta_value
-
+            
             # Construct a new member dict and add to the members list
             member = {
                 'globus_user_id': wp_user_meta_globus_user_id.meta_value,
-                'globus_username': globus_username,
                 'first_name': connection_data.first_name,
                 'last_name': connection_data.last_name,
-                'email': user.user_email
+                'email': user.user_email,
+                'organization': connection_data.organization
             }
 
             members.append(member)
