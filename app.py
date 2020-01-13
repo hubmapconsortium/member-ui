@@ -1912,6 +1912,27 @@ def match(globus_user_id, connection_id):
 
     return show_admin_info("This registration has been approved successfully by using an exisiting mathcing profile!")
 
+# Instructions
+@app.route("/find_globus_identity", methods=['GET'])
+@login_required
+def find_globus_identity():
+    context = {
+        'isAuthenticated': True,
+        'username': session['name']
+    }
+
+    return render_template('instructions/find_globus_identity.html', data = context)
+
+
+@app.route("/unlink_globus_identities", methods=['GET'])
+@login_required
+def unlink_globus_identities():
+    context = {
+        'isAuthenticated': True,
+        'username': session['name']
+    }
+
+    return render_template('instructions/unlink_globus_identities.html', data = context)
 
 
 # Run Server
