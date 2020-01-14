@@ -1732,6 +1732,9 @@ def delete_member(globus_user_id):
         # Must delete the connection record before deleting wp_user
         db.session.delete(wp_user.connection[0])
 
+        # Also delete the usermeta records
+        WPUserMeta.query.filter(WPUserMeta.user_id == wp_user.id).delete()
+
         # Then delete the wp user record, this also deletes the mapping record in `user_connection` table
         db.session.delete(wp_user)
 
