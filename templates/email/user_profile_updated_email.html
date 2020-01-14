@@ -12,6 +12,10 @@ Old access requests:<br />
 {% endfor %}
 </ul>
 
+{% if 'HuBMAP Data Via Globus' in old_access_requests_data['access_requests'] %}
+Globus username to be used for HuBMAP Data group access: {{ old_access_requests_data['globus_identity'] }} <br />
+{% endif %}
+
 {% if 'HuBMAP Google Drive Share' in old_access_requests_data['access_requests'] %}
 Google account for HuBMAP Google Drive Share: {{ old_access_requests_data['google_email'] }} <br />
 {% endif %}
@@ -33,6 +37,10 @@ New access requests:<br />
 <li>{{ new_req }} </li>
 {% endfor %}
 </ul>
+
+{% if 'HuBMAP Data Via Globus' in data['access_requests'] %}
+Globus username to be used for HuBMAP Data group access: {{ data['globus_identity'] }} <br />
+{% endif %}
 
 {% if 'HuBMAP Google Drive Share' in data['access_requests'] %}
 Google account for HuBMAP Google Drive Share: {{ data['google_email'] }} <br />

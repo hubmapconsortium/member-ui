@@ -1,7 +1,6 @@
 HuBMAP new user registered.
 
-Globus ID: {{ data['globus_user_id'] }}
-Globus Username: {{ data['globus_username'] }}
+Globus Username associated with registration/profile: {{ data['globus_username'] }}
 
 Name: {{ data['first_name'] }} {{ data['last_name'] }}
 Email: {{ data['email'] }}
@@ -22,21 +21,15 @@ Role: {{ data['role'] }}
 Other Role: {{ data['other_role'] }}
 {% endif %}
 
-{#
-Working group(s):
-{% for grp in data['working_group'] %} 
-- {{ grp }}
-{% endfor %}
-#}
-
-
 HuBMAP service(s) access requested:
 
 {% for req in data['access_requests'] %}
 - {{ req }}
 {% endfor %}
 
-
+{% if 'HuBMAP Data Via Globus' in data['access_requests'] %}
+Globus username to be used for HuBMAP Data group access: {{ data['globus_identity'] }} <br />
+{% endif %}
 
 {% if 'HuBMAP Google Drive Share' in data['access_requests'] %}
 Google account for HuBMAP Google Drive Share: {{ data['google_email'] }}
