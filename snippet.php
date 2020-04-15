@@ -151,6 +151,7 @@ function cn_register_custom_metabox_and_text_field() {
                 	'' => '',
                     'Administrative Assistant'   => 'Administrative Assistant',
                     'Agreement Specialist'   => 'Agreement Specialist',
+                    'Chief Scientist' => 'Chief Scientist',
                     'Co-Investigator' => 'Co-Investigator',
                     'Complicance Officer'  => 'Complicance Officer',
                     'Computer Scientist'  => 'Computer Scientist',
