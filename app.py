@@ -1587,16 +1587,15 @@ def profile():
 
             try:
                 options = json.loads(connection_data['options'])
-                profile_pic_path = options['image']['meta']['original']['path']
-
-                # Also check if the file exists, otherwise profile_pic_url = '' still
-                # It's possible the path and url in database but the actual file or dir not on the disk
-                if pathlib.Path(profile_pic_path).exists():
-                    if 'url' in options['image']['meta']['original']:
-                        profile_pic_url = options['image']['meta']['original']['url']
+                profile_pic_info = options['image']['meta']['original']
+                if 'path' in profile_pic_info:
+                    profile_pic_path = options['image']['meta']['original']['path']                                               
+                    # Also check if the file exists, otherwise profile_pic_url = '' still
+                    # It's possible the path and url in database but the actual file or dir not on the disk
+                    if pathlib.Path(profile_pic_path).exists():
+                        if 'url' in profile_pic_info:
+                            profile_pic_url = options['image']['meta']['original']['url']
             except KeyError:
-                profile_pic_url = ''
-            except TypeError:
                 profile_pic_url = ''
 
             context = {
