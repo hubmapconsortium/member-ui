@@ -1596,6 +1596,8 @@ def profile():
                         profile_pic_url = options['image']['meta']['original']['url']
             except KeyError:
                 profile_pic_url = ''
+            except TypeError:
+                profile_pic_url = ''
 
             context = {
                 'isAuthenticated': True,
