@@ -616,6 +616,13 @@ def update_user_profile(connection_id, user_info, profile_pic_option, img_to_upl
         current_image_filename = 'default_profile.png'
         save_path = os.path.join(current_image_dir, secure_filename(f"{user_info['globus_user_id']}.png"))
         copyfile(os.path.join(app.root_path, 'static', 'images', current_image_filename), save_path)
+    except TypeError:
+        # We create the image folder
+        pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
+        # Copy over the default image       
+        current_image_filename = 'default_profile.png'
+        save_path = os.path.join(current_image_dir, secure_filename(f"{user_info['globus_user_id']}.png"))
+        copyfile(os.path.join(app.root_path, 'static', 'images', current_image_filename), save_path)
 
     # This exisiting user doesn't change first name and last name, so no need to get new unique slug
     if (user_info['first_name'].lower() == connection_profile.first_name.lower()) and (user_info['last_name'].lower() == connection_profile.last_name.lower()):
@@ -1587,15 +1594,16 @@ def profile():
 
             try:
                 options = json.loads(connection_data['options'])
-                profile_pic_info = options['image']['meta']['original']
-                if 'path' in profile_pic_info:
-                    profile_pic_path = options['image']['meta']['original']['path']                                               
-                    # Also check if the file exists, otherwise profile_pic_url = '' still
-                    # It's possible the path and url in database but the actual file or dir not on the disk
-                    if pathlib.Path(profile_pic_path).exists():
-                        if 'url' in profile_pic_info:
-                            profile_pic_url = options['image']['meta']['original']['url']
+                profile_pic_path = options['image']['meta']['original']['path']
+
+                # Also check if the file exists, otherwise profile_pic_url = '' still
+                # It's possible the path and url in database but the actual file or dir not on the disk
+                if pathlib.Path(profile_pic_path).exists():
+                    if 'url' in options['image']['meta']['original']:
+                        profile_pic_url = options['image']['meta']['original']['url']
             except KeyError:
+                profile_pic_url = ''
+            except TypeError:
                 profile_pic_url = ''
 
             context = {
