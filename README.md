@@ -47,7 +47,7 @@ This option comes with MySQL server and phpMyAdmin running on separate docker co
 In the project root, 
 
 ````
-sudo docker-compose build
+sudo docker-compose -f docker-compose.dev.yml build
 ````
 
 This builds the docker images for member-ui and MySQL.
@@ -55,11 +55,11 @@ This builds the docker images for member-ui and MySQL.
 To spin up the containers, 
 
 ````
-sudo docker-compose up
+sudo docker-compose -f docker-compose.dev.yml up
 ````
 
 To stop and remove the containers as well as the volume mounts and network:
 
 ````
-sudo docker-compose down
+sudo docker-compose -f docker-compose.dev.yml down
 ````
