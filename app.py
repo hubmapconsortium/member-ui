@@ -473,7 +473,7 @@ def user_is_admin(globus_user_id):
 def user_in_pending(globus_user_id):
     stage_user = StageUser.query.filter(StageUser.globus_user_id == globus_user_id)
     if stage_user.count() == 0:
-    	return False
+        return False
     return True
 
 # Add new user reigstration to `stage_user` table
@@ -1175,21 +1175,23 @@ def get_all_members():
         # Check if this target user is a member (capabilities will be empty dict if not member role)
         capabilities = next((meta for meta in user.metas if (meta.meta_key == 'wp_capabilities') and ('member' in meta.meta_value)), {})
         if capabilities:
-            # Note user.connection returns a list of connections (should be only one though)
-            connection_data = user.connection[0]
-            # Also get the globus_user_id
-            wp_user_meta_globus_user_id = WPUserMeta.query.filter(WPUserMeta.user_id == user.id, WPUserMeta.meta_key.like('openid-connect-generic-subject-identity')).first()
-            
-            # Construct a new member dict and add to the members list
-            member = {
-                'globus_user_id': wp_user_meta_globus_user_id.meta_value,
-                'first_name': connection_data.first_name,
-                'last_name': connection_data.last_name,
-                'email': user.user_email,
-                'organization': connection_data.organization
-            }
+            # Use this check in case certain user doesn't have the connection info
+            if hasattr(user, 'connection'):
+                # Note user.connection returns a list of connections (should be only one though)
+                connection_data = user.connection[0]
+                # Also get the globus_user_id
+                wp_user_meta_globus_user_id = WPUserMeta.query.filter(WPUserMeta.user_id == user.id, WPUserMeta.meta_key.like('openid-connect-generic-subject-identity')).first()
+                
+                # Construct a new member dict and add to the members list
+                member = {
+                    'globus_user_id': wp_user_meta_globus_user_id.meta_value,
+                    'first_name': connection_data.first_name,
+                    'last_name': connection_data.last_name,
+                    'email': user.user_email,
+                    'organization': connection_data.organization
+                }
 
-            members.append(member)
+                members.append(member)
     
     return members
 
