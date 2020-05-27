@@ -1176,7 +1176,7 @@ def get_all_members():
         capabilities = next((meta for meta in user.metas if (meta.meta_key == 'wp_capabilities') and ('member' in meta.meta_value)), {})
         if capabilities:
             # Use this check in case certain user doesn't have the connection info
-            if hasattr(user, 'connection'):
+            if user.connection[0]:
                 # Note user.connection returns a list of connections (should be only one though)
                 connection_data = user.connection[0]
                 # Also get the globus_user_id
