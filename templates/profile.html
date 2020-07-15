@@ -599,7 +599,7 @@ HuBMAP ID System</label>
                                         <div class="form-group form-group-sm" id="globus-identity">
                                             <label for="globus_identity">Globus Identity: <span class="text-danger">*</span> <a href="/find_globus_identity" target="_blank">How to find my Globus Identity?</a></label>
                                             
-                                            {% if data.google_email %}
+                                            {% if data.globus_identity %}
                                             <input type="text" name="globus_identity" value="{{ data.globus_identity }}" class="form-control" maxlength="200" id="id_globus_identity" disabled>
                                             <input type="hidden" name="globus_identity" value="{{ data.globus_identity }}">
                                             {% else %}
