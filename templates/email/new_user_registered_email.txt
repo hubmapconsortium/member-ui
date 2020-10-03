@@ -13,7 +13,7 @@ Other Component: {{ data['other_component'] }}
 
 Organization: {{ data['organization'] }}
 {% if data['other_organization'] %}
-Other Rrganization: {{ data['other_organization'] }}
+Other Organization: {{ data['other_organization'] }}
 {% endif %}
 
 Role: {{ data['role'] }}
