@@ -114,7 +114,7 @@ function cn_register_custom_metabox_and_text_field() {
                     'OD' => 'OD',
                     'Pacific Northwest National Laboratory' => 'Pacific Northwest National Laboratory',
                     'Pennsylvania State University' => 'Pennsylvania State University',
-                    'PSC(Pittsburgh Supercomputing Center)/CMU' => 'PSC(Pittsburgh Supercomputing Center)/CMU',
+                    'PSC (Pittsburgh Supercomputing Center)/CMU' => 'PSC (Pittsburgh Supercomputing Center)/CMU',
                     'Pacific Northwest National Laboratory' => 'Pacific Northwest National Laboratory',
                     'Purdue University' => 'Purdue University',
                     'Renaissance Computing Institute (RENCI), University of North Carolina, Chapel Hill' => 'Renaissance Computing Institute (RENCI), University of North Carolina, Chapel Hill',
