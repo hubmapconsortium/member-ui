@@ -245,7 +245,6 @@ function cn_register_custom_metabox_and_text_field() {
                 'type'       => 'checkboxgroup',  // This is the field type being added.
                 'options'    => array(
                     'HuBMAP Data Via Globus'   => 'HuBMAP Data Via Globus',
-                    'HuBMAP ID System'   => 'HuBMAP ID System',
                     'Collaboration Portal' => 'Collaboration Portal',
                     'HuBMAP Google Drive Share'  => 'HuBMAP Google Drive Share',
                     'HuBMAP GitHub Repository'  => 'HuBMAP GitHub Repository',

@@ -531,17 +531,7 @@ Note: You can't edit resources that you've been approved to use.
  HuBMAP Data Via Globus</label>
 
 </li>
-    <li><label for="id_access_requests_2">
-{% if "HuBMAP ID System" in data.access_requests %}
-    <input type="checkbox" name="access_requests" value="HuBMAP ID System" id="id_access_requests_2" disabled checked />
-    <input type="hidden" name="access_requests" value="HuBMAP ID System" />
-{% else %}
-    <input type="checkbox" name="access_requests" value="HuBMAP ID System" id="id_access_requests_2" />
-{% endif %}
-    
-HuBMAP ID System</label>
 
-</li>
     <li><label for="id_access_requests_3">
 
 {% if "HuBMAP Google Drive Share" in data.access_requests %}
@@ -671,7 +661,7 @@ HuBMAP ID System</label>
 
                             <div class="col-sm-6">
                                 <div class="form-group">
-		                            <label for="website">URL of a personal profile page to share with the consortium.</label>
+		                            <label for="website">URL of a personal profile page to share</label>
 		                            <input type="url" name="website" value="{{ data.website }}" class="form-control" maxlength="500" id="id_website">
 		                            
 		                        </div>
