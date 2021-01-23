@@ -46,7 +46,8 @@ function cn_register_custom_metabox_and_text_field() {
                     'TTD - Stanford University' => 'TTD - Stanford University',
                     'TTD - University of California San Diego/City of Hope' => 'TTD - University of California San Diego/City of Hope',
                     'TTD - Yale University' => 'TTD - Yale University',
-                    'Other' => 'Other'
+                    'EPC' => 'EPC',
+                    'Associate Member' => 'Associate Member'
                 ),
                 'default'    => '', // This is the default selected option. Leave blank for none.
             ),
