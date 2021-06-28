@@ -247,6 +247,7 @@ function cn_register_custom_metabox_and_text_field() {
                 'options'    => array(
                     'HuBMAP Data Via Globus'   => 'HuBMAP Data Via Globus',
                     'Collaboration Portal' => 'Collaboration Portal',
+                    'protocols.io'   => 'protocols.io',
                     'HuBMAP Google Drive Share'  => 'HuBMAP Google Drive Share',
                     'HuBMAP GitHub Repository'  => 'HuBMAP GitHub Repository',
                     'HuBMAP Slack Workspace' => 'HuBMAP Slack Workspace'
