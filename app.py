@@ -72,6 +72,7 @@ class StageUser(db.Model):
     google_email = db.Column(db.String(200))
     github_username = db.Column(db.String(200))
     slack_username = db.Column(db.String(200))
+    protocols_io_email = db.Column(db.String(200))
     phone = db.Column(db.String(100))
     website = db.Column(db.String(500))
     bio = db.Column(db.Text)
@@ -102,6 +103,7 @@ class StageUser(db.Model):
             self.google_email = a_dict['google_email'] if 'google_email' in a_dict else ''
             self.github_username = a_dict['github_username'] if 'github_username' in a_dict else ''
             self.slack_username = a_dict['slack_username'] if 'slack_username' in a_dict else ''
+            self.protocols_io_email = a_dict['protocols_io_email'] if 'protocols_io_email' in a_dict else ''
             self.phone = a_dict['phone'] if 'phone' in a_dict else ''
             self.website = a_dict['website'] if 'website' in a_dict else ''
             self.bio = a_dict['bio'] if 'bio' in a_dict else ''
@@ -116,7 +118,7 @@ class StageUser(db.Model):
 class StageUserSchema(ma.Schema):
     class Meta:
         fields = ('id', 'globus_user_id', 'globus_username', 'email', 'first_name', 'last_name', 'component', 'other_component', 'organization', 'other_organization',
-                    'role', 'other_role', 'photo', 'photo_url', 'access_requests', 'globus_identity', 'google_email', 'github_username', 'slack_username', 'phone', 'website',
+                    'role', 'other_role', 'photo', 'photo_url', 'access_requests', 'globus_identity', 'google_email', 'github_username', 'slack_username', 'protocols_io_email', 'phone', 'website',
                     'bio', 'orcid', 'pm', 'pm_name', 'pm_email', 'created_at', 'deny')
 
 # WPUserMeta Class/Model
@@ -334,6 +336,7 @@ def construct_user(request):
         "google_email": request.form['google_email'].strip(),
         "github_username": request.form['github_username'].strip(),
         "slack_username": request.form['slack_username'].strip(),
+        "protocols_io_email": request.form['protocols_io_email'].strip(),
         "website": request.form['website'].strip(),
         "bio": request.form['bio'],
         "orcid": request.form['orcid'].strip(),
@@ -834,6 +837,7 @@ def create_new_connection(stage_user_obj, new_wp_user):
     google_email = stage_user_obj.google_email
     github_username = stage_user_obj.github_username
     slack_username = stage_user_obj.slack_username
+    protocols_io_email = stage_user_obj.protocols_io_email
 
     # Other connections metas
     connection_meta_component = ConnectionMeta()
@@ -890,6 +894,11 @@ def create_new_connection(stage_user_obj, new_wp_user):
     connection_meta_slack_username.meta_key = 'hm_slack_username'
     connection_meta_slack_username.meta_value = slack_username
     connection.metas.append(connection_meta_slack_username)
+
+    connection_meta_protocols_io_email = ConnectionMeta()
+    connection_meta_protocols_io_email.meta_key = 'hm_protocols_io_email'
+    connection_meta_protocols_io_email.meta_value = protocols_io_email
+    connection.metas.append(connection_meta_protocols_io_email)
 
     connection_meta_website = ConnectionMeta()
     connection_meta_website.meta_key = 'hm_website'
@@ -1113,6 +1122,15 @@ def edit_connection(user_obj, wp_user, connection, new_user = False):
         connection_meta_slack_username.meta_key = 'hm_slack_username'
         connection_meta_slack_username.meta_value = user_obj.slack_username
         connection.metas.append(connection_meta_slack_username)
+
+    connection_meta_protocols_io_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_protocols_io_email', ConnectionMeta.entry_id == connection.id).first()
+    if connection_meta_protocols_io_email:
+        connection_meta_protocols_io_email.meta_value = user_obj.protocols_io_email
+    else:
+        connection_meta_protocols_io_email = ConnectionMeta()
+        connection_meta_protocols_io_email.meta_key = 'hm_protocols_io_email'
+        connection_meta_protocols_io_email.meta_value = user_obj.protocols_io_email
+        connection.metas.append(connection_meta_protocols_io_email)
 
     connection_meta_website = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_website', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_website:
@@ -1508,13 +1526,19 @@ def profile():
                 if slack_username_record:
                     slack_username_value = slack_username_record.meta_value
                 
+                protocols_io_email_value = ''
+                protocols_io_email_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_protocols_io_email', ConnectionMeta.entry_id == connection_id).first()
+                if protocols_io_email_record:
+                    protocols_io_email_value = protocols_io_email_record.meta_value
+
                 old_access_requests_dict = {
                     # Convert list string respresentation to Python list, if empty string, empty list()
                     'access_requests': ast.literal_eval(access_requests_value) if (access_requests_value != '') else list(),
                     'globus_identity': globus_identity_value,
                     'google_email': google_email_value,
                     'github_username': github_username_value,
-                    'slack_username': slack_username_value
+                    'slack_username': slack_username_value,
+                    'protocols_io_email': protocols_io_email_value
                 }
 
                 try:
@@ -1579,6 +1603,7 @@ def profile():
                 'google_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_google_email'), {'meta_value': ''})['meta_value'],
                 'github_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_github_username'), {'meta_value': ''})['meta_value'],
                 'slack_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_slack_username'), {'meta_value': ''})['meta_value'],
+                'protocols_io_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_protocols_io_email'), {'meta_value': ''})['meta_value'],
                 'website': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_website'), {'meta_value': ''})['meta_value'],
                 'orcid': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_orcid'), {'meta_value': ''})['meta_value'],
                 'pm': 'Yes' if next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_pm'), {'meta_value': ''})['meta_value'] == '1' else 'No',
@@ -1692,6 +1717,7 @@ def members(globus_user_id):
             'google_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_google_email'), {'meta_value': ''})['meta_value'],
             'github_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_github_username'), {'meta_value': ''})['meta_value'],
             'slack_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_slack_username'), {'meta_value': ''})['meta_value'],
+            'protocols_io_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_protocols_io_email'), {'meta_value': ''})['meta_value'],
             'website': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_website'), {'meta_value': ''})['meta_value'],
             'orcid': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_orcid'), {'meta_value': ''})['meta_value'],
             # This is slightly different from the GET /profile

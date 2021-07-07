@@ -32,6 +32,7 @@
         $("#globus-identity").hide();
         $("#google-email").hide();
         $("#slack-username").hide();
+        $("#protocols-io-email").hide();
         $("#github-username").hide();
         $("div.pm-name").hide();
         $("div.pm-email").hide();
@@ -105,6 +106,12 @@
             }
             $("#slack-username").toggle(this.checked);
         });
+        $("#id_access_requests_6").change(function() {
+            if (!this.checked){
+                $("#id_protocols_io_email").val('');
+            }
+            $("#protocols-io-email").toggle(this.checked);
+        });
         
         id = $("#id_component").children("option:selected").val();
         if(id==='Other'){ // other selected
@@ -140,6 +147,9 @@
         }
         if ($("#id_access_requests_5").prop('checked')){
             $("#slack-username").show();
+        }
+        if ($("#id_access_requests_6").prop('checked')){
+            $("#protocols-io-email").show();
         }
 
         if($(":radio[id^='id_pm_0']").prop('checked')){
@@ -319,6 +329,11 @@
                 valid = false;
                 $("#id_slack_username").addClass('is-invalid');
                 $("#id_slack_username").after("<div class='invalid-feedback'>Slack username is required.</div>");
+            }
+            if($("#id_access_requests_6").prop('checked') && $.trim($("#id_protocols_io_email").val()) === ''){
+                valid = false;
+                $("#id_protocols_io_email").addClass('is-invalid');
+                $("#id_protocols_io_email").after("<div class='invalid-feedback'>protocols.io account email is required.</div>");
             }
             if($("#id_bio").val().length > biography_length_limit){
                 valid = false;
@@ -647,6 +662,21 @@ Note: You can't edit resources that you've been approved to use.
                                             <input type="hidden" name="slack_username" value="{{ data.slack_username }}">
                                             {% else %}
                                             <input type="text" name="slack_username" value="{{ data.slack_username }}" class="form-control" maxlength="200" id="id_slack_username">
+                                            {% endif %}
+
+                                            
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-sm-12">
+                                        <div class="form-group form-group-sm" id="protocols-io-email">
+                                            <label for="protocols_io_email">Email address for protocols.io: <span class="text-danger">*</span></label>
+                                            {% if data.protocols_io_email %}
+                                            <input type="text" name="protocols_io_email" value="{{ data.protocols_io_email }}" class="form-control" maxlength="200" id="id_protocols_io_email" disabled>
+                                            <input type="hidden" name="protocols_io_email" value="{{ data.protocols_io_email }}">
+                                            {% else %}
+                                            <input type="text" name="protocols_io_email" value="{{ data.protocols_io_email }}" class="form-control" maxlength="200" id="id_protocols_io_email">
                                             {% endif %}
 
                                             
