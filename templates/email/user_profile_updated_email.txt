@@ -26,6 +26,9 @@ Github username: {{ old_access_requests_data['github_username'] }}
 Email for HuBMAP Slack Workspace: {{ old_access_requests_data['slack_username'] }}
 {% endif %}
 
+{% if 'protocols.io' in old_access_requests_data['access_requests'] %}
+Email for protocols.io: {{ old_access_requests_data['protocols_io_email'] }}
+{% endif %}
 
 New access requests:
 

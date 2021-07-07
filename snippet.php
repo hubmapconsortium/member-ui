@@ -247,6 +247,7 @@ function cn_register_custom_metabox_and_text_field() {
                 'options'    => array(
                     'HuBMAP Data Via Globus'   => 'HuBMAP Data Via Globus',
                     'Collaboration Portal' => 'Collaboration Portal',
+                    'protocols.io'   => 'protocols.io',
                     'HuBMAP Google Drive Share'  => 'HuBMAP Google Drive Share',
                     'HuBMAP GitHub Repository'  => 'HuBMAP GitHub Repository',
                     'HuBMAP Slack Workspace' => 'HuBMAP Slack Workspace'
@@ -314,6 +315,22 @@ function cn_register_custom_metabox_and_text_field() {
                 'name'       => 'slack username', // Change this field name to something which applies to you project.
                 'show_label' => TRUE,         // Whether or not to display the 'name'. Changing it to false will suppress the name.
                 'id'         => 'hm_slack_username',   // Change this so it is unique to you project. Each field id MUST be unique.
+                'type'       => 'text',       // This is the field type being added.
+                'size'       => 'regular',    // This can be changed to one of the following: 'small', 'regular', 'large'
+            ),
+        ),
+    );
+
+    $hm_protocols_io_email_atts = array(
+        'title'    => 'What is your protocols.io account email?',         // Change this to a name which applies to your project.
+        'id'       => 'hm_protocols_io_email',           // Change this so it is unique to you project.
+        'context'  => 'normal',
+        'priority' => 'core',
+        'fields'   => array(
+            array(
+                'name'       => 'protocols_io_email', // Change this field name to something which applies to you project.
+                'show_label' => TRUE,         // Whether or not to display the 'name'. Changing it to false will suppress the name.
+                'id'         => 'hm_protocols_io_email',   // Change this so it is unique to you project. Each field id MUST be unique.
                 'type'       => 'text',       // This is the field type being added.
                 'size'       => 'regular',    // This can be changed to one of the following: 'small', 'regular', 'large'
             ),
@@ -416,6 +433,7 @@ function cn_register_custom_metabox_and_text_field() {
     cnMetaboxAPI::add( $hm_google_email_atts);
     cnMetaboxAPI::add( $hm_github_username_atts);
     cnMetaboxAPI::add( $hm_slack_username_atts);
+    cnMetaboxAPI::add( $hm_protocols_io_email_atts);
     cnMetaboxAPI::add( $hm_website_atts );
     cnMetaboxAPI::add( $hm_orcid_atts );
     cnMetaboxAPI::add( $hm_pm_atts );

@@ -18,6 +18,7 @@ CREATE TABLE `stage_user` (
   `google_email` varchar(200) DEFAULT NULL,
   `github_username` varchar(200) DEFAULT NULL,
   `slack_username` varchar(200) DEFAULT NULL,
+  `protocols_io_email` varchar(200) DEFAULT NULL,
   `phone` varchar(100) DEFAULT NULL,
   `website` varchar(500) DEFAULT NULL,
   `bio` longtext DEFAULT NULL,
