@@ -61,6 +61,10 @@ Github username: {{ data.stage_user.github_username }} <br />
 Email for HuBMAP Slack Workspace: {{ data.stage_user.slack_username }} <br />
 {% endif %}
 
+{% if 'protocols.io' in data.stage_user.access_requests %}
+Email for protocols.io: {{ data.stage_user.protocols_io_email }} <br />
+{% endif %}
+
 <br />
 {% if data.stage_user.pm %}
 The user would like the following project manager to be copied on all communications: <br />
