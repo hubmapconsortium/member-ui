@@ -328,7 +328,7 @@ function cn_register_custom_metabox_and_text_field() {
         'priority' => 'core',
         'fields'   => array(
             array(
-                'name'       => 'protocols_io_email', // Change this field name to something which applies to you project.
+                'name'       => 'protocols.io email', // Change this field name to something which applies to you project.
                 'show_label' => TRUE,         // Whether or not to display the 'name'. Changing it to false will suppress the name.
                 'id'         => 'hm_protocols_io_email',   // Change this so it is unique to you project. Each field id MUST be unique.
                 'type'       => 'text',       // This is the field type being added.
