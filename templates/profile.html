@@ -315,6 +315,21 @@
                 $("#id_photo_url").after("<div class='invalid-feedback'>Please specify the image URL.</div>");
             }
 
+            if($("#id_access_requests_1").prop('checked')) {
+                var globus_identity = $.trim($("#id_globus_identity").val())
+
+                if (globus_identity === '') {
+                    valid = false;
+                    $("#id_globus_identity").addClass('is-invalid');
+                    $("#id_globus_identity").after("<div class='invalid-feedback'>Globus identity is required.</div>");
+                }
+
+                if (globus_identity.endsWith("@globusid.org") || globus_identity.endsWith("@orcid.org") || globus_identity.endsWith("@gmail.com")) {
+                    valid = false;
+                    $("#id_globus_identity").addClass('is-invalid');
+                    $("#id_globus_identity").after("<div class='invalid-feedback'>ONLY institutional or eRA Commons Globus identities are acceptable.</div>");
+                }
+            }
             if($("#id_access_requests_3").prop('checked') && $.trim($("#id_google_email").val()) === ''){
                 valid = false;
                 $("#id_google_email").addClass('is-invalid');
