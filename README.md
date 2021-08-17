@@ -51,3 +51,9 @@ python3 -m flask run -p 5005
 ## Deployment
 
 For deployment on remote VM, we'll use Nignx to serve this Python program via uWSGI server. 
+
+First copy the `nginx/conf.d/member-ui.conf` to `/etc/nginx/conf.d`, then start the program:
+
+```
+uwsgi --ini /opt/hubmap/member-ui/uwsgi.ini
+```
