@@ -3,63 +3,51 @@
 This repo contains code that handles the HuBMAP member registration and profile management. It's built on top of Python Flask micro-framework and has a tight-coupling with Wordpress and the Connections plugin.
 
 
-## Local standalone development
+## Install dependencies
 
-### Install dependencies
-
-We use [Pipenv](https://docs.pipenv.org/en/latest/) to manage dependencies for this application. Pipenv is recommended for collaborative projects as it's a higher-level tool that simplifies dependency management for common use cases.
-
-Just follow the Pipenv instructions to install Pipenv. You can also install via `pip install --user pipenv`. After that, clone this repo and create a virtualenv for this project:
+Create a new Python 3.x virtual environment:
 
 ````
-git clone https://github.com/hubmapconsortium/registration.git
-cd registration
-pipenv shell
+python3 -m venv venv-member-ui
+source venv-member-ui/bin/activate
 ````
 
-Then install all the project dependencies:
+Upgrade pip:
+````
+python3 -m pip install --upgrade pip
+````
+
+Then install the dependencies:
 
 ````
-pipenv install
+pip install -r requirements.txt
 ````
 
-### Configuration
+## Configuration
 
 The confiuration file `app.cfg` is located under `instance` folder. You can read more about [Flask Instance Folders](http://flask.pocoo.org/docs/1.0/config/#instance-folders). 
 
 There's an example configuration file `instance/app.cfg.example` for your quick start.
 
-### Start Flask development server
+## Start the server
 
-```
+Either methods below will run the search-api web service at `http://localhost:5005`. Choose one:
+
+### Directly via Python
+
+````
+python3 app.py
+````
+
+### With the Flask Development Server
+
+````
+cd src
 export FLASK_APP=app.py
 export FLASK_ENV=development
-flask run
-```
-
-Simply run `exit` to deactivate current Pipenv shell
-
-
-### Local development with Docker-Compose
-
-This option comes with MySQL server and phpMyAdmin running on separate docker containers, the member-ui is also running its own container that talks to the MySQL container. This makes setting up the local development environments very easy without needing to setup MySQL server separately.
-
-In the project root, 
-
-````
-sudo docker-compose -f docker-compose.dev.yml build
+python3 -m flask run -p 5005
 ````
 
-This builds the docker images for member-ui and MySQL.
+## Deployment
 
-To spin up the containers, 
-
-````
-sudo docker-compose -f docker-compose.dev.yml up
-````
-
-To stop and remove the containers as well as the volume mounts and network:
-
-````
-sudo docker-compose -f docker-compose.dev.yml down
-````
+For deployment on remote VM, we'll use Nignx to serve this Python program via uWSGI server. 
