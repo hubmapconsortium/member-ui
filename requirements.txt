@@ -8,8 +8,8 @@ cryptography==2.7
 flask-mail==0.9.1
 flask-marshmallow==0.10.1
 flask-sqlalchemy==2.4.0
-flask==1.1.1
-globus-sdk==1.8.0
+Flask==1.1.2
+globus_sdk>=1.9.0
 idna==2.8
 itsdangerous==1.1.0
 jinja2==2.10.1
@@ -22,7 +22,7 @@ pycparser==2.19
 pyjwt[crypto]==1.7.1
 pymysql==0.9.3
 python-slugify==3.0.3
-requests==2.22.0
+requests==2.25.1
 six==1.12.0
 sqlalchemy==1.3.6
 text-unidecode==1.2
