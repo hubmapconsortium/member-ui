@@ -12,3 +12,5 @@ avatar/
 instance/app.cfg
 
 log/*
+
+venv-member-ui
