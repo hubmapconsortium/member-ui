@@ -17,3 +17,4 @@ instance/app.cfg
 # Rotated log files
 **/*.log*
 
+venv-member-ui

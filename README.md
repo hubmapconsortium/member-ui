@@ -86,7 +86,12 @@ server {
 }
 ```
 
-Copy the `hubmap-member-ui.uwsgi.service` file to `/etc/systemd/system` and we'll create a service. 
+For quick testing:
+```
+uwsgi --ini /opt/hubmap/member-ui/uwsgi.ini -H /opt/hubmap/member-ui/venv-member-ui/
+```
+
+Once everything in place, we can copy the `hubmap-member-ui.uwsgi.service` file to `/etc/systemd/system` and create a service. 
 
 To enable the service with system reboot:
 
