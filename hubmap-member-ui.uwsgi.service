@@ -8,6 +8,7 @@ Restart=always
 KillSignal=SIGQUIT
 Type=notify
 NotifyAccess=all
+ExecStop=/usr/sbin/uwsgi --stop /tmp/hubmap-member-ui-uwsgi.pid
 
 [Install]
 WantedBy=multi-user.target
