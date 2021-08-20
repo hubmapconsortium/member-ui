@@ -22,7 +22,7 @@ pycparser==2.19
 pyjwt[crypto]==1.7.1
 pymysql==0.9.3
 python-slugify==3.0.3
-requests==2.22.0
+requests==2.25.1
 six==1.12.0
 sqlalchemy==1.3.6
 text-unidecode==1.2
