@@ -1364,9 +1364,9 @@ def login():
         
         # Get all Bearer tokens
         auth_token = token_response.by_resource_server['auth.globus.org']['access_token']
-        nexus_token = token_response.by_resource_server['nexus.api.globus.org']['access_token']
+        #nexus_token = token_response.by_resource_server['nexus.api.globus.org']['access_token']
         #groups_token = token_response.by_resource_server['groups.api.globus.org']['access_token']
-        transfer_token = token_response.by_resource_server['transfer.api.globus.org']['access_token']
+        #transfer_token = token_response.by_resource_server['transfer.api.globus.org']['access_token']
 
         # Also get the user info (sub, email, name, preferred_username) using the AuthClient with the auth token
         user_info = get_globus_user_info(auth_token)
@@ -1382,9 +1382,9 @@ def login():
         # Normalize email to lowercase
         session['email'] = user_info['email'].lower()
         session['auth_token'] = auth_token
-        session['groups_token'] = groups_token
+        #session['groups_token'] = groups_token
         #session['nexus_token'] = nexus_token
-        session['transfer_token'] = transfer_token
+        #session['transfer_token'] = transfer_token
       
         # Finally redirect back to the home page default route
         return redirect("/")
