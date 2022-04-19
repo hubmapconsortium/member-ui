@@ -52,6 +52,9 @@ Github username: {{ data['github_username'] }}
 Email for HuBMAP Slack Workspace: {{ data['slack_username'] }}
 {% endif %}
 
+{% if 'protocols.io' in data['access_requests'] %}
+Email for protocols.io: {{ data['protocols_io_email'] }} <br />
+{% endif %}
 
 
 HuBMAP Member Registration and Profile
