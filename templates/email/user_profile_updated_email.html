@@ -58,6 +58,10 @@ Github username: {{ data['github_username'] }} <br />
 Email for HuBMAP Slack Workspace: {{ data['slack_username'] }} <br />
 {% endif %}
 
+{% if 'protocols.io' in data['access_requests'] %}
+Email for protocols.io: {{ data['protocols_io_email'] }} <br />
+{% endif %}
+
 <br />
 
 <br />
