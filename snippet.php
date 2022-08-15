@@ -26,6 +26,7 @@ function cn_register_custom_metabox_and_text_field() {
                     'RTI - GEscd' => 'RTI - GEscd',
                     'RTI - Northwestern University' => 'RTI - Northwestern University',
                     'RTI - Stanford University' => 'RTI - Stanford University',
+                    'TMC - BIDMC' => 'TMC - BIDMC',
                     'TMC - California Institute of Technology' => 'TMC - California Institute of Technology',
                     "TMC - Children's Hospital of Philadelphia" => "TMC - Children's Hospital of Philadelphia",
                     'TMC - Pacific Northwest National Laboratory' => 'TMC - Pacific Northwest National Laboratory',
@@ -84,6 +85,7 @@ function cn_register_custom_metabox_and_text_field() {
                 'type'       => 'select',  // This is the field type being added.
                 'options'    => array(
                     '' => '',
+                    'Beth Israel Deaconess Medical Center' => 'Beth Israel Deaconess Medical Center',
                     'Broad Institute' => 'Broad Institute',
                     'California Institute of Technology'   => 'California Institute of Technology',
                     'Carnegie Mellon University'   => 'Carnegie Mellon University',
