@@ -18,7 +18,7 @@ function cn_register_custom_metabox_and_text_field() {
                     '' => '',
                     'Demonstration Project - University of Illinois, Chicago' => 'Demonstration Project - University of Illinois, Chicago',
                     'Demonstration Project - Harvard School of Medicine' => 'Demonstration Project - Harvard School of Medicine',
-                    'Demonstration Project - Children's Hospital of Philadelphia' => 'Demonstration Project - Children's Hospital of Philadelphia',
+                    "Demonstration Project - Children's Hospital of Philadelphia" => "Demonstration Project - Children's Hospital of Philadelphia",
                     'HIVE IEC - Carnegie Mellon University'   => 'HIVE IEC - Carnegie Mellon University',
                     'HIVE MC - Indiana University Bloomington'   => 'HIVE MC - Indiana University Bloomington',
                     'HIVE MC - New York Genome Center' => 'HIVE MC - New York Genome Center',
