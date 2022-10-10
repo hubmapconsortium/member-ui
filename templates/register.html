@@ -33,6 +33,10 @@
 
         $("#id_component").change(function() {
             let id = $(this).children("option:selected").val();
+
+            // Remove the single quote
+            id = id.replaceAll("'", "");
+
             // All cards are hidden by default
             if (id === '----') {
                 $("#active_card").html('');
