@@ -35,7 +35,7 @@ function cn_register_custom_metabox_and_text_field() {
                     'TMC - California Institute of Technology' => 'TMC - California Institute of Technology',
                     "TMC - Children's Hospital of Philadelphia" => "TMC - Children's Hospital of Philadelphia",
                     "TMC - Children's Hospital of Philadelphia Heart" => "TMC - Children's Hospital of Philadelphia Heart",
-                    'Johns Hopkins University' => 'Johns Hopkins University',
+                    'TMC - Johns Hopkins University' => 'TMC - Johns Hopkins University',
                     'TMC - GE-Pitt' => 'TMC - GE-Pitt',
                     'TMC - Pacific Northwest National Laboratory' => 'TMC - Pacific Northwest National Laboratory',
                     'TMC - Stanford University' => 'TMC - Stanford University',
