@@ -25,6 +25,9 @@ SQLALCHEMY_TRACK_MODIFICATIONS = False
 STAGE_USER_IMAGE_DIR = '/usr/src/app/member-ui-stage-images/'
 CONNECTION_IMAGE_DIR = '/usr/src/app/wp-connections-images/'
 
+# Prefix for the Connections meta fields
+CONNECTION_META_KEY_PREFIX = 'hm_'
+
 # Base URL for displaying connection profile images
 CONNECTION_IMAGE_URL = 'https://hubmapconsortium.org/wp-content/uploads/connections-images/'
 
