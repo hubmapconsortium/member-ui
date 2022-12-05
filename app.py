@@ -7,6 +7,7 @@ import phpserialize
 import json
 import os
 import random
+import stat
 from shutil import copyfile, copy2, rmtree
 from datetime import datetime
 import pathlib
@@ -36,6 +37,7 @@ app.config.from_pyfile('app.cfg')
 app.config['FLASK_APP_BASE_URI'] = app.config['FLASK_APP_BASE_URI'].strip('/')
 app.config['CONNECTION_IMAGE_URL'] = app.config['CONNECTION_IMAGE_URL'].strip('/')
 
+# The `stage_user` and `user_connection` tables don't use this prefix
 wp_db_table_prefix = app.config['WP_DB_TABLE_PREFIX']
 
 # Prefix for the Connections meta fields
@@ -51,9 +53,10 @@ db = SQLAlchemy(app)
 ma = Marshmallow(app)
 
 # User-Connection mapping table
+# No prefix
 connects = db.Table('user_connection',
-    db.Column('user_id', db.Integer, db.ForeignKey('wp_users.id')),
-    db.Column('connection_id', db.Integer, db.ForeignKey('wp_connections.id'))
+    db.Column('user_id', db.Integer, db.ForeignKey(wp_db_table_prefix + 'users.id')),
+    db.Column('connection_id', db.Integer, db.ForeignKey(wp_db_table_prefix + 'connections.id'))
 )
 
 # StageUser Class/Model
@@ -61,7 +64,7 @@ class StageUser(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     globus_user_id = db.Column(db.String(100), unique=True)
     globus_username = db.Column(db.String(200))
-    email = db.Column(db.String(200), unique=True)
+    email = db.Column(db.String(200))
     first_name = db.Column(db.String(200))
     last_name = db.Column(db.String(200))
     component = db.Column(db.String(200))
@@ -128,10 +131,10 @@ class StageUserSchema(ma.Schema):
 
 # WPUserMeta Class/Model
 class WPUserMeta(db.Model):
-    __tablename__ = 'wp_usermeta'
+    __tablename__ = wp_db_table_prefix + 'usermeta'
 
     umeta_id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('wp_users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey(wp_db_table_prefix + 'users.id'), nullable=False)
     meta_key = db.Column(db.String(255), nullable=False)
     meta_value = db.Column(db.Text)
 
@@ -143,10 +146,10 @@ class WPUserMetaSchema(ma.Schema):
 
 # ConnectionMeta
 class ConnectionMeta(db.Model):
-    __tablename__ = 'wp_connections_meta'
+    __tablename__ = wp_db_table_prefix + 'connections_meta'
 
     meta_id = db.Column(db.Integer, primary_key=True)
-    entry_id = db.Column(db.Integer, db.ForeignKey('wp_connections.id'), nullable=False)
+    entry_id = db.Column(db.Integer, db.ForeignKey(wp_db_table_prefix + 'connections.id'), nullable=False)
     meta_key = db.Column(db.String(255), nullable=False)
     meta_value = db.Column(db.Text)
 
@@ -156,10 +159,10 @@ class ConnectionMetaSchema(ma.Schema):
         fields = ('meta_id', 'entry_id', 'meta_key', 'meta_value')
 
 class ConnectionEmail(db.Model):
-    __tablename__ = 'wp_connections_email'
+    __tablename__ = wp_db_table_prefix + 'connections_email'
 
     id = db.Column(db.Integer, primary_key=True)
-    entry_id = db.Column(db.Integer, db.ForeignKey('wp_connections.id'), nullable=False)
+    entry_id = db.Column(db.Integer, db.ForeignKey(wp_db_table_prefix + 'connections.id'), nullable=False)
     order = db.Column(db.Integer)
     preferred = db.Column(db.Integer)
     type = db.Column(db.Text)
@@ -167,10 +170,10 @@ class ConnectionEmail(db.Model):
     visibility = db.Column(db.Text)
 
 class ConnectionPhone(db.Model):
-    __tablename__ = 'wp_connections_phone'
+    __tablename__ = wp_db_table_prefix + 'connections_phone'
 
     id = db.Column(db.Integer, primary_key=True)
-    entry_id = db.Column(db.Integer, db.ForeignKey('wp_connections.id'), nullable=False)
+    entry_id = db.Column(db.Integer, db.ForeignKey(wp_db_table_prefix + 'connections.id'), nullable=False)
     order = db.Column(db.Integer)
     preferred = db.Column(db.Integer)
     type = db.Column(db.Text)
@@ -179,7 +182,7 @@ class ConnectionPhone(db.Model):
 
 # Connection
 class Connection(db.Model):
-    __tablename__ = 'wp_connections'
+    __tablename__ = wp_db_table_prefix + 'connections'
 
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.Text)
@@ -228,7 +231,7 @@ class ConnectionSchema(ma.Schema):
 
 # WPUser Class/Model
 class WPUser(db.Model):
-    __tablename__ = 'wp_users'
+    __tablename__ = wp_db_table_prefix + 'users'
 
     id = db.Column(db.Integer, primary_key=True)
     user_login = db.Column(db.String(60), nullable=False)
@@ -455,7 +458,7 @@ def user_is_approved(globus_user_id):
     users = [user_meta.user]
     result = wp_users_schema.dump(users)
     user = result[0][0]
-    capabilities = next((meta for meta in user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
+    capabilities = next((meta for meta in user['metas'] if meta['meta_key'] == wp_db_table_prefix + 'capabilities'), {})
     if (('meta_value' in capabilities) and ('member' in capabilities['meta_value'] or 'administrator' in capabilities['meta_value'])):
         return True
     else:
@@ -470,7 +473,7 @@ def user_is_admin(globus_user_id):
     users = [user_meta.user]
     result = wp_users_schema.dump(users)
     user = result[0][0]
-    capabilities = next((meta for meta in user['metas'] if meta['meta_key'] == 'wp_capabilities'), {})
+    capabilities = next((meta for meta in user['metas'] if meta['meta_key'] == wp_db_table_prefix + 'capabilities'), {})
     if (('meta_value' in capabilities) and ('administrator' in capabilities['meta_value'])):
         return True
     else:
@@ -560,7 +563,10 @@ def handle_stage_user_profile_pic(user_info, profile_pic_option, img_to_upload):
     else:
         # Use default image
         save_path = os.path.join(app.config['STAGE_USER_IMAGE_DIR'], secure_filename(f"{user_info['globus_user_id']}.png"))
-        copyfile(os.path.join(app.root_path, 'static', 'images', 'default_profile.png'), save_path)
+        source_file_path = os.path.join(app.root_path, 'static', 'images', 'default_profile.png')
+        copyfile(source_file_path, save_path)
+        # Also keep the file owner and group
+        keep_file_owner_and_group(source_file_path, save_path)
 
     return save_path
 
@@ -586,7 +592,10 @@ def update_user_profile_pic(user_info, profile_pic_option, img_to_upload, image_
     else:
         # Use default image
         save_path = os.path.join(image_dir, secure_filename(f"{user_info['globus_user_id']}.png"))
-        copyfile(os.path.join(app.root_path, 'static', 'images', 'default_profile.png'), save_path)
+        source_file_path = os.path.join(app.root_path, 'static', 'images', 'default_profile.png')
+        copyfile(source_file_path, save_path)
+        # Also keep the file owner and group
+        keep_file_owner_and_group(source_file_path, save_path)
 
     return save_path
 
@@ -623,14 +632,20 @@ def update_user_profile(connection_id, user_info, profile_pic_option, img_to_upl
         # Copy over the default image       
         current_image_filename = 'default_profile.png'
         save_path = os.path.join(current_image_dir, secure_filename(f"{user_info['globus_user_id']}.png"))
-        copyfile(os.path.join(app.root_path, 'static', 'images', current_image_filename), save_path)
+        source_file_path = os.path.join(app.root_path, 'static', 'images', current_image_filename)
+        copyfile(source_file_path, save_path)
+        # Also keep the file owner and group
+        keep_file_owner_and_group(source_file_path, save_path)
     except TypeError:
         # We create the image folder
         pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
         # Copy over the default image       
         current_image_filename = 'default_profile.png'
         save_path = os.path.join(current_image_dir, secure_filename(f"{user_info['globus_user_id']}.png"))
-        copyfile(os.path.join(app.root_path, 'static', 'images', current_image_filename), save_path)
+        source_file_path = os.path.join(app.root_path, 'static', 'images', current_image_filename)
+        copyfile(source_file_path, save_path)
+        # Also keep the file owner and group
+        keep_file_owner_and_group(source_file_path, save_path)
 
     # This exisiting user doesn't change first name and last name, so no need to get new unique slug
     if (user_info['first_name'].lower() == connection_profile.first_name.lower()) and (user_info['last_name'].lower() == connection_profile.last_name.lower()):
@@ -646,9 +661,13 @@ def update_user_profile(connection_id, user_info, profile_pic_option, img_to_upl
         # Copy all old images to this new folder
         for file in os.listdir(current_image_dir):
             file_path = os.path.join(current_image_dir, file)
+            new_file_path = os.path.join(new_image_dir, file)
             
             if os.path.isfile(file_path):
                 copy2(file_path, new_image_dir)
+                # Also keep the file owner and group
+                keep_file_owner_and_group(file_path, new_file_path)
+
         # Finally delete the old image folder        
         try:
             rmtree(current_image_dir)
@@ -713,7 +732,7 @@ def edit_wp_user(stage_user_obj):
     wp_user.user_login = stage_user_obj.email
     wp_user.user_email = stage_user_obj.email
 
-    meta_capabilities = next((meta for meta in wp_user.metas if meta.meta_key == "wp_capabilities"), None)
+    meta_capabilities = next((meta for meta in wp_user.metas if meta.meta_key == wp_db_table_prefix + 'capabilities'), None)
     if meta_capabilities:
         meta_capabilities.meta_value = "a:1:{s:6:\"member\";b:1;}"
     
@@ -726,7 +745,7 @@ def create_new_user(stage_user_obj):
 
     # Create new usermeta for "member" role
     meta_capabilities = WPUserMeta()
-    meta_capabilities.meta_key = "wp_capabilities"
+    meta_capabilities.meta_key = wp_db_table_prefix + 'capabilities'
     meta_capabilities.meta_value = "a:1:{s:6:\"member\";b:1;}"
     new_wp_user.metas.append(meta_capabilities)
     
@@ -826,12 +845,15 @@ def create_new_connection(stage_user_obj, new_wp_user):
     photo_file_name = stage_user_obj.photo.split('/')[-1]
     target_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug)
     pathlib.Path(target_image_dir).mkdir(parents=True, exist_ok=True)
-    copyfile(stage_user_obj.photo, os.path.join(target_image_dir, photo_file_name))
+    new_file_path = os.path.join(target_image_dir, photo_file_name)
+    copyfile(stage_user_obj.photo, new_file_path)
+    # Also keep the file owner and group
+    keep_file_owner_and_group(stage_user_obj.photo, new_file_path)
     # Delete stage image file
     os.unlink(stage_user_obj.photo)
 
     # Get the MIME type of image
-    image = Image.open(os.path.join(target_image_dir, photo_file_name))
+    image = Image.open(new_file_path)
     content_type = Image.MIME[image.format]
 
     image_path = os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug, photo_file_name)
@@ -846,87 +868,87 @@ def create_new_connection(stage_user_obj, new_wp_user):
 
     # Other connections metas
     connection_meta_component = ConnectionMeta()
-    connection_meta_component.meta_key = 'hm_component'
+    connection_meta_component.meta_key = connection_meta_key_prefix + 'component'
     connection_meta_component.meta_value = stage_user_obj.component
     connection.metas.append(connection_meta_component)
 
     connection_meta_other_component = ConnectionMeta()
-    connection_meta_other_component.meta_key = 'hm_other_component'
+    connection_meta_other_component.meta_key = connection_meta_key_prefix + 'other_component'
     connection_meta_other_component.meta_value = stage_user_obj.other_component
     connection.metas.append(connection_meta_other_component)
 
     connection_meta_organization = ConnectionMeta()
-    connection_meta_organization.meta_key = 'hm_organization'
+    connection_meta_organization.meta_key = connection_meta_key_prefix + 'organization'
     connection_meta_organization.meta_value = stage_user_obj.organization
     connection.metas.append(connection_meta_organization)
 
     connection_meta_other_organization = ConnectionMeta()
-    connection_meta_other_organization.meta_key = 'hm_other_organization'
+    connection_meta_other_organization.meta_key = connection_meta_key_prefix + 'other_organization'
     connection_meta_other_organization.meta_value = stage_user_obj.other_organization
     connection.metas.append(connection_meta_other_organization)
 
     connection_meta_role = ConnectionMeta()
-    connection_meta_role.meta_key = 'hm_role'
+    connection_meta_role.meta_key = connection_meta_key_prefix + 'role'
     connection_meta_role.meta_value = stage_user_obj.role
     connection.metas.append(connection_meta_role)
 
     connection_meta_other_role = ConnectionMeta()
-    connection_meta_other_role.meta_key = 'hm_other_role'
+    connection_meta_other_role.meta_key = connection_meta_key_prefix + 'other_role'
     connection_meta_other_role.meta_value = stage_user_obj.other_role
     connection.metas.append(connection_meta_other_role)
 
     connection_meta_access_requests = ConnectionMeta()
-    connection_meta_access_requests.meta_key = 'hm_access_requests'
+    connection_meta_access_requests.meta_key = connection_meta_key_prefix + 'access_requests'
     connection_meta_access_requests.meta_value = stage_user_obj.access_requests
     connection.metas.append(connection_meta_access_requests)
 
     connection_meta_globus_identity = ConnectionMeta()
-    connection_meta_globus_identity.meta_key = 'hm_globus_identity'
+    connection_meta_globus_identity.meta_key = connection_meta_key_prefix + 'globus_identity'
     connection_meta_globus_identity.meta_value = globus_identity
     connection.metas.append(connection_meta_globus_identity)
 
     connection_meta_google_email = ConnectionMeta()
-    connection_meta_google_email.meta_key = 'hm_google_email'
+    connection_meta_google_email.meta_key = connection_meta_key_prefix + 'google_email'
     connection_meta_google_email.meta_value = google_email
     connection.metas.append(connection_meta_google_email)
 
     connection_meta_github_username = ConnectionMeta()
-    connection_meta_github_username.meta_key = 'hm_github_username'
+    connection_meta_github_username.meta_key = connection_meta_key_prefix + 'github_username'
     connection_meta_github_username.meta_value = github_username
     connection.metas.append(connection_meta_github_username)
 
     connection_meta_slack_username = ConnectionMeta()
-    connection_meta_slack_username.meta_key = 'hm_slack_username'
+    connection_meta_slack_username.meta_key = connection_meta_key_prefix + 'slack_username'
     connection_meta_slack_username.meta_value = slack_username
     connection.metas.append(connection_meta_slack_username)
 
     connection_meta_protocols_io_email = ConnectionMeta()
-    connection_meta_protocols_io_email.meta_key = 'hm_protocols_io_email'
+    connection_meta_protocols_io_email.meta_key = connection_meta_key_prefix + 'protocols_io_email'
     connection_meta_protocols_io_email.meta_value = protocols_io_email
     connection.metas.append(connection_meta_protocols_io_email)
 
     connection_meta_website = ConnectionMeta()
-    connection_meta_website.meta_key = 'hm_website'
+    connection_meta_website.meta_key = connection_meta_key_prefix + 'website'
     connection_meta_website.meta_value = stage_user_obj.website
     connection.metas.append(connection_meta_website)
 
     connection_meta_orcid = ConnectionMeta()
-    connection_meta_orcid.meta_key = 'hm_orcid'
+    connection_meta_orcid.meta_key = connection_meta_key_prefix + 'orcid'
     connection_meta_orcid.meta_value = stage_user_obj.orcid
     connection.metas.append(connection_meta_orcid)
 
     connection_meta_pm = ConnectionMeta()
-    connection_meta_pm.meta_key = 'hm_pm'
+    connection_meta_pm.meta_key = connection_meta_key_prefix + 'pm'
     connection_meta_pm.meta_value = stage_user_obj.pm
     connection.metas.append(connection_meta_pm)
 
     connection_meta_pm_name = ConnectionMeta()
-    connection_meta_pm_name.meta_key = 'hm_pm_name'
+    connection_meta_pm_name.meta_key = connection_meta_key_prefix + 'pm_name'
     connection_meta_pm_name.meta_value = stage_user_obj.pm_name
     connection.metas.append(connection_meta_pm_name)
 
     connection_meta_pm_email = ConnectionMeta()
-    connection_meta_pm_email.meta_key = 'hm_pm_email'
+    connection_meta_pm_email.meta_key = connection_meta_key_prefix + 'pm_email'
     connection_meta_pm_email.meta_value = stage_user_obj.pm_email
     connection.metas.append(connection_meta_pm_email)
 
@@ -1004,7 +1026,10 @@ def edit_connection(user_obj, wp_user, connection, new_user = False):
     target_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug)
     if new_user:
         pathlib.Path(target_image_dir).mkdir(parents=True, exist_ok=True)
-        copyfile(user_obj.photo, os.path.join(target_image_dir, photo_file_name))
+        new_file_path = os.path.join(target_image_dir, photo_file_name)
+        copyfile(user_obj.photo, new_file_path)
+        # Also keep the file owner and group
+        keep_file_owner_and_group(user_obj.photo, new_file_path)
         # Delete stage image file
         os.unlink(user_obj.photo)
     else:
@@ -1029,156 +1054,156 @@ def edit_connection(user_obj, wp_user, connection, new_user = False):
     connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + image_path + "\",\"url\": \"" + image_url + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"" + content_type + "\",\"type\":2}}}}"
 
     # Update corresponding metas
-    connection_meta_component = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_component', ConnectionMeta.entry_id == connection.id).first()
+    connection_meta_component = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'component', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_component:
         connection_meta_component.meta_value = user_obj.component
     else:
         connection_meta_component = ConnectionMeta()
-        connection_meta_component.meta_key = 'hm_component'
+        connection_meta_component.meta_key = connection_meta_key_prefix + 'component'
         connection_meta_component.meta_value = user_obj.component
         connection.metas.append(connection_meta_component)
 
-    connection_meta_other_component = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_other_component', ConnectionMeta.entry_id == connection.id).first()
+    connection_meta_other_component = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'other_component', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_other_component:
         connection_meta_other_component.meta_value = user_obj.other_component
     else:
         connection_meta_other_component = ConnectionMeta()
-        connection_meta_other_component.meta_key = 'hm_other_component'
+        connection_meta_other_component.meta_key = connection_meta_key_prefix + 'other_component'
         connection_meta_other_component.meta_value = user_obj.other_component
         connection.metas.append(connection_meta_other_component)
 
-    connection_meta_organization = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_organization', ConnectionMeta.entry_id == connection.id).first()
+    connection_meta_organization = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'organization', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_organization:
         connection_meta_organization.meta_value = user_obj.organization
     else:
         connection_meta_organization = ConnectionMeta()
-        connection_meta_organization.meta_key = 'hm_organization'
+        connection_meta_organization.meta_key = connection_meta_key_prefix + 'organization'
         connection_meta_organization.meta_value = user_obj.organization
         connection.metas.append(connection_meta_organization)
 
-    connection_meta_other_organization = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_other_organization', ConnectionMeta.entry_id == connection.id).first()
+    connection_meta_other_organization = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'other_organization', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_other_organization:
         connection_meta_other_organization.meta_value = user_obj.other_organization
     else:
         connection_meta_other_organization = ConnectionMeta()
-        connection_meta_other_organization.meta_key = 'hm_other_organization'
+        connection_meta_other_organization.meta_key = connection_meta_key_prefix + 'other_organization'
         connection_meta_other_organization.meta_value = user_obj.other_organization
         connection.metas.append(connection_meta_other_organization)
 
-    connection_meta_role = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_role', ConnectionMeta.entry_id == connection.id).first()
+    connection_meta_role = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'role', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_role:
         connection_meta_role.meta_value = user_obj.role
     else:
         connection_meta_role = ConnectionMeta()
-        connection_meta_role.meta_key = 'hm_role'
+        connection_meta_role.meta_key = connection_meta_key_prefix + 'role'
         connection_meta_role.meta_value = user_obj.role
         connection.metas.append(connection_meta_role)
 
-    connection_meta_other_role = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_other_role', ConnectionMeta.entry_id == connection.id).first()
+    connection_meta_other_role = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'other_role', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_other_role:
         connection_meta_other_role.meta_value = user_obj.other_role
     else:
         connection_meta_other_role = ConnectionMeta()
-        connection_meta_other_role.meta_key = 'hm_other_role'
+        connection_meta_other_role.meta_key = connection_meta_key_prefix + 'other_role'
         connection_meta_other_role.meta_value = user_obj.other_role
         connection.metas.append(connection_meta_other_role)
 
-    connection_meta_access_requests = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_access_requests', ConnectionMeta.entry_id == connection.id).first()
+    connection_meta_access_requests = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'access_requests', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_access_requests:
         connection_meta_access_requests.meta_value = user_obj.access_requests
     else:
         connection_meta_access_requests = ConnectionMeta()
-        connection_meta_access_requests.meta_key = 'hm_access_requests'
+        connection_meta_access_requests.meta_key = connection_meta_key_prefix + 'access_requests'
         connection_meta_access_requests.meta_value = user_obj.access_requests
         connection.metas.append(connection_meta_access_requests)
 
-    connection_meta_globus_identity = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_globus_identity', ConnectionMeta.entry_id == connection.id).first()
+    connection_meta_globus_identity = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'globus_identity', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_globus_identity:
         connection_meta_globus_identity.meta_value = user_obj.globus_identity
     else:
         connection_meta_globus_identity = ConnectionMeta()
-        connection_meta_globus_identity.meta_key = 'hm_globus_identity'
+        connection_meta_globus_identity.meta_key = connection_meta_key_prefix + 'globus_identity'
         connection_meta_globus_identity.meta_value = user_obj.globus_identity
         connection.metas.append(connection_meta_globus_identity)
 
-    connection_meta_google_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_google_email', ConnectionMeta.entry_id == connection.id).first()
+    connection_meta_google_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'google_email', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_google_email:
         connection_meta_google_email.meta_value = user_obj.google_email
     else:
         connection_meta_google_email = ConnectionMeta()
-        connection_meta_google_email.meta_key = 'hm_google_email'
+        connection_meta_google_email.meta_key = connection_meta_key_prefix + 'google_email'
         connection_meta_google_email.meta_value = user_obj.google_email
         connection.metas.append(connection_meta_google_email)
 
-    connection_meta_github_username = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_github_username', ConnectionMeta.entry_id == connection.id).first()
+    connection_meta_github_username = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'github_username', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_github_username:
         connection_meta_github_username.meta_value = user_obj.github_username
     else:
         connection_meta_github_username = ConnectionMeta()
-        connection_meta_github_username.meta_key = 'hm_github_username'
+        connection_meta_github_username.meta_key = connection_meta_key_prefix + 'github_username'
         connection_meta_github_username.meta_value = user_obj.github_username
         connection.metas.append(connection_meta_github_username)
 
-    connection_meta_slack_username = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_slack_username', ConnectionMeta.entry_id == connection.id).first()
+    connection_meta_slack_username = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'slack_username', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_slack_username:
         connection_meta_slack_username.meta_value = user_obj.slack_username
     else:
         connection_meta_slack_username = ConnectionMeta()
-        connection_meta_slack_username.meta_key = 'hm_slack_username'
+        connection_meta_slack_username.meta_key = connection_meta_key_prefix + 'slack_username'
         connection_meta_slack_username.meta_value = user_obj.slack_username
         connection.metas.append(connection_meta_slack_username)
 
-    connection_meta_protocols_io_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_protocols_io_email', ConnectionMeta.entry_id == connection.id).first()
+    connection_meta_protocols_io_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'protocols_io_email', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_protocols_io_email:
         connection_meta_protocols_io_email.meta_value = user_obj.protocols_io_email
     else:
         connection_meta_protocols_io_email = ConnectionMeta()
-        connection_meta_protocols_io_email.meta_key = 'hm_protocols_io_email'
+        connection_meta_protocols_io_email.meta_key = connection_meta_key_prefix + 'protocols_io_email'
         connection_meta_protocols_io_email.meta_value = user_obj.protocols_io_email
         connection.metas.append(connection_meta_protocols_io_email)
 
-    connection_meta_website = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_website', ConnectionMeta.entry_id == connection.id).first()
+    connection_meta_website = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'website', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_website:
         connection_meta_website.meta_value = user_obj.website
     else:
         connection_meta_website = ConnectionMeta()
-        connection_meta_website.meta_key = 'hm_website'
+        connection_meta_website.meta_key = connection_meta_key_prefix + 'website'
         connection_meta_website.meta_value = user_obj.website
         connection.metas.append(connection_meta_website)
 
-    connection_meta_orcid = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_orcid', ConnectionMeta.entry_id == connection.id).first()
+    connection_meta_orcid = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'orcid', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_orcid:
         connection_meta_orcid.meta_value = user_obj.orcid
     else:
         connection_meta_orcid = ConnectionMeta()
-        connection_meta_orcid.meta_key = 'hm_orcid'
+        connection_meta_orcid.meta_key = connection_meta_key_prefix + 'orcid'
         connection_meta_orcid.meta_value = user_obj.orcid
         connection.metas.append(connection_meta_orcid)
 
-    connection_meta_pm = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_pm', ConnectionMeta.entry_id == connection.id).first()
+    connection_meta_pm = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'pm', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_pm:
         connection_meta_pm.meta_value = user_obj.pm
     else:
         connection_meta_pm = ConnectionMeta()
-        connection_meta_pm.meta_key = 'hm_pm'
+        connection_meta_pm.meta_key = connection_meta_key_prefix + 'pm'
         connection_meta_pm.meta_value = user_obj.pm
         connection.metas.append(connection_meta_pm)
 
-    connection_meta_pm_name = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_pm_name', ConnectionMeta.entry_id == connection.id).first()
+    connection_meta_pm_name = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'pm_name', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_pm_name:
         connection_meta_pm_name.meta_value = user_obj.pm_name
     else:
         connection_meta_pm_name = ConnectionMeta()
-        connection_meta_pm_name.meta_key = 'hm_pm_name'
+        connection_meta_pm_name.meta_key = connection_meta_key_prefix + 'pm_name'
         connection_meta_pm_name.meta_value = user_obj.pm_name
         connection.metas.append(connection_meta_pm_name)
 
-    connection_meta_pm_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_pm_email', ConnectionMeta.entry_id == connection.id).first()
+    connection_meta_pm_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'pm_email', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_pm_email:
         connection_meta_pm_email.meta_value = user_obj.pm_email
     else:
         connection_meta_pm_email = ConnectionMeta()
-        connection_meta_pm_email.meta_key = 'hm_pm_email'
+        connection_meta_pm_email.meta_key = connection_meta_key_prefix + 'pm_email'
         connection_meta_pm_email.meta_value = user_obj.pm_email
         connection.metas.append(connection_meta_pm_email)
 
@@ -1196,7 +1221,7 @@ def get_all_members():
     wp_users = WPUser.query.order_by(WPUser.id.desc()).all()
     for user in wp_users:
         # Check if this target user is a member (capabilities will be empty dict if not member role)
-        capabilities = next((meta for meta in user.metas if (meta.meta_key == 'wp_capabilities') and ('member' in meta.meta_value)), {})
+        capabilities = next((meta for meta in user.metas if (meta.meta_key == wp_db_table_prefix + 'capabilities') and ('member' in meta.meta_value)), {})
         if capabilities:
             # Use this check in case certain user doesn't have the connection info
             if user.connection:
@@ -1313,7 +1338,13 @@ def get_matching_profiles(last_name, first_name, email, organization):
 def get_connection_profile(connection_id):
     connection_profile = Connection.query.filter(Connection.id == connection_id).first()
     return connection_profile
-    
+
+
+# `shutil.copyfile`, even the higher-level file copying functions (shutil.copy(), shutil.copy2()) cannot copy all file metadata.
+# On POSIX platforms, this means that file owner and group are lost as well as ACLs.
+def keep_file_owner_and_group(source_file_path, target_file_path):
+    st = os.stat(source_file_path)
+    os.chown(target_file_path, st.st_uid, st.st_gid)
 
 # Login Required Decorator
 # To use the decorator, apply it as innermost decorator to a view function. 
@@ -1358,7 +1389,7 @@ def login():
     # starting a Globus Auth login flow.
     # Redirect out to Globus Auth
     if 'code' not in request.args:                                        
-        auth_uri = confidential_app_auth_client.oauth2_get_authorize_url(additional_params={"scope": "openid profile email urn:globus:auth:scope:transfer.api.globus.org:all urn:globus:auth:scope:auth.globus.org:view_identities urn:globus:auth:scope:nexus.api.globus.org:groups" })
+        auth_uri = confidential_app_auth_client.oauth2_get_authorize_url()
         return redirect(auth_uri)
     # If we do have a "code" param, we're coming back from Globus Auth
     # and can start the process of exchanging an auth code for a token.
@@ -1367,11 +1398,8 @@ def login():
 
         token_response = confidential_app_auth_client.oauth2_exchange_code_for_tokens(auth_code)
         
-        # Get all Bearer tokens
+        # Get auth token
         auth_token = token_response.by_resource_server['auth.globus.org']['access_token']
-        #nexus_token = token_response.by_resource_server['nexus.api.globus.org']['access_token']
-        #groups_token = token_response.by_resource_server['groups.api.globus.org']['access_token']
-        #transfer_token = token_response.by_resource_server['transfer.api.globus.org']['access_token']
 
         # Also get the user info (sub, email, name, preferred_username) using the AuthClient with the auth token
         user_info = get_globus_user_info(auth_token)
@@ -1387,10 +1415,7 @@ def login():
         # Normalize email to lowercase
         session['email'] = user_info['email'].lower()
         session['auth_token'] = auth_token
-        #session['groups_token'] = groups_token
-        #session['nexus_token'] = nexus_token
-        #session['transfer_token'] = transfer_token
-      
+
         # Finally redirect back to the home page default route
         return redirect("/")
 
@@ -1404,10 +1429,8 @@ def logout():
     confidential_app_auth_client = ConfidentialAppAuthClient(app.config['GLOBUS_APP_ID'], app.config['GLOBUS_APP_SECRET'])
 
     # Revoke the tokens with Globus Auth
-    if 'tokens' in session:    
-        for token in (token_info['access_token']
-            for token_info in session['tokens'].values()):
-                confidential_app_auth_client.oauth2_revoke_token(token)
+    if 'auth_token' in session:    
+        confidential_app_auth_client.oauth2_revoke_token(session['auth_token'])
 
     # Destroy the session state
     session.clear()
@@ -1509,32 +1532,32 @@ def profile():
                 
                 # Get this before calling update_user_profile()
                 access_requests_value = ''
-                access_requests_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_access_requests', ConnectionMeta.entry_id == connection_id).first()
+                access_requests_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'access_requests', ConnectionMeta.entry_id == connection_id).first()
                 if access_requests_record:
                     access_requests_value = access_requests_record.meta_value
 
                 globus_identity_value = ''
-                globus_identity_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_globus_identity', ConnectionMeta.entry_id == connection_id).first()
+                globus_identity_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'globus_identity', ConnectionMeta.entry_id == connection_id).first()
                 if globus_identity_record:
                     globus_identity_value = globus_identity_record.meta_value
 
                 google_email_value = ''
-                google_email_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_google_email', ConnectionMeta.entry_id == connection_id).first()
+                google_email_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'google_email', ConnectionMeta.entry_id == connection_id).first()
                 if google_email_record:
                     google_email_value = google_email_record.meta_value
 
                 github_username_value = ''
-                github_username_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_github_username', ConnectionMeta.entry_id == connection_id).first()
+                github_username_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'github_username', ConnectionMeta.entry_id == connection_id).first()
                 if github_username_record:
                     github_username_value = github_username_record.meta_value
 
                 slack_username_value = ''
-                slack_username_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_slack_username', ConnectionMeta.entry_id == connection_id).first()
+                slack_username_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'slack_username', ConnectionMeta.entry_id == connection_id).first()
                 if slack_username_record:
                     slack_username_value = slack_username_record.meta_value
                 
                 protocols_io_email_value = ''
-                protocols_io_email_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == 'hm_protocols_io_email', ConnectionMeta.entry_id == connection_id).first()
+                protocols_io_email_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'protocols_io_email', ConnectionMeta.entry_id == connection_id).first()
                 if protocols_io_email_record:
                     protocols_io_email_value = protocols_io_email_record.meta_value
 
@@ -1602,20 +1625,20 @@ def profile():
                 'email': wp_user['user_email'].lower(),
                 # Other values pulled from `wp_connections_meta` table as customized fileds
                 'phone': deserilized_phone,
-                'other_component': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_other_component'), {'meta_value': ''})['meta_value'],
-                'other_organization': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_other_organization'), {'meta_value': ''})['meta_value'],
-                'other_role': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_other_role'), {'meta_value': ''})['meta_value'],
-                'access_requests': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_access_requests'), {'meta_value': ''})['meta_value'],
-                'globus_identity': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_globus_identity'), {'meta_value': ''})['meta_value'],
-                'google_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_google_email'), {'meta_value': ''})['meta_value'],
-                'github_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_github_username'), {'meta_value': ''})['meta_value'],
-                'slack_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_slack_username'), {'meta_value': ''})['meta_value'],
-                'protocols_io_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_protocols_io_email'), {'meta_value': ''})['meta_value'],
-                'website': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_website'), {'meta_value': ''})['meta_value'],
-                'orcid': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_orcid'), {'meta_value': ''})['meta_value'],
-                'pm': 'Yes' if next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_pm'), {'meta_value': ''})['meta_value'] == '1' else 'No',
-                'pm_name': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_pm_name'), {'meta_value': ''})['meta_value'],
-                'pm_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_pm_email'), {'meta_value': ''})['meta_value'],
+                'other_component': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'other_component'), {'meta_value': ''})['meta_value'],
+                'other_organization': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'other_organization'), {'meta_value': ''})['meta_value'],
+                'other_role': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'other_role'), {'meta_value': ''})['meta_value'],
+                'access_requests': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'access_requests'), {'meta_value': ''})['meta_value'],
+                'globus_identity': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'globus_identity'), {'meta_value': ''})['meta_value'],
+                'google_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'google_email'), {'meta_value': ''})['meta_value'],
+                'github_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'github_username'), {'meta_value': ''})['meta_value'],
+                'slack_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'slack_username'), {'meta_value': ''})['meta_value'],
+                'protocols_io_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'protocols_io_email'), {'meta_value': ''})['meta_value'],
+                'website': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'website'), {'meta_value': ''})['meta_value'],
+                'orcid': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'orcid'), {'meta_value': ''})['meta_value'],
+                'pm': 'Yes' if next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'pm'), {'meta_value': ''})['meta_value'] == '1' else 'No',
+                'pm_name': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'pm_name'), {'meta_value': ''})['meta_value'],
+                'pm_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'pm_email'), {'meta_value': ''})['meta_value'],
             }
 
             # Convert string representation to list
@@ -1716,21 +1739,21 @@ def members(globus_user_id):
             'email': wp_user['user_email'].lower(),
             # Other values pulled from `wp_connections_meta` table as customized fileds
             'phone': deserilized_phone,
-            'other_component': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_other_component'), {'meta_value': ''})['meta_value'],
-            'other_organization': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_other_organization'), {'meta_value': ''})['meta_value'],
-            'other_role': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_other_role'), {'meta_value': ''})['meta_value'],
-            'access_requests': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_access_requests'), {'meta_value': ''})['meta_value'],
-            'globus_identity': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_globus_identity'), {'meta_value': ''})['meta_value'],
-            'google_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_google_email'), {'meta_value': ''})['meta_value'],
-            'github_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_github_username'), {'meta_value': ''})['meta_value'],
-            'slack_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_slack_username'), {'meta_value': ''})['meta_value'],
-            'protocols_io_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_protocols_io_email'), {'meta_value': ''})['meta_value'],
-            'website': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_website'), {'meta_value': ''})['meta_value'],
-            'orcid': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_orcid'), {'meta_value': ''})['meta_value'],
+            'other_component': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'other_component'), {'meta_value': ''})['meta_value'],
+            'other_organization': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'other_organization'), {'meta_value': ''})['meta_value'],
+            'other_role': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'other_role'), {'meta_value': ''})['meta_value'],
+            'access_requests': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'access_requests'), {'meta_value': ''})['meta_value'],
+            'globus_identity': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'globus_identity'), {'meta_value': ''})['meta_value'],
+            'google_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'google_email'), {'meta_value': ''})['meta_value'],
+            'github_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'github_username'), {'meta_value': ''})['meta_value'],
+            'slack_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'slack_username'), {'meta_value': ''})['meta_value'],
+            'protocols_io_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'protocols_io_email'), {'meta_value': ''})['meta_value'],
+            'website': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'website'), {'meta_value': ''})['meta_value'],
+            'orcid': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'orcid'), {'meta_value': ''})['meta_value'],
             # This is slightly different from the GET /profile
-            'pm': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_pm'), {'meta_value': ''})['meta_value'] == '1',
-            'pm_name': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_pm_name'), {'meta_value': ''})['meta_value'],
-            'pm_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == 'hm_pm_email'), {'meta_value': ''})['meta_value'],
+            'pm': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'pm'), {'meta_value': ''})['meta_value'] == '1',
+            'pm_name': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'pm_name'), {'meta_value': ''})['meta_value'],
+            'pm_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'pm_email'), {'meta_value': ''})['meta_value'],
         }
 
         # Get the globus_username for individual user
@@ -1953,6 +1976,7 @@ def match(globus_user_id, connection_id):
 
     return show_admin_info("This registration has been approved successfully by using an exisiting mathcing profile!")
 
+
 # Instructions
 @app.route("/find_globus_identity", methods=['GET'])
 @login_required
@@ -1974,6 +1998,7 @@ def unlink_globus_identities():
     }
 
     return render_template('instructions/unlink_globus_identities.html', data = context)
+
 
 def get_connection_keys():
     return ['other_component', 'other_organization', 'other_role', 'access_requests',
