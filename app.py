@@ -36,6 +36,8 @@ app.config.from_pyfile('app.cfg')
 app.config['FLASK_APP_BASE_URI'] = app.config['FLASK_APP_BASE_URI'].strip('/')
 app.config['CONNECTION_IMAGE_URL'] = app.config['CONNECTION_IMAGE_URL'].strip('/')
 
+wp_db_table_prefix = app.config['WP_DB_TABLE_PREFIX']
+
 # Prefix for the Connections meta fields
 connection_meta_key_prefix = app.config['CONNECTION_META_KEY_PREFIX']
 

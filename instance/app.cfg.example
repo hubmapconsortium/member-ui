@@ -16,7 +16,8 @@ GOOGLE_RECAPTCHA_SECRET_KEY = ''
 GOOGLE_RECAPTCHA_VERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify'
 
 # DB connection ettings
-# Default works for local development with docker 
+# Default works for local development with docker
+WP_DB_TABLE_PREFIX = 'wp_'
 SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://root:123@member-mysql/hm_wpdb'
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 
