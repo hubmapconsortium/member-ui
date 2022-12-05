@@ -18,14 +18,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sennetconsortium/member-ui.git"
+    "url": "git+https://github.com/hubmapconsortium/member-ui.git"
   },
   "author": "dbmit.pitt.edu",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/sennetconsortium/member-ui/issues"
+    "url": "https://github.com/hubmapconsortium/member-ui/issues"
   },
-  "homepage": "https://github.com/sennetconsortium/member-ui#readme",
+  "homepage": "https://github.com/hubmapconsortium/member-ui#readme",
   "devDependencies": {
     "@babel/core": "^7.20.2",
     "@babel/preset-env": "^7.20.2",

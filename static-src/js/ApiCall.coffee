@@ -37,7 +37,7 @@ class ApiCall extends App
             a = document.createElement('a')
             url = window.URL.createObjectURL(data)
             a.href = url
-            a.download = $el.data('filename') or 'SenNet-file'
+            a.download = $el.data('filename') or 'HuBMAP-file'
             document.body.append a
             a.click()
             a.remove()
