@@ -126,13 +126,12 @@ No project manager for this user
   </div>
 </div>
 
+<!-- Disabled profile matching by Zhou 10/6/2023 -->
+{% if data.matching_profiles|length > 0 %}
 
 <div class="card mt-4">
   <h5 class="card-header">Possible Existing Matching Profile</h5>
   <div class="card-body">
-    
-
-{% if data.matching_profiles|length > 0 %}
 
 {#
 <div class="alert alert-info" role="alert">
@@ -219,10 +218,11 @@ The following results only show total score that is greater than the first name 
 <div class="alert alert-info" role="alert">
 No matching profiles found from `wp_connections` table.
 </div>
-{% endif %}
+
   </div>
 </div>
 
+{% endif %}
 
 
 
