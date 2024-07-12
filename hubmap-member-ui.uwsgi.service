@@ -3,12 +3,22 @@ Description=uWSGI serivice for HuBAMP Member Registration and Profile
 After=syslog.target
 
 [Service]
-ExecStart=/usr/sbin/uwsgi --ini /opt/hubmap/member-ui/uwsgi.ini -H /opt/hubmap/member-ui/venv-member-ui/
+# Commented line is the command to be used when uWSGI is installed as a system package
+# ExecStart=/usr/sbin/uwsgi --ini /opt/hubmap/member-ui/uwsgi.ini -H /opt/hubmap/member-ui/venv-member-ui/
+
+# Below is the command when using uWSGI from pip install
+ExecStart=/opt/hubmap/member-ui/venv-member-ui/bin/uwsgi --ini /opt/hubmap/member-ui/uwsgi.ini -H /opt/hubmap/member-ui/venv-member-ui/
+
 Restart=always
 KillSignal=SIGQUIT
 Type=notify
 NotifyAccess=all
-ExecStop=/usr/sbin/uwsgi --stop /var/run/hubmap-member-ui-uwsgi.pid
+
+# Commented line is the command to be used when uWSGI is installed as a system package
+#ExecStop=/usr/sbin/uwsgi --stop /var/run/hubmap-member-ui-uwsgi.pid
+
+# Below is the command when using uWSGI from pip install
+ExecStop=/opt/hubmap/member-ui/venv-member-ui/bin/uwsgi --stop /var/run/hubmap-member-ui-uwsgi.pid
 
 [Install]
 WantedBy=multi-user.target
