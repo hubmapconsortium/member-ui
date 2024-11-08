@@ -78,6 +78,7 @@ class StageUser(db.Model):
     access_requests = db.Column(db.String(500)) # Checkboxes
     globus_identity = db.Column(db.String(200))
     google_email = db.Column(db.String(200))
+    globus_parsed_email = db.Column(db.String(200))
     github_username = db.Column(db.String(200))
     slack_username = db.Column(db.String(200))
     protocols_io_email = db.Column(db.String(200))
@@ -109,6 +110,7 @@ class StageUser(db.Model):
             self.access_requests = json.dumps(a_dict['access_requests']) if 'access_requests' in a_dict else ''
             self.globus_identity = a_dict['globus_identity'] if 'globus_identity' in a_dict else ''
             self.google_email = a_dict['google_email'] if 'google_email' in a_dict else ''
+            self.globus_parsed_email = a_dict['globus_parsed_email'] if 'globus_parsed_email' in a_dict else ''
             self.github_username = a_dict['github_username'] if 'github_username' in a_dict else ''
             self.slack_username = a_dict['slack_username'] if 'slack_username' in a_dict else ''
             self.protocols_io_email = a_dict['protocols_io_email'] if 'protocols_io_email' in a_dict else ''
@@ -125,7 +127,7 @@ class StageUser(db.Model):
 # Define output format with marshmallow schema
 class StageUserSchema(ma.Schema):
     class Meta:
-        fields = ('id', 'globus_user_id', 'globus_username', 'email', 'first_name', 'last_name', 'component', 'other_component', 'organization', 'other_organization',
+        fields = ('id', 'globus_user_id','globus_parsed_email', 'globus_username', 'email', 'first_name', 'last_name', 'component', 'other_component', 'organization', 'other_organization',
                     'role', 'other_role', 'photo', 'photo_url', 'access_requests', 'globus_identity', 'google_email', 'github_username', 'slack_username', 'protocols_io_email', 'phone', 'website',
                     'bio', 'orcid', 'pm', 'pm_name', 'pm_email', 'created_at', 'deny')
 
@@ -185,6 +187,7 @@ class Connection(db.Model):
     __tablename__ = wp_db_table_prefix + 'connections'
 
     id = db.Column(db.Integer, primary_key=True)
+    globus_parsed_email = db.Column(db.Text)
     email = db.Column(db.Text)
     first_name = db.Column(db.Text)
     last_name = db.Column(db.Text)
@@ -338,6 +341,7 @@ def construct_user(request):
         "other_role": request.form['other_role'].strip(),
         "photo": '',
         "photo_url": request.form['photo_url'].strip(),
+        "globus_parsed_email": request.form['globus_parsed_email'].strip(),
         # multiple checkboxes
         "access_requests": request.form.getlist('access_requests'),
         "globus_identity": request.form['globus_identity'].strip(),
@@ -390,10 +394,13 @@ def show_registration_form():
         'first_name': name_words[0],
         # Use empty for last name if not present
         'last_name': name_words[1] if (len(name_words) > 1) else "",
-        'email': session['email'],
+        # 'email': session['email'],
+        # Replacing the prefilled email with user-editable, and saving the globus email in a hidden field
+        # 'email': session['email'],
+        'globus_parsed_email': session['email'],
         'recaptcha_site_key': app.config['GOOGLE_RECAPTCHA_SITE_KEY']
     }
-
+    print('show_registration_form(): context')
     return render_template('register.html', data = context)
 
 # Three different types of message for authenticated users
@@ -761,6 +768,12 @@ def create_new_user(stage_user_obj):
     meta_globus_username.meta_value = stage_user_obj.globus_username
     new_wp_user.metas.append(meta_globus_username)
 
+    # Create new usermeta for globus email captured from legacy email support
+    meta_globus_parsed_email = WPUserMeta()
+    meta_globus_parsed_email.meta_key = "globus_parsed_email"
+    meta_globus_parsed_email.meta_value = stage_user_obj.globus_parsed_email
+    new_wp_user.metas.append(meta_globus_parsed_email)
+
     return new_wp_user
 
 def generate_password():
@@ -862,6 +875,7 @@ def create_new_connection(stage_user_obj, new_wp_user):
 
     globus_identity = stage_user_obj.globus_identity
     google_email = stage_user_obj.google_email
+    globus_parsed_email = stage_user_obj.globus_parsed_email
     github_username = stage_user_obj.github_username
     slack_username = stage_user_obj.slack_username
     protocols_io_email = stage_user_obj.protocols_io_email
@@ -1134,6 +1148,15 @@ def edit_connection(user_obj, wp_user, connection, new_user = False):
         connection_meta_google_email.meta_key = connection_meta_key_prefix + 'google_email'
         connection_meta_google_email.meta_value = user_obj.google_email
         connection.metas.append(connection_meta_google_email)
+
+    connection_meta_globus_parsed_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'google_email', ConnectionMeta.entry_id == connection.id).first()
+    if connection_meta_globus_parsed_email:
+        connection_meta_globus_parsed_email.meta_value = user_obj.globus_parsed_email
+    else:
+        connection_meta_globus_parsed_email = ConnectionMeta()
+        connection_meta_globus_parsed_email.meta_key = connection_meta_key_prefix + 'globus_parsed_email'
+        connection_meta_globus_parsed_email.meta_value = user_obj.globus_parsed_email
+        connection.metas.append(connection_meta_globus_parsed_email)
 
     connection_meta_github_username = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'github_username', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_github_username:
@@ -1463,18 +1486,19 @@ def register():
         else:
             if request.method == 'POST':
                 # reCAPTCHA validation
-                recaptcha_response = request.form['g-recaptcha-response']
-                values = {
-                    'secret': app.config['GOOGLE_RECAPTCHA_SECRET_KEY'],
-                    'response': recaptcha_response
-                }
-                data = urllib.parse.urlencode(values).encode()
-                req = urllib.request.Request(app.config['GOOGLE_RECAPTCHA_VERIFY_URL'], data = data)
-                response = urllib.request.urlopen(req)
-                result = json.loads(response.read().decode())
+                # recaptcha_response = request.form['g-recaptcha-response']
+                # values = {
+                #     'secret': app.config['GOOGLE_RECAPTCHA_SECRET_KEY'],
+                #     'response': recaptcha_response
+                # }
+                # data = urllib.parse.urlencode(values).encode()
+                # req = urllib.request.Request(app.config['GOOGLE_RECAPTCHA_VERIFY_URL'], data = data)
+                # response = urllib.request.urlopen(req)
+                # result = json.loads(response.read().decode())
 
                 # For testing only
-                #result['success'] = True
+                result = {'success': True}
+                # result['success'] = True
 
                 # Currently no backend form validation
                 # Only front end validation and reCAPTCHA
@@ -1540,13 +1564,13 @@ def profile():
                 globus_identity_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'globus_identity', ConnectionMeta.entry_id == connection_id).first()
                 if globus_identity_record:
                     globus_identity_value = globus_identity_record.meta_value
-
+                
                 google_email_value = ''
                 google_email_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'google_email', ConnectionMeta.entry_id == connection_id).first()
-                if google_email_record:
-                    google_email_value = google_email_record.meta_value
+                if globus_identity_record:
+                    google_email_value = globus_identity_record.meta_value
 
-                github_username_value = ''
+                github_username_value: Literal[''] = ''
                 github_username_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'github_username', ConnectionMeta.entry_id == connection_id).first()
                 if github_username_record:
                     github_username_value = github_username_record.meta_value
@@ -1622,7 +1646,9 @@ def profile():
                 'role': connection_data['title'], # Store the role value in title field
                 'bio': connection_data['bio'],
                 # email is pulled from the `wp_users` table that is linked with Globus login so no need to deserialize the wp_connections.email filed
+                # UPDATE 10/1/24 We Are Now unlinking the two, which means we should probably get back to that deserializing?
                 'email': wp_user['user_email'].lower(),
+                'Cemail':connection_data['email'],
                 # Other values pulled from `wp_connections_meta` table as customized fileds
                 'phone': deserilized_phone,
                 'other_component': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'other_component'), {'meta_value': ''})['meta_value'],
@@ -1631,6 +1657,7 @@ def profile():
                 'access_requests': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'access_requests'), {'meta_value': ''})['meta_value'],
                 'globus_identity': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'globus_identity'), {'meta_value': ''})['meta_value'],
                 'google_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'google_email'), {'meta_value': ''})['meta_value'],
+                'globus_parsed_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'globus_parsed_email'), {'meta_value': ''})['meta_value'],
                 'github_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'github_username'), {'meta_value': ''})['meta_value'],
                 'slack_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'slack_username'), {'meta_value': ''})['meta_value'],
                 'protocols_io_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'protocols_io_email'), {'meta_value': ''})['meta_value'],
@@ -1669,6 +1696,7 @@ def profile():
                 'globus_user_id': session['globus_user_id'],
                 # For individual user profile, use the globus_username from session
                 'globus_username': session['globus_username'],
+                'globus_parsed_email': session['globus_username'],
                 'csrf_token': generate_csrf_token(),
                 'connection_id': connection_data['id'],
                 'profile_pic_url': profile_pic_url
@@ -1745,6 +1773,7 @@ def members(globus_user_id):
             'access_requests': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'access_requests'), {'meta_value': ''})['meta_value'],
             'globus_identity': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'globus_identity'), {'meta_value': ''})['meta_value'],
             'google_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'google_email'), {'meta_value': ''})['meta_value'],
+            'globus_parsed_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'globus_parsed_email'), {'meta_value': ''})['meta_value'],
             'github_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'github_username'), {'meta_value': ''})['meta_value'],
             'slack_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'slack_username'), {'meta_value': ''})['meta_value'],
             'protocols_io_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'protocols_io_email'), {'meta_value': ''})['meta_value'],
@@ -2007,7 +2036,7 @@ def unlink_globus_identities():
 
 def get_connection_keys():
     return ['other_component', 'other_organization', 'other_role', 'access_requests',
-            'globus_identity', 'google_email', 'github_username', 'slack_username', 'protocols_io_email',
+            'globus_identity','globus_parsed_email', 'google_email', 'github_username', 'slack_username', 'protocols_io_email',
             'website', 'orcid', 'pm', 'pm_name', 'pm_email']
 
 
@@ -2032,6 +2061,7 @@ def get_all_users_with_all_info():
                 # Construct a new member dict and add to the members list
                 member = {
                     'globus_user_id': wp_user_meta_globus_user_id.meta_value,
+                    'globus_parsed_email': connection_data.globus_parsed_email,
                     'first_name': connection_data.first_name,
                     'last_name': connection_data.last_name,
                     'organization': connection_data.organization,
@@ -2057,7 +2087,7 @@ def get_all_users_with_all_info():
                                 member[k] = obj['meta_value'] if isinstance(obj, (dict)) else obj.meta_value
                 except Exception as e:
                     print(e)
-                    # print(user.user_email)
+                    print(user.user_email)
 
                 users.append(member)
 

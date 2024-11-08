@@ -30,7 +30,8 @@
         $("#oth-org").hide();
         $("#oth-role").hide();
         $("#globus-identity").hide();
-        $("#google-email").hide();
+        // $("#globus_parsed_email").hide();
+        // $("#google-email").hide();
         $("#slack-username").hide();
         $("#protocols-io-email").hide();
         $("#github-username").hide();
@@ -252,6 +253,7 @@
         
         $("#registration-form").submit(function(e){
             e.preventDefault();
+            console.debug('%c◉ this ', 'color:#00ff7b', this);
             var form = this;
             valid = true;
             $(form).find('.invalid-feedback').remove();
@@ -261,6 +263,11 @@
                 $("#id_email").addClass('is-invalid');
                 $("#id_email").after("<div class='invalid-feedback'>Email is required.</div>");
             }
+            // if($.trim($("#id_globus_parsed_email").val()) === ''){
+            //     valid = false;
+            //     $("#id_globus_parsed_email").addClass('is-invalid');
+            //     $("#id_globus_parsed_email").after("<div class='invalid-feedback'>Globus_parsed_email is required.</div>");
+            // }
             if($.trim($("#id_phone").val()) === ''){
                 valid = false;
                 $("#id_phone").addClass('is-invalid');
@@ -370,8 +377,10 @@
                 $("#id_pm_email").after("<div class='invalid-feedback'>Project Manager's email is required.</div>");
             }
             if(valid){
+                console.debug('%c◉ form ', 'color:#00ff7b', form);
                 form.submit();
             } else {
+                console.debug('%c◉ form ', 'color:#ff005d', form);
                 $(".main-error-message").show();
             }
         });
@@ -404,10 +413,13 @@
             <div class="row">
                 <div class="col">
                     <div class="form-group">
-                        <label for="email">Email address <span class="text-danger">*</span></label>
-                        <!-- Disallow edit email since it's used with globus login -->
-                        <input type="email" name="email" value="{{ data.email }}" class="form-control" id="id_email" disabled>
-                        <input type="hidden" name="email" value="{{ data.email }}">
+                        <!-- <label for="email">Email address <span class="text-danger">*</span></label> -->
+                        <!-- Disallow edit email since it's used with globus login UPDATE: Allowing Again oct 2024 --> 
+                        <input type="email" name="email" value="{{ data.email }}" class="form-control" id="id_email">
+                        <!-- <input type="email" name="email" value="{{ data.Wemail }}" class="form-control" id="id_email"> -->
+                        <!-- <input type="email" name="email" value="{{ data.Cemail }}" class="form-control" id="id_email"> -->
+                        <!-- <input type="email" name="email" value="{{ data.globus_parsed_email if data.globus_parsed_email.length }}"> -->
+                        <input type="email" name="globus_parsed_email" value="{{ data.globus_parsed_email if data.globus_parsed_email else data.email }}" class="form-control" id="id_globus_parsed_email">
                     </div>
                 </div>
                 <div class="col">
