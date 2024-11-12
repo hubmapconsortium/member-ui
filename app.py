@@ -330,7 +330,6 @@ def construct_user(request):
         "globus_username": session['globus_username'],
         # All others are from the form data
         "email": request.form['email'].strip(),
-        "globus_parsed_email": request.form['globus_parsed_email'].strip(),
         "first_name": request.form['first_name'].strip(),
         "last_name": request.form['last_name'].strip(),
         "phone": request.form['phone'].strip(),
@@ -354,7 +353,8 @@ def construct_user(request):
         "orcid": request.form['orcid'].strip(),
         "pm": get_pm_selection(request.form['pm']),
         "pm_name": request.form['pm_name'].strip(),
-        "pm_email": request.form['pm_email'].strip()
+        "pm_email": request.form['pm_email'].strip(),
+        "globus_parsed_email": request.form['globus_parsed_email'].strip(),
     }
 
     img_to_upload = photo_file if photo_file is not None else imgByteArr if imgByteArr is not None else None
@@ -1235,6 +1235,15 @@ def edit_connection(user_obj, wp_user, connection, new_user = False):
         connection_meta_pm_email.meta_value = user_obj.pm_email
         connection.metas.append(connection_meta_pm_email)
 
+    connection_meta_globus_parsed_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'globus_parsed_email', ConnectionMeta.entry_id == connection.id).first()
+    if connection_meta_globus_parsed_email:
+        connection_meta_globus_parsed_email.meta_value = user_obj.globus_parsed_email
+    else:
+        connection_meta_globus_parsed_email = ConnectionMeta()
+        connection_meta_globus_parsed_email.meta_key = connection_meta_key_prefix + 'globus_parsed_email'
+        connection_meta_globus_parsed_email.meta_value = user_obj.globus_parsed_email
+        connection.metas.append(connection_meta_globus_parsed_email)
+
     # Also update the wp_user record
     wp_user.user_login = user_obj.email
     wp_user.user_email = user_obj.email
@@ -1575,7 +1584,7 @@ def profile():
                 if globus_identity_record:
                     google_email_value = globus_identity_record.meta_value
 
-                github_username_value: Literal[''] = ''
+                github_username_value = ''
                 github_username_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'github_username', ConnectionMeta.entry_id == connection_id).first()
                 if github_username_record:
                     github_username_value = github_username_record.meta_value
@@ -1597,7 +1606,8 @@ def profile():
                     'google_email': google_email_value,
                     'github_username': github_username_value,
                     'slack_username': slack_username_value,
-                    'protocols_io_email': protocols_io_email_value
+                    'protocols_io_email': protocols_io_email_value,
+                    'globus_parsed_email': globus_parsed_email_value
                 }
 
                 try:
@@ -1775,7 +1785,6 @@ def members(globus_user_id):
             'access_requests': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'access_requests'), {'meta_value': ''})['meta_value'],
             'globus_identity': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'globus_identity'), {'meta_value': ''})['meta_value'],
             'google_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'google_email'), {'meta_value': ''})['meta_value'],
-            'globus_parsed_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'globus_parsed_email'), {'meta_value': ''})['meta_value'],
             'github_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'github_username'), {'meta_value': ''})['meta_value'],
             'slack_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'slack_username'), {'meta_value': ''})['meta_value'],
             'protocols_io_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'protocols_io_email'), {'meta_value': ''})['meta_value'],
@@ -1785,6 +1794,7 @@ def members(globus_user_id):
             'pm': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'pm'), {'meta_value': ''})['meta_value'] == '1',
             'pm_name': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'pm_name'), {'meta_value': ''})['meta_value'],
             'pm_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'pm_email'), {'meta_value': ''})['meta_value'],
+            'globus_parsed_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'globus_parsed_email'), {'meta_value': ''})['meta_value'],
         }
 
         # Get the globus_username for individual user
