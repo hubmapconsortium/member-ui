@@ -42,6 +42,7 @@
         $("#pic_url").hide();
 
         populate_selections();
+        console.debug('%c◉ data ', 'color:#00ff7b', data);
 
         $("#id_component").change(function() {
             let id = $(this).children("option:selected").val();
@@ -263,11 +264,6 @@
                 $("#id_email").addClass('is-invalid');
                 $("#id_email").after("<div class='invalid-feedback'>Email is required.</div>");
             }
-            // if($.trim($("#id_globus_parsed_email").val()) === ''){
-            //     valid = false;
-            //     $("#id_globus_parsed_email").addClass('is-invalid');
-            //     $("#id_globus_parsed_email").after("<div class='invalid-feedback'>Globus_parsed_email is required.</div>");
-            // }
             if($.trim($("#id_phone").val()) === ''){
                 valid = false;
                 $("#id_phone").addClass('is-invalid');
@@ -413,14 +409,17 @@
             <div class="row">
                 <div class="col">
                     <div class="form-group">
-                        <!-- <label for="email">Email address <span class="text-danger">*</span></label> -->
-                        <!-- Disallow edit email since it's used with globus login UPDATE: Allowing Again oct 2024 --> 
+                        <label for="email">Email address <span class="text-danger">*</span></label>
                         <input type="email" name="email" value="{{ data.email }}" class="form-control" id="id_email">
-                        <!-- <input type="email" name="email" value="{{ data.Wemail }}" class="form-control" id="id_email"> -->
-                        <!-- <input type="email" name="email" value="{{ data.Cemail }}" class="form-control" id="id_email"> -->
-                        <!-- <input type="email" name="email" value="{{ data.globus_parsed_email if data.globus_parsed_email.length }}"> -->
-                        <input type="email" name="globus_parsed_email" value="{{ data.globus_parsed_email if data.globus_parsed_email else data.email }}" class="form-control" id="id_globus_parsed_email">
                     </div>
+                    <div class="form-group">
+                        {% if data.globus_parsed_email %}
+                            <input type="hidden" name="globus_parsed_email" value="{{ data.globus_parsed_email }}">
+                        {% else %}
+                            <input type="hidden" name="globus_parsed_email" value="{{ data.email }}" class="form-control" maxlength="200" id="id_globus_parsed_email">
+                        {% endif %}
+                    </div>
+
                 </div>
                 <div class="col">
                     <div class="form-group">

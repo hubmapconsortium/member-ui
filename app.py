@@ -78,7 +78,6 @@ class StageUser(db.Model):
     access_requests = db.Column(db.String(500)) # Checkboxes
     globus_identity = db.Column(db.String(200))
     google_email = db.Column(db.String(200))
-    globus_parsed_email = db.Column(db.String(200))
     github_username = db.Column(db.String(200))
     slack_username = db.Column(db.String(200))
     protocols_io_email = db.Column(db.String(200))
@@ -91,6 +90,7 @@ class StageUser(db.Model):
     pm_email = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     deny = db.Column(db.Boolean)
+    globus_parsed_email = db.Column(db.String(200))
 
     def __init__(self, a_dict):
         try:
@@ -110,7 +110,6 @@ class StageUser(db.Model):
             self.access_requests = json.dumps(a_dict['access_requests']) if 'access_requests' in a_dict else ''
             self.globus_identity = a_dict['globus_identity'] if 'globus_identity' in a_dict else ''
             self.google_email = a_dict['google_email'] if 'google_email' in a_dict else ''
-            self.globus_parsed_email = a_dict['globus_parsed_email'] if 'globus_parsed_email' in a_dict else ''
             self.github_username = a_dict['github_username'] if 'github_username' in a_dict else ''
             self.slack_username = a_dict['slack_username'] if 'slack_username' in a_dict else ''
             self.protocols_io_email = a_dict['protocols_io_email'] if 'protocols_io_email' in a_dict else ''
@@ -121,15 +120,16 @@ class StageUser(db.Model):
             self.pm = a_dict['pm'] if 'pm' in a_dict else ''
             self.pm_name = a_dict['pm_name'] if 'pm_name' in a_dict else ''
             self.pm_email = a_dict['pm_email'] if 'pm_email' in a_dict else ''
+            self.globus_parsed_email = a_dict['globus_parsed_email'] if 'globus_parsed_email' in a_dict else ''
         except e:
             raise e
 
 # Define output format with marshmallow schema
 class StageUserSchema(ma.Schema):
     class Meta:
-        fields = ('id', 'globus_user_id','globus_parsed_email', 'globus_username', 'email', 'first_name', 'last_name', 'component', 'other_component', 'organization', 'other_organization',
+        fields = ('id', 'globus_user_id','globus_username', 'email', 'first_name', 'last_name', 'component', 'other_component', 'organization', 'other_organization',
                     'role', 'other_role', 'photo', 'photo_url', 'access_requests', 'globus_identity', 'google_email', 'github_username', 'slack_username', 'protocols_io_email', 'phone', 'website',
-                    'bio', 'orcid', 'pm', 'pm_name', 'pm_email', 'created_at', 'deny')
+                    'bio', 'orcid', 'pm', 'pm_name', 'pm_email', 'created_at', 'deny', 'globus_parsed_email')
 
 # WPUserMeta Class/Model
 class WPUserMeta(db.Model):
@@ -187,7 +187,6 @@ class Connection(db.Model):
     __tablename__ = wp_db_table_prefix + 'connections'
 
     id = db.Column(db.Integer, primary_key=True)
-    globus_parsed_email = db.Column(db.Text)
     email = db.Column(db.Text)
     first_name = db.Column(db.Text)
     last_name = db.Column(db.Text)
@@ -224,6 +223,7 @@ class Connection(db.Model):
     metas = db.relationship('ConnectionMeta', backref='connection', lazy='joined')
     emails = db.relationship('ConnectionEmail', backref='connection', lazy='joined')
     phones = db.relationship('ConnectionPhone', backref='connection', lazy='joined')
+    globus_parsed_email = db.Column(db.Text)
 
 # Connection Schema
 class ConnectionSchema(ma.Schema):
@@ -330,6 +330,7 @@ def construct_user(request):
         "globus_username": session['globus_username'],
         # All others are from the form data
         "email": request.form['email'].strip(),
+        "globus_parsed_email": request.form['globus_parsed_email'].strip(),
         "first_name": request.form['first_name'].strip(),
         "last_name": request.form['last_name'].strip(),
         "phone": request.form['phone'].strip(),
@@ -341,7 +342,6 @@ def construct_user(request):
         "other_role": request.form['other_role'].strip(),
         "photo": '',
         "photo_url": request.form['photo_url'].strip(),
-        "globus_parsed_email": request.form['globus_parsed_email'].strip(),
         # multiple checkboxes
         "access_requests": request.form.getlist('access_requests'),
         "globus_identity": request.form['globus_identity'].strip(),
@@ -624,65 +624,65 @@ def update_user_profile(connection_id, user_info, profile_pic_option, img_to_upl
 
     # If we see 'image' field in options, it means this user is added either via registration or WP connections plugin with an image
     # thus there's an image folder with an image
-    try:
-        options = json.loads(connection_profile.options)
-        current_image_path = options['image']['meta']['original']['path']
-        current_image_filename = current_image_path.split('/')[-1]
-        # In case the image folder is gone if someone manually deleted it, we check to make and create one to avoid unknown errors
-        if not pathlib.Path(current_image_dir).exists():
-            pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
-    # Otherwise, this connection entry is created directly from WP connections plugin without uploading an image
-    # thus there's no image folder created
-    except KeyError:
-        # We create the image folder
-        pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
-        # Copy over the default image       
-        current_image_filename = 'default_profile.png'
-        save_path = os.path.join(current_image_dir, secure_filename(f"{user_info['globus_user_id']}.png"))
-        source_file_path = os.path.join(app.root_path, 'static', 'images', current_image_filename)
-        copyfile(source_file_path, save_path)
-        # Also keep the file owner and group
-        keep_file_owner_and_group(source_file_path, save_path)
-    except TypeError:
-        # We create the image folder
-        pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
-        # Copy over the default image       
-        current_image_filename = 'default_profile.png'
-        save_path = os.path.join(current_image_dir, secure_filename(f"{user_info['globus_user_id']}.png"))
-        source_file_path = os.path.join(app.root_path, 'static', 'images', current_image_filename)
-        copyfile(source_file_path, save_path)
-        # Also keep the file owner and group
-        keep_file_owner_and_group(source_file_path, save_path)
+    # try:
+    #     options = json.loads(connection_profile.options)
+    #     current_image_path = options['image']['meta']['original']['path']
+    #     current_image_filename = current_image_path.split('/')[-1]
+    #     # In case the image folder is gone if someone manually deleted it, we check to make and create one to avoid unknown errors
+    #     if not pathlib.Path(current_image_dir).exists():
+    #         pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
+    # # Otherwise, this connection entry is created directly from WP connections plugin without uploading an image
+    # # thus there's no image folder created
+    # except KeyError:
+    #     # We create the image folder
+    #     pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
+    #     # Copy over the default image       
+    #     current_image_filename = 'default_profile.png'
+    #     save_path = os.path.join(current_image_dir, secure_filename(f"{user_info['globus_user_id']}.png"))
+    #     source_file_path = os.path.join(app.root_path, 'static', 'images', current_image_filename)
+    #     copyfile(source_file_path, save_path)
+    #     # Also keep the file owner and group
+    #     keep_file_owner_and_group(source_file_path, save_path)
+    # except TypeError:
+    #     # We create the image folder
+    #     pathlib.Path(current_image_dir).mkdir(parents=True, exist_ok=True)
+    #     # Copy over the default image       
+    #     current_image_filename = 'default_profile.png'
+    #     save_path = os.path.join(current_image_dir, secure_filename(f"{user_info['globus_user_id']}.png"))
+    #     source_file_path = os.path.join(app.root_path, 'static', 'images', current_image_filename)
+    #     copyfile(source_file_path, save_path)
+    #     # Also keep the file owner and group
+    #     keep_file_owner_and_group(source_file_path, save_path)
 
     # This exisiting user doesn't change first name and last name, so no need to get new unique slug
-    if (user_info['first_name'].lower() == connection_profile.first_name.lower()) and (user_info['last_name'].lower() == connection_profile.last_name.lower()):
-        # Update profile image directly
-        user_info['photo'] = update_user_profile_pic(user_info, profile_pic_option, img_to_upload, current_image_dir, current_image_filename)
-    # Otherwise, we need a new slug and create the new image folder and copy old images to this new location
-    else:
-        new_slug = unique_connection_slug(user_info['first_name'], user_info['last_name'], connection_id)
-        new_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], new_slug)
+    # if (user_info['first_name'].lower() == connection_profile.first_name.lower()) and (user_info['last_name'].lower() == connection_profile.last_name.lower()):
+    #     # Update profile image directly
+    #     user_info['photo'] = update_user_profile_pic(user_info, profile_pic_option, img_to_upload, current_image_dir, current_image_filename)
+    # # Otherwise, we need a new slug and create the new image folder and copy old images to this new location
+    # else:
+    #     new_slug = unique_connection_slug(user_info['first_name'], user_info['last_name'], connection_id)
+    #     new_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], new_slug)
 
-        # Create the new image folder
-        pathlib.Path(new_image_dir).mkdir(parents=True, exist_ok=True)
-        # Copy all old images to this new folder
-        for file in os.listdir(current_image_dir):
-            file_path = os.path.join(current_image_dir, file)
-            new_file_path = os.path.join(new_image_dir, file)
+    #     # Create the new image folder
+    #     pathlib.Path(new_image_dir).mkdir(parents=True, exist_ok=True)
+    #     # Copy all old images to this new folder
+    #     for file in os.listdir(current_image_dir):
+    #         file_path = os.path.join(current_image_dir, file)
+    #         new_file_path = os.path.join(new_image_dir, file)
             
-            if os.path.isfile(file_path):
-                copy2(file_path, new_image_dir)
-                # Also keep the file owner and group
-                keep_file_owner_and_group(file_path, new_file_path)
+    #         if os.path.isfile(file_path):
+    #             copy2(file_path, new_image_dir)
+    #             # Also keep the file owner and group
+    #             keep_file_owner_and_group(file_path, new_file_path)
 
-        # Finally delete the old image folder        
-        try:
-            rmtree(current_image_dir)
-        except Exception as e:
-            print("Failed to delete the old profile image folder due to new slug: " + current_image_dir)
-            print(e)
+    #     # Finally delete the old image folder        
+    #     try:
+    #         rmtree(current_image_dir)
+    #     except Exception as e:
+    #         print("Failed to delete the old profile image folder due to new slug: " + current_image_dir)
+    #         print(e)
 
-        user_info['photo'] = update_user_profile_pic(user_info, profile_pic_option, img_to_upload, new_image_dir, current_image_filename)
+    #     user_info['photo'] = update_user_profile_pic(user_info, profile_pic_option, img_to_upload, new_image_dir, current_image_filename)
 
     # Convert the user_info dict into object via StageUser() model
     # So edit_connection() can be reused for approcing new user by editing matched and updating exisiting approved user
@@ -966,6 +966,11 @@ def create_new_connection(stage_user_obj, new_wp_user):
     connection_meta_pm_email.meta_value = stage_user_obj.pm_email
     connection.metas.append(connection_meta_pm_email)
 
+    connection_meta_globus_parsed_email = ConnectionMeta()
+    connection_meta_globus_parsed_email.meta_key = connection_meta_key_prefix + 'globus_parsed_email'
+    connection_meta_globus_parsed_email.meta_value = stage_user_obj.globus_parsed_email
+    connection.metas.append(connection_meta_globus_parsed_email)
+
 
 # Overwrite the existing fields with the ones from user registration or profile update
 def edit_connection(user_obj, wp_user, connection, new_user = False):
@@ -1029,43 +1034,43 @@ def edit_connection(user_obj, wp_user, connection, new_user = False):
     connection.bio = user_obj.bio
     connection.edited_by = edit_user_id
 
-    # Handle profile image
-    # user_obj.photo is the image file path when pic option is (One of "existing", "default", "upload", or "url")
-    # It's possible the user has changed first/last name, resulting a new slug with number
-    # In this special case, if the user chose to reuse "exisiting" image, we'll also need to update the image path and url in connection.options in database
-    photo_file_name = user_obj.photo.split('/')[-1]
+    # # Handle profile image
+    # # user_obj.photo is the image file path when pic option is (One of "existing", "default", "upload", or "url")
+    # # It's possible the user has changed first/last name, resulting a new slug with number
+    # # In this special case, if the user chose to reuse "exisiting" image, we'll also need to update the image path and url in connection.options in database
+    # photo_file_name = user_obj.photo.split('/')[-1]
 
-    # Profile update for an approved user doesn't need to mkdir and copy image
-    # Approving a new user by editing an exisiting profile requires to mkdir and copy the image
-    target_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug)
-    if new_user:
-        pathlib.Path(target_image_dir).mkdir(parents=True, exist_ok=True)
-        new_file_path = os.path.join(target_image_dir, photo_file_name)
-        copyfile(user_obj.photo, new_file_path)
-        # Also keep the file owner and group
-        keep_file_owner_and_group(user_obj.photo, new_file_path)
-        # Delete stage image file
-        os.unlink(user_obj.photo)
-    else:
-        # For existing profile image update, remove all the old images and leave the new one there
-        # since the one image has already been copied there
-        for file in os.listdir(target_image_dir):
-            file_path = os.path.join(target_image_dir, file)
+    # # Profile update for an approved user doesn't need to mkdir and copy image
+    # # Approving a new user by editing an exisiting profile requires to mkdir and copy the image
+    # target_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug)
+    # if new_user:
+    #     pathlib.Path(target_image_dir).mkdir(parents=True, exist_ok=True)
+    #     new_file_path = os.path.join(target_image_dir, photo_file_name)
+    #     copyfile(user_obj.photo, new_file_path)
+    #     # Also keep the file owner and group
+    #     keep_file_owner_and_group(user_obj.photo, new_file_path)
+    #     # Delete stage image file
+    #     os.unlink(user_obj.photo)
+    # else:
+    #     # For existing profile image update, remove all the old images and leave the new one there
+    #     # since the one image has already been copied there
+    #     for file in os.listdir(target_image_dir):
+    #         file_path = os.path.join(target_image_dir, file)
             
-            if os.path.isfile(file_path) and (file_path != user_obj.photo):
-                try:
-                    os.unlink(file_path)
-                except Exception as e:
-                    print("Failed to empty the profile image folder: " + target_image_dir)
-                    print(e)
+    #         if os.path.isfile(file_path) and (file_path != user_obj.photo):
+    #             try:
+    #                 os.unlink(file_path)
+    #             except Exception as e:
+    #                 print("Failed to empty the profile image folder: " + target_image_dir)
+    #                 print(e)
 
-    # Get the MIME type of image
-    image = Image.open(os.path.join(target_image_dir, photo_file_name))
-    content_type = Image.MIME[image.format]
+    # # Get the MIME type of image
+    # image = Image.open(os.path.join(target_image_dir, photo_file_name))
+    # content_type = Image.MIME[image.format]
 
-    image_path = os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug, photo_file_name)
-    image_url = app.config['CONNECTION_IMAGE_URL'] + "/" + connection.slug + "/" + photo_file_name
-    connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + image_path + "\",\"url\": \"" + image_url + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"" + content_type + "\",\"type\":2}}}}"
+    # image_path = os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug, photo_file_name)
+    # image_url = app.config['CONNECTION_IMAGE_URL'] + "/" + connection.slug + "/" + photo_file_name
+    # connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + image_path + "\",\"url\": \"" + image_url + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"" + content_type + "\",\"type\":2}}}}"
 
     # Update corresponding metas
     connection_meta_component = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'component', ConnectionMeta.entry_id == connection.id).first()
@@ -1149,7 +1154,7 @@ def edit_connection(user_obj, wp_user, connection, new_user = False):
         connection_meta_google_email.meta_value = user_obj.google_email
         connection.metas.append(connection_meta_google_email)
 
-    connection_meta_globus_parsed_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'google_email', ConnectionMeta.entry_id == connection.id).first()
+    connection_meta_globus_parsed_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'globus_parsed_email', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_globus_parsed_email:
         connection_meta_globus_parsed_email.meta_value = user_obj.globus_parsed_email
     else:
@@ -1645,10 +1650,7 @@ def profile():
                 'organization': connection_data['organization'], 
                 'role': connection_data['title'], # Store the role value in title field
                 'bio': connection_data['bio'],
-                # email is pulled from the `wp_users` table that is linked with Globus login so no need to deserialize the wp_connections.email filed
-                # UPDATE 10/1/24 We Are Now unlinking the two, which means we should probably get back to that deserializing?
                 'email': wp_user['user_email'].lower(),
-                'Cemail':connection_data['email'],
                 # Other values pulled from `wp_connections_meta` table as customized fileds
                 'phone': deserilized_phone,
                 'other_component': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'other_component'), {'meta_value': ''})['meta_value'],
@@ -1657,7 +1659,6 @@ def profile():
                 'access_requests': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'access_requests'), {'meta_value': ''})['meta_value'],
                 'globus_identity': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'globus_identity'), {'meta_value': ''})['meta_value'],
                 'google_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'google_email'), {'meta_value': ''})['meta_value'],
-                'globus_parsed_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'globus_parsed_email'), {'meta_value': ''})['meta_value'],
                 'github_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'github_username'), {'meta_value': ''})['meta_value'],
                 'slack_username': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'slack_username'), {'meta_value': ''})['meta_value'],
                 'protocols_io_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'protocols_io_email'), {'meta_value': ''})['meta_value'],
@@ -1666,6 +1667,7 @@ def profile():
                 'pm': 'Yes' if next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'pm'), {'meta_value': ''})['meta_value'] == '1' else 'No',
                 'pm_name': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'pm_name'), {'meta_value': ''})['meta_value'],
                 'pm_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'pm_email'), {'meta_value': ''})['meta_value'],
+                'globus_parsed_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'globus_parsed_email'), {'meta_value': ''})['meta_value'],
             }
 
             # Convert string representation to list
@@ -2036,8 +2038,8 @@ def unlink_globus_identities():
 
 def get_connection_keys():
     return ['other_component', 'other_organization', 'other_role', 'access_requests',
-            'globus_identity','globus_parsed_email', 'google_email', 'github_username', 'slack_username', 'protocols_io_email',
-            'website', 'orcid', 'pm', 'pm_name', 'pm_email']
+            'globus_identity', 'google_email', 'github_username', 'slack_username', 'protocols_io_email',
+            'website', 'orcid', 'pm', 'pm_name', 'pm_email', 'globus_parsed_email']
 
 
 # Get a list of all approved users

@@ -376,9 +376,14 @@
                 <div class="col">
                     <div class="form-group">
                         <label for="email">Email address <span class="text-danger">*</span></label>
-                        <!-- Disallow edit email since it's used with globus login -->
                         <input type="email" name="email" value="{{ data.email }}" class="form-control" id="id_email">
-                        <input type="email" name="globus_parsed_email" value="{{ data.globus_parsed_email }}"  class="form-control" id="id_globus_parsed_email" >
+                    </div>
+                    <div class="form-group">
+                        {% if data.globus_parsed_email %}
+                            <input type="hidden" name="globus_parsed_email" value="{{ data.globus_parsed_email }}">
+                        {% else %}
+                            <input type="hidden" name="globus_parsed_email" value="{{ data.email }}" class="form-control" maxlength="200" id="id_globus_parsed_email">
+                        {% endif %}
                     </div>
                 </div>
                 <div class="col">
