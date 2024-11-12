@@ -1599,10 +1599,10 @@ def profile():
                 if protocols_io_email_record:
                     protocols_io_email_value = protocols_io_email_record.meta_value
 
-                globus_parsed_email_value = ''
-                globus_parsed_email_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'globus_parsed_email', ConnectionMeta.entry_id == connection_id).first()
-                if globus_parsed_email_record:
-                    globus_parsed_email_value = globus_parsed_email_record.meta_value
+                protocols_io_email_value = ''
+                protocols_io_email_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'protocols_io_email', ConnectionMeta.entry_id == connection_id).first()
+                if protocols_io_email_record:
+                    protocols_io_email_value = protocols_io_email_record.meta_value
 
                 old_access_requests_dict = {
                     # Convert list string respresentation to Python list, if empty string, empty list()
@@ -1611,8 +1611,8 @@ def profile():
                     'google_email': google_email_value,
                     'github_username': github_username_value,
                     'slack_username': slack_username_value,
-                    'protocols_io_email': protocols_io_email_value,
-                    'globus_parsed_email': protocols_io_email_value
+                    'protocols_io_email': protocols_io_email_value
+                    'globus_parsed_email': globus_parsed_email_value
                     
                 }
 
