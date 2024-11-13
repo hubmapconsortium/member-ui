@@ -23,8 +23,8 @@ SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://user:password@host/database'
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 # Absolute image directories, works regardless the trailing slash /
-STAGE_USER_IMAGE_DIR = '/path/profile-pics/'
-CONNECTION_IMAGE_DIR = '/path/connections-images/'
+STAGE_USER_IMAGE_DIR = '/path/member-ui/profile-pics/'
+CONNECTION_IMAGE_DIR = '/path/member-ui/connections-images/'
 
 # Prefix for the Connections meta fields
 CONNECTION_META_KEY_PREFIX = 'hm_'
