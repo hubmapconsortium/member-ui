@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, Response, render_template, session, r
 from globus_sdk import AuthClient, AccessTokenAuthorizer, ConfidentialAppAuthClient
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
-from werkzeug import secure_filename
+from werkzeug.utils import secure_filename
 import phpserialize
 import json
 import os
