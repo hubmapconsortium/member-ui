@@ -27,25 +27,26 @@ HuBMAP service(s) access requested:
 - {{ req }}
 {% endfor %}
 
+
 {% if 'HuBMAP Data Via Globus' in data['access_requests'] %}
 Globus username to be used for HuBMAP Data group access: {{ data['globus_identity'] }} <br />
 {% endif %}
 
-{% if 'HuBMAP Google Drive Share' in data['access_requests'] %}
-Google account for HuBMAP Google Drive Share: {{ data['google_email'] }}
+{% if 'HuBMAP GitHub Repository' in data['access_requests'] %}
+Github username: {{ data['github_username'] }} <br />
 {% endif %}
 
-{% if 'HuBMAP GitHub Repository' in data['access_requests'] %}
-Github username: {{ data['github_username'] }}
+{% if 'HuBMAP Google Drive Share' in data['access_requests'] %}
+Google account for HuBMAP Google Drive Share: {{ data['google_email'] }} <br />
 {% endif %}
 
 {% if 'HuBMAP Slack Workspace' in data['access_requests'] %}
-Email for HuBMAP Slack Workspace: {{ data['slack_username'] }}
+Email for HuBMAP Slack Workspace: {{ data['slack_username'] }} <br />
 {% endif %}
 
 {% if 'protocols.io' in data['access_requests'] %}
-Email for protocols.io: {{ data['protocols_io_email'] }}
-{% endif %}
+Email for protocols.io: {{ data['protocols_io_email'] }} <br />
+{% endif %} 
 
 <br />
 {% if data['pm'] %}

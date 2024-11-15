@@ -45,12 +45,12 @@ HuBMAP service(s) access requested: <br />
 Globus username to be used for HuBMAP Data group access: {{ data['globus_identity'] }} <br />
 {% endif %}
 
-{% if 'HuBMAP Google Drive Share' in data['access_requests'] %}
-Google account for HuBMAP Google Drive Share: {{ data['google_email'] }} <br />
-{% endif %}
-
 {% if 'HuBMAP GitHub Repository' in data['access_requests'] %}
 Github username: {{ data['github_username'] }} <br />
+{% endif %}
+
+{% if 'HuBMAP Google Drive Share' in data['access_requests'] %}
+Google account for HuBMAP Google Drive Share: {{ data['google_email'] }} <br />
 {% endif %}
 
 {% if 'HuBMAP Slack Workspace' in data['access_requests'] %}

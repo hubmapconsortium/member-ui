@@ -90,6 +90,7 @@ class StageUser(db.Model):
     pm_email = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     deny = db.Column(db.Boolean)
+    globus_parsed_email = db.Column(db.String(200))
 
     def __init__(self, a_dict):
         try:
@@ -119,15 +120,16 @@ class StageUser(db.Model):
             self.pm = a_dict['pm'] if 'pm' in a_dict else ''
             self.pm_name = a_dict['pm_name'] if 'pm_name' in a_dict else ''
             self.pm_email = a_dict['pm_email'] if 'pm_email' in a_dict else ''
+            self.globus_parsed_email = a_dict['globus_parsed_email'] if 'globus_parsed_email' in a_dict else ''
         except e:
             raise e
 
 # Define output format with marshmallow schema
 class StageUserSchema(ma.Schema):
     class Meta:
-        fields = ('id', 'globus_user_id', 'globus_username', 'email', 'first_name', 'last_name', 'component', 'other_component', 'organization', 'other_organization',
+        fields = ('id', 'globus_user_id','globus_username', 'email', 'first_name', 'last_name', 'component', 'other_component', 'organization', 'other_organization',
                     'role', 'other_role', 'photo', 'photo_url', 'access_requests', 'globus_identity', 'google_email', 'github_username', 'slack_username', 'protocols_io_email', 'phone', 'website',
-                    'bio', 'orcid', 'pm', 'pm_name', 'pm_email', 'created_at', 'deny')
+                    'bio', 'orcid', 'pm', 'pm_name', 'pm_email', 'created_at', 'deny', 'globus_parsed_email')
 
 # WPUserMeta Class/Model
 class WPUserMeta(db.Model):
@@ -221,6 +223,7 @@ class Connection(db.Model):
     metas = db.relationship('ConnectionMeta', backref='connection', lazy='joined')
     emails = db.relationship('ConnectionEmail', backref='connection', lazy='joined')
     phones = db.relationship('ConnectionPhone', backref='connection', lazy='joined')
+    globus_parsed_email = db.Column(db.Text)
 
 # Connection Schema
 class ConnectionSchema(ma.Schema):
@@ -264,8 +267,9 @@ connections_schema = ConnectionSchema(many=True, strict=True)
 
 
 # Send email confirmation of new user registration to admins
-def send_new_user_registered_mail(data):
-    msg = Message('New user registration submitted', recipients=app.config['MAIL_ADMIN_LIST'])
+def send_new_user_registered_mail(data):    
+    data["access_requests"].sort();
+    msg = Message(subject='New user registration submitted', recipients=["jeswaldrip@gmail.com"])
     msg.body = render_template('email/new_user_registered_email.txt', data = data)
     msg.html = render_template('email/new_user_registered_email.html', data = data)
     mail.send(msg)
@@ -274,6 +278,10 @@ def send_new_user_registered_mail(data):
 # Only email when the access requests has changed
 def send_user_profile_updated_mail(data, old_access_requests_data):
     msg = Message('User profile updated', recipients=app.config['MAIL_ADMIN_LIST'])
+    # We need the values for the lists to be in order
+    
+    # old_access_requests_data_sorted = dict(sorted(old_access_requests_data.items(), key=lambda item: item[1]))
+    old_access_requests_data["access_requests"].sort();    data["access_requests"].sort();
     msg.body = render_template('email/user_profile_updated_email.txt', data = data, old_access_requests_data = old_access_requests_data)
     msg.html = render_template('email/user_profile_updated_email.html', data = data, old_access_requests_data = old_access_requests_data)
     mail.send(msg)
@@ -350,7 +358,8 @@ def construct_user(request):
         "orcid": request.form['orcid'].strip(),
         "pm": get_pm_selection(request.form['pm']),
         "pm_name": request.form['pm_name'].strip(),
-        "pm_email": request.form['pm_email'].strip()
+        "pm_email": request.form['pm_email'].strip(),
+        "globus_parsed_email": request.form['globus_parsed_email'].strip(),
     }
 
     img_to_upload = photo_file if photo_file is not None else imgByteArr if imgByteArr is not None else None
@@ -390,10 +399,13 @@ def show_registration_form():
         'first_name': name_words[0],
         # Use empty for last name if not present
         'last_name': name_words[1] if (len(name_words) > 1) else "",
-        'email': session['email'],
+        # 'email': session['email'],
+        # Replacing the prefilled email with user-editable, and saving the globus email in a hidden field
+        # 'email': session['email'],
+        'globus_parsed_email': session['email'],
         'recaptcha_site_key': app.config['GOOGLE_RECAPTCHA_SITE_KEY']
     }
-
+    print('show_registration_form(): context')
     return render_template('register.html', data = context)
 
 # Three different types of message for authenticated users
@@ -761,6 +773,12 @@ def create_new_user(stage_user_obj):
     meta_globus_username.meta_value = stage_user_obj.globus_username
     new_wp_user.metas.append(meta_globus_username)
 
+    # Create new usermeta for globus email captured from legacy email support
+    meta_globus_parsed_email = WPUserMeta()
+    meta_globus_parsed_email.meta_key = "globus_parsed_email"
+    meta_globus_parsed_email.meta_value = stage_user_obj.globus_parsed_email
+    new_wp_user.metas.append(meta_globus_parsed_email)
+
     return new_wp_user
 
 def generate_password():
@@ -862,6 +880,7 @@ def create_new_connection(stage_user_obj, new_wp_user):
 
     globus_identity = stage_user_obj.globus_identity
     google_email = stage_user_obj.google_email
+    globus_parsed_email = stage_user_obj.globus_parsed_email
     github_username = stage_user_obj.github_username
     slack_username = stage_user_obj.slack_username
     protocols_io_email = stage_user_obj.protocols_io_email
@@ -951,6 +970,11 @@ def create_new_connection(stage_user_obj, new_wp_user):
     connection_meta_pm_email.meta_key = connection_meta_key_prefix + 'pm_email'
     connection_meta_pm_email.meta_value = stage_user_obj.pm_email
     connection.metas.append(connection_meta_pm_email)
+
+    connection_meta_globus_parsed_email = ConnectionMeta()
+    connection_meta_globus_parsed_email.meta_key = connection_meta_key_prefix + 'globus_parsed_email'
+    connection_meta_globus_parsed_email.meta_value = stage_user_obj.globus_parsed_email
+    connection.metas.append(connection_meta_globus_parsed_email)
 
 
 # Overwrite the existing fields with the ones from user registration or profile update
@@ -1135,6 +1159,15 @@ def edit_connection(user_obj, wp_user, connection, new_user = False):
         connection_meta_google_email.meta_value = user_obj.google_email
         connection.metas.append(connection_meta_google_email)
 
+    connection_meta_globus_parsed_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'google_email', ConnectionMeta.entry_id == connection.id).first()
+    if connection_meta_globus_parsed_email:
+        connection_meta_globus_parsed_email.meta_value = user_obj.globus_parsed_email
+    else:
+        connection_meta_globus_parsed_email = ConnectionMeta()
+        connection_meta_globus_parsed_email.meta_key = connection_meta_key_prefix + 'globus_parsed_email'
+        connection_meta_globus_parsed_email.meta_value = user_obj.globus_parsed_email
+        connection.metas.append(connection_meta_globus_parsed_email)
+
     connection_meta_github_username = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'github_username', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_github_username:
         connection_meta_github_username.meta_value = user_obj.github_username
@@ -1206,6 +1239,15 @@ def edit_connection(user_obj, wp_user, connection, new_user = False):
         connection_meta_pm_email.meta_key = connection_meta_key_prefix + 'pm_email'
         connection_meta_pm_email.meta_value = user_obj.pm_email
         connection.metas.append(connection_meta_pm_email)
+
+    connection_meta_globus_parsed_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'globus_parsed_email', ConnectionMeta.entry_id == connection.id).first()
+    if connection_meta_globus_parsed_email:
+        connection_meta_globus_parsed_email.meta_value = user_obj.globus_parsed_email
+    else:
+        connection_meta_globus_parsed_email = ConnectionMeta()
+        connection_meta_globus_parsed_email.meta_key = connection_meta_key_prefix + 'globus_parsed_email'
+        connection_meta_globus_parsed_email.meta_value = user_obj.globus_parsed_email
+        connection.metas.append(connection_meta_globus_parsed_email)
 
     # Also update the wp_user record
     wp_user.user_login = user_obj.email
@@ -1410,6 +1452,10 @@ def login():
         session['isAdmin'] = user_is_admin(user_info['sub'])
         # Globus ID and username parsed from login
         session['globus_user_id'] = user_info['sub']
+        # In come cases it's possible the user info is in user_info['data'] instead
+        # session['globus_user_id']  = user_info['sub'] if 'phone' in a_dict else ''
+        # if user_info['sub'] === ''
+            # session['globus_user_id'] === user_info['data']['preferred_username']
         session['globus_username'] = user_info['preferred_username']
         session['name'] = user_info['name']
         # Normalize email to lowercase
@@ -1451,7 +1497,7 @@ def logout():
 @login_required
 def register():
     # A not approved user can be a totally new user or user has a pending registration
-    if not user_is_approved(session['globus_user_id']):
+    if not user_is_approved(globus_user_id=session['globus_user_id']):
         if user_in_pending(session['globus_user_id']):
             # Check if this pening registration has been denied
             stage_user = get_stage_user(session['globus_user_id'])
@@ -1540,11 +1586,11 @@ def profile():
                 globus_identity_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'globus_identity', ConnectionMeta.entry_id == connection_id).first()
                 if globus_identity_record:
                     globus_identity_value = globus_identity_record.meta_value
-
+                
                 google_email_value = ''
                 google_email_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'google_email', ConnectionMeta.entry_id == connection_id).first()
-                if google_email_record:
-                    google_email_value = google_email_record.meta_value
+                if globus_identity_record:
+                    google_email_value = globus_identity_record.meta_value
 
                 github_username_value = ''
                 github_username_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'github_username', ConnectionMeta.entry_id == connection_id).first()
@@ -1555,11 +1601,16 @@ def profile():
                 slack_username_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'slack_username', ConnectionMeta.entry_id == connection_id).first()
                 if slack_username_record:
                     slack_username_value = slack_username_record.meta_value
-                
+
                 protocols_io_email_value = ''
                 protocols_io_email_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'protocols_io_email', ConnectionMeta.entry_id == connection_id).first()
                 if protocols_io_email_record:
                     protocols_io_email_value = protocols_io_email_record.meta_value
+
+                globus_parsed_email_value = ''
+                globus_parsed_email_record = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'globus_parsed_email', ConnectionMeta.entry_id == connection_id).first()
+                if globus_parsed_email_record:
+                    globus_parsed_email_value = globus_parsed_email_record.meta_value
 
                 old_access_requests_dict = {
                     # Convert list string respresentation to Python list, if empty string, empty list()
@@ -1568,7 +1619,9 @@ def profile():
                     'google_email': google_email_value,
                     'github_username': github_username_value,
                     'slack_username': slack_username_value,
-                    'protocols_io_email': protocols_io_email_value
+                    'protocols_io_email': protocols_io_email_value,
+                    'globus_parsed_email': globus_parsed_email_value
+                    
                 }
 
                 try:
@@ -1586,6 +1639,7 @@ def profile():
                             # Send email to admin for user profile update
                             # so the admin can do furtuer changes in globus
                             send_user_profile_updated_mail(user_info, old_access_requests_dict)
+
                         except Exception as e: 
                             print("Failed to send user profile update email to admin.")
                             print(e)
@@ -1621,7 +1675,6 @@ def profile():
                 'organization': connection_data['organization'], 
                 'role': connection_data['title'], # Store the role value in title field
                 'bio': connection_data['bio'],
-                # email is pulled from the `wp_users` table that is linked with Globus login so no need to deserialize the wp_connections.email filed
                 'email': wp_user['user_email'].lower(),
                 # Other values pulled from `wp_connections_meta` table as customized fileds
                 'phone': deserilized_phone,
@@ -1639,6 +1692,7 @@ def profile():
                 'pm': 'Yes' if next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'pm'), {'meta_value': ''})['meta_value'] == '1' else 'No',
                 'pm_name': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'pm_name'), {'meta_value': ''})['meta_value'],
                 'pm_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'pm_email'), {'meta_value': ''})['meta_value'],
+                'globus_parsed_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'globus_parsed_email'), {'meta_value': ''})['meta_value'],
             }
 
             # Convert string representation to list
@@ -1669,6 +1723,7 @@ def profile():
                 'globus_user_id': session['globus_user_id'],
                 # For individual user profile, use the globus_username from session
                 'globus_username': session['globus_username'],
+                'globus_parsed_email': session['globus_username'],
                 'csrf_token': generate_csrf_token(),
                 'connection_id': connection_data['id'],
                 'profile_pic_url': profile_pic_url
@@ -1754,6 +1809,7 @@ def members(globus_user_id):
             'pm': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'pm'), {'meta_value': ''})['meta_value'] == '1',
             'pm_name': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'pm_name'), {'meta_value': ''})['meta_value'],
             'pm_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'pm_email'), {'meta_value': ''})['meta_value'],
+            'globus_parsed_email': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'globus_parsed_email'), {'meta_value': ''})['meta_value'],
         }
 
         # Get the globus_username for individual user
@@ -2008,7 +2064,7 @@ def unlink_globus_identities():
 def get_connection_keys():
     return ['other_component', 'other_organization', 'other_role', 'access_requests',
             'globus_identity', 'google_email', 'github_username', 'slack_username', 'protocols_io_email',
-            'website', 'orcid', 'pm', 'pm_name', 'pm_email']
+            'website', 'orcid', 'pm', 'pm_name', 'pm_email', 'globus_parsed_email']
 
 
 # Get a list of all approved users
@@ -2032,6 +2088,7 @@ def get_all_users_with_all_info():
                 # Construct a new member dict and add to the members list
                 member = {
                     'globus_user_id': wp_user_meta_globus_user_id.meta_value,
+                    'globus_parsed_email': connection_data.globus_parsed_email,
                     'first_name': connection_data.first_name,
                     'last_name': connection_data.last_name,
                     'organization': connection_data.organization,
@@ -2057,7 +2114,7 @@ def get_all_users_with_all_info():
                                 member[k] = obj['meta_value'] if isinstance(obj, (dict)) else obj.meta_value
                 except Exception as e:
                     print(e)
-                    # print(user.user_email)
+                    print(user.user_email)
 
                 users.append(member)
 

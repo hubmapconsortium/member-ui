@@ -445,6 +445,25 @@ function cn_register_custom_metabox_and_text_field() {
         ),
     );
 
+
+    $hm_globus_parsed_email_atts = array(
+        'title'    => 'What email address is linked to your Globus Login account?',         // Change this to a name which applies to your project.
+        'id'       => 'hm_globus_parsed_email',           // Change this so it is unique to you project.
+        'context'  => 'normal',
+        'priority' => 'core',
+        'fields'   => array(
+            array(
+                'name'       => 'globus email', // Change this field name to something which applies to you project.
+                'show_label' => TRUE,         // Whether or not to display the 'name'. Changing it to false will suppress the name.
+                'id'         => 'hm_globus_parsed_email',   // Change this so it is unique to you project. Each field id MUST be unique.
+                'type'       => 'text',       // This is the field type being added.
+                'size'       => 'regular',    // This can be changed to one of the following: 'small', 'regular', 'large'
+            ),
+        ),
+    );
+    
+    
+
  
     cnMetaboxAPI::add( $hm_component_atts );
     cnMetaboxAPI::add( $hm_other_component_atts);
@@ -463,4 +482,5 @@ function cn_register_custom_metabox_and_text_field() {
     cnMetaboxAPI::add( $hm_pm_atts );
     cnMetaboxAPI::add( $hm_pm_name_atts );
     cnMetaboxAPI::add( $hm_pm_email_atts );
+    cnMetaboxAPI::add( $hm_globus_parsed_email_atts);
 }
