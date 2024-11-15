@@ -1,14 +1,17 @@
-The following HuBMAP user has updated access requests list:
+The following HuBMAP user has updated access requests list:<br /><br />
 
-Name: {{ data['first_name'] }} {{ data['last_name'] }} 
-Email: {{ data['email'] }}
+Name: {{ data['first_name'] }} {{ data['last_name'] }} <br /> 
+Email: {{ data['email'] }} <br />
 
+<br />
+Old access requests:<br />
 
-Old access requests:
-
+<ul>
 {% for old_req in old_access_requests_data['access_requests'] %}
-- {{ old_req }}
+<li>{{ old_req }} </li>
 {% endfor %}
+</ul>
+
 
 {% if 'HuBMAP Data Via Globus' in old_access_requests_data['access_requests'] %}
 Globus username to be used for HuBMAP Data group access: {{ old_access_requests_data['globus_identity'] }} <br />
@@ -30,11 +33,16 @@ Email for HuBMAP Slack Workspace: {{ old_access_requests_data['slack_username'] 
 Email for protocols.io: {{ old_access_requests_data['protocols_io_email'] }}
 {% endif %}
 
-New access requests:
+<br />
 
+New access requests:<br />
+
+<ul>
 {% for new_req in data['access_requests'] %}
-- {{ new_req }}
+<li>{{ new_req }} </li>
 {% endfor %}
+</ul>
+
 
 {% if 'HuBMAP Data Via Globus' in data['access_requests'] %}
 Globus username to be used for HuBMAP Data group access: {{ data['globus_identity'] }} <br />
@@ -56,5 +64,7 @@ Email for HuBMAP Slack Workspace: {{ data['slack_username'] }}
 Email for protocols.io: {{ data['protocols_io_email'] }} <br />
 {% endif %}
 
+<br />
 
+<br />
 HuBMAP Member Registration and Profile

@@ -267,8 +267,9 @@ connections_schema = ConnectionSchema(many=True, strict=True)
 
 
 # Send email confirmation of new user registration to admins
-def send_new_user_registered_mail(data):
-    msg = Message('New user registration submitted', recipients=app.config['MAIL_ADMIN_LIST'])
+def send_new_user_registered_mail(data):    
+    data["access_requests"].sort();
+    msg = Message(subject='New user registration submitted', recipients=["jeswaldrip@gmail.com"])
     msg.body = render_template('email/new_user_registered_email.txt', data = data)
     msg.html = render_template('email/new_user_registered_email.html', data = data)
     mail.send(msg)
@@ -277,6 +278,10 @@ def send_new_user_registered_mail(data):
 # Only email when the access requests has changed
 def send_user_profile_updated_mail(data, old_access_requests_data):
     msg = Message('User profile updated', recipients=app.config['MAIL_ADMIN_LIST'])
+    # We need the values for the lists to be in order
+    
+    # old_access_requests_data_sorted = dict(sorted(old_access_requests_data.items(), key=lambda item: item[1]))
+    old_access_requests_data["access_requests"].sort();    data["access_requests"].sort();
     msg.body = render_template('email/user_profile_updated_email.txt', data = data, old_access_requests_data = old_access_requests_data)
     msg.html = render_template('email/user_profile_updated_email.html', data = data, old_access_requests_data = old_access_requests_data)
     mail.send(msg)
@@ -1042,35 +1047,35 @@ def edit_connection(user_obj, wp_user, connection, new_user = False):
 
     # Profile update for an approved user doesn't need to mkdir and copy image
     # Approving a new user by editing an exisiting profile requires to mkdir and copy the image
-    target_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug)
-    if new_user:
-        pathlib.Path(target_image_dir).mkdir(parents=True, exist_ok=True)
-        new_file_path = os.path.join(target_image_dir, photo_file_name)
-        copyfile(user_obj.photo, new_file_path)
-        # Also keep the file owner and group
-        keep_file_owner_and_group(user_obj.photo, new_file_path)
-        # Delete stage image file
-        os.unlink(user_obj.photo)
-    else:
-        # For existing profile image update, remove all the old images and leave the new one there
-        # since the one image has already been copied there
-        for file in os.listdir(target_image_dir):
-            file_path = os.path.join(target_image_dir, file)
+    # target_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug)
+    # if new_user:
+    #     pathlib.Path(target_image_dir).mkdir(parents=True, exist_ok=True)
+    #     new_file_path = os.path.join(target_image_dir, photo_file_name)
+    #     copyfile(user_obj.photo, new_file_path)
+    #     # Also keep the file owner and group
+    #     keep_file_owner_and_group(user_obj.photo, new_file_path)
+    #     # Delete stage image file
+    #     os.unlink(user_obj.photo)
+    # else:
+    #     # For existing profile image update, remove all the old images and leave the new one there
+    #     # since the one image has already been copied there
+    #     for file in os.listdir(target_image_dir):
+    #         file_path = os.path.join(target_image_dir, file)
             
-            if os.path.isfile(file_path) and (file_path != user_obj.photo):
-                try:
-                    os.unlink(file_path)
-                except Exception as e:
-                    print("Failed to empty the profile image folder: " + target_image_dir)
-                    print(e)
+    #         if os.path.isfile(file_path) and (file_path != user_obj.photo):
+    #             try:
+    #                 os.unlink(file_path)
+    #             except Exception as e:
+    #                 print("Failed to empty the profile image folder: " + target_image_dir)
+    #                 print(e)
 
-    # Get the MIME type of image
-    image = Image.open(os.path.join(target_image_dir, photo_file_name))
-    content_type = Image.MIME[image.format]
+    # # Get the MIME type of image
+    # image = Image.open(os.path.join(target_image_dir, photo_file_name))
+    # content_type = Image.MIME[image.format]
 
-    image_path = os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug, photo_file_name)
-    image_url = app.config['CONNECTION_IMAGE_URL'] + "/" + connection.slug + "/" + photo_file_name
-    connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + image_path + "\",\"url\": \"" + image_url + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"" + content_type + "\",\"type\":2}}}}"
+    # image_path = os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug, photo_file_name)
+    # image_url = app.config['CONNECTION_IMAGE_URL'] + "/" + connection.slug + "/" + photo_file_name
+    # connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + image_path + "\",\"url\": \"" + image_url + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"" + content_type + "\",\"type\":2}}}}"
 
     # Update corresponding metas
     connection_meta_component = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'component', ConnectionMeta.entry_id == connection.id).first()
@@ -1447,6 +1452,10 @@ def login():
         session['isAdmin'] = user_is_admin(user_info['sub'])
         # Globus ID and username parsed from login
         session['globus_user_id'] = user_info['sub']
+        # In come cases it's possible the user info is in user_info['data'] instead
+        # session['globus_user_id']  = user_info['sub'] if 'phone' in a_dict else ''
+        # if user_info['sub'] === ''
+            # session['globus_user_id'] === user_info['data']['preferred_username']
         session['globus_username'] = user_info['preferred_username']
         session['name'] = user_info['name']
         # Normalize email to lowercase
@@ -1488,7 +1497,7 @@ def logout():
 @login_required
 def register():
     # A not approved user can be a totally new user or user has a pending registration
-    if not user_is_approved(session['globus_user_id']):
+    if not user_is_approved(globus_user_id=session['globus_user_id']):
         if user_in_pending(session['globus_user_id']):
             # Check if this pening registration has been denied
             stage_user = get_stage_user(session['globus_user_id'])
@@ -1631,6 +1640,7 @@ def profile():
                             # Send email to admin for user profile update
                             # so the admin can do furtuer changes in globus
                             send_user_profile_updated_mail(user_info, old_access_requests_dict)
+
                         except Exception as e: 
                             print("Failed to send user profile update email to admin.")
                             print(e)
