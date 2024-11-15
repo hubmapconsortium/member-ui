@@ -1047,35 +1047,35 @@ def edit_connection(user_obj, wp_user, connection, new_user = False):
 
     # Profile update for an approved user doesn't need to mkdir and copy image
     # Approving a new user by editing an exisiting profile requires to mkdir and copy the image
-    # target_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug)
-    # if new_user:
-    #     pathlib.Path(target_image_dir).mkdir(parents=True, exist_ok=True)
-    #     new_file_path = os.path.join(target_image_dir, photo_file_name)
-    #     copyfile(user_obj.photo, new_file_path)
-    #     # Also keep the file owner and group
-    #     keep_file_owner_and_group(user_obj.photo, new_file_path)
-    #     # Delete stage image file
-    #     os.unlink(user_obj.photo)
-    # else:
-    #     # For existing profile image update, remove all the old images and leave the new one there
-    #     # since the one image has already been copied there
-    #     for file in os.listdir(target_image_dir):
-    #         file_path = os.path.join(target_image_dir, file)
+    target_image_dir = os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug)
+    if new_user:
+        pathlib.Path(target_image_dir).mkdir(parents=True, exist_ok=True)
+        new_file_path = os.path.join(target_image_dir, photo_file_name)
+        copyfile(user_obj.photo, new_file_path)
+        # Also keep the file owner and group
+        keep_file_owner_and_group(user_obj.photo, new_file_path)
+        # Delete stage image file
+        os.unlink(user_obj.photo)
+    else:
+        # For existing profile image update, remove all the old images and leave the new one there
+        # since the one image has already been copied there
+        for file in os.listdir(target_image_dir):
+            file_path = os.path.join(target_image_dir, file)
             
-    #         if os.path.isfile(file_path) and (file_path != user_obj.photo):
-    #             try:
-    #                 os.unlink(file_path)
-    #             except Exception as e:
-    #                 print("Failed to empty the profile image folder: " + target_image_dir)
-    #                 print(e)
+            if os.path.isfile(file_path) and (file_path != user_obj.photo):
+                try:
+                    os.unlink(file_path)
+                except Exception as e:
+                    print("Failed to empty the profile image folder: " + target_image_dir)
+                    print(e)
 
-    # # Get the MIME type of image
-    # image = Image.open(os.path.join(target_image_dir, photo_file_name))
-    # content_type = Image.MIME[image.format]
+    # Get the MIME type of image
+    image = Image.open(os.path.join(target_image_dir, photo_file_name))
+    content_type = Image.MIME[image.format]
 
-    # image_path = os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug, photo_file_name)
-    # image_url = app.config['CONNECTION_IMAGE_URL'] + "/" + connection.slug + "/" + photo_file_name
-    # connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + image_path + "\",\"url\": \"" + image_url + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"" + content_type + "\",\"type\":2}}}}"
+    image_path = os.path.join(app.config['CONNECTION_IMAGE_DIR'], connection.slug, photo_file_name)
+    image_url = app.config['CONNECTION_IMAGE_URL'] + "/" + connection.slug + "/" + photo_file_name
+    connection.options = "{\"entry\":{\"type\":\"individual\"},\"image\":{\"linked\":true,\"display\":true,\"name\":{\"original\":\"" + photo_file_name + "\"},\"meta\":{\"original\":{\"name\":\"" + photo_file_name + "\",\"path\":\"" + image_path + "\",\"url\": \"" + image_url + "\",\"width\":200,\"height\":200,\"size\":\"width=\\\"200\\\" height=\\\"200\\\"\",\"mime\":\"" + content_type + "\",\"type\":2}}}}"
 
     # Update corresponding metas
     connection_meta_component = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'component', ConnectionMeta.entry_id == connection.id).first()
@@ -1509,19 +1509,18 @@ def register():
         else:
             if request.method == 'POST':
                 # reCAPTCHA validation
-                # recaptcha_response = request.form['g-recaptcha-response']
-                # values = {
-                #     'secret': app.config['GOOGLE_RECAPTCHA_SECRET_KEY'],
-                #     'response': recaptcha_response
-                # }
-                # data = urllib.parse.urlencode(values).encode()
-                # req = urllib.request.Request(app.config['GOOGLE_RECAPTCHA_VERIFY_URL'], data = data)
-                # response = urllib.request.urlopen(req)
-                # result = json.loads(response.read().decode())
+                recaptcha_response = request.form['g-recaptcha-response']
+                values = {
+                    'secret': app.config['GOOGLE_RECAPTCHA_SECRET_KEY'],
+                    'response': recaptcha_response
+                }
+                data = urllib.parse.urlencode(values).encode()
+                req = urllib.request.Request(app.config['GOOGLE_RECAPTCHA_VERIFY_URL'], data = data)
+                response = urllib.request.urlopen(req)
+                result = json.loads(response.read().decode())
 
                 # For testing only
-                result = {'success': True}
-                # result['success'] = True
+                #result['success'] = True
 
                 # Currently no backend form validation
                 # Only front end validation and reCAPTCHA
