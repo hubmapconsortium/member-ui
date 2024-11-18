@@ -15,12 +15,12 @@ Old access requests:
 Globus username to be used for HuBMAP Data group access: {{ old_access_requests_data['globus_identity'] }} 
 {% endif %}
 
-{% if 'HuBMAP Google Drive Share' in old_access_requests_data['access_requests'] %}
-Google account for HuBMAP Google Drive Share: {{ old_access_requests_data['google_email'] }}
-{% endif %}
-
 {% if 'HuBMAP GitHub Repository' in old_access_requests_data['access_requests'] %}
 Github username: {{ old_access_requests_data['github_username'] }}
+{% endif %}
+
+{% if 'HuBMAP Google Drive Share' in old_access_requests_data['access_requests'] %}
+Google account for HuBMAP Google Drive Share: {{ old_access_requests_data['google_email'] }}
 {% endif %}
 
 {% if 'HuBMAP Slack Workspace' in old_access_requests_data['access_requests'] %}
@@ -30,8 +30,6 @@ Email for HuBMAP Slack Workspace: {{ old_access_requests_data['slack_username'] 
 {% if 'protocols.io' in old_access_requests_data['access_requests'] %}
 Email for protocols.io: {{ old_access_requests_data['protocols_io_email'] }}
 {% endif %}
-
-
 
 New access requests:
 
@@ -58,6 +56,5 @@ Email for HuBMAP Slack Workspace: {{ data['slack_username'] }}
 {% if 'protocols.io' in data['access_requests'] %}
 Email for protocols.io: {{ data['protocols_io_email'] }} 
 {% endif %}
-
 
 HuBMAP Member Registration and Profile
