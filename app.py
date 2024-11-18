@@ -269,7 +269,7 @@ connections_schema = ConnectionSchema(many=True, strict=True)
 # Send email confirmation of new user registration to admins
 def send_new_user_registered_mail(data):    
     data["access_requests"].sort();
-    msg = Message(subject='New user registration submitted', recipients=["jeswaldrip@gmail.com"])
+    msg = Message(subject='New user registration submitted', recipients=app.config['MAIL_ADMIN_LIST'])
     msg.body = render_template('email/new_user_registered_email.txt', data = data)
     msg.html = render_template('email/new_user_registered_email.html', data = data)
     mail.send(msg)
