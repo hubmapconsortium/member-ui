@@ -29,26 +29,26 @@ HuBMAP service(s) access requested:
 
 
 {% if 'HuBMAP Data Via Globus' in data['access_requests'] %}
-Globus username to be used for HuBMAP Data group access: {{ data['globus_identity'] }} <br />
+Globus username to be used for HuBMAP Data group access: {{ data['globus_identity'] }} 
 {% endif %}
 
 {% if 'HuBMAP GitHub Repository' in data['access_requests'] %}
-Github username: {{ data['github_username'] }} <br />
+Github username: {{ data['github_username'] }} 
 {% endif %}
 
 {% if 'HuBMAP Google Drive Share' in data['access_requests'] %}
-Google account for HuBMAP Google Drive Share: {{ data['google_email'] }} <br />
+Google account for HuBMAP Google Drive Share: {{ data['google_email'] }} 
 {% endif %}
 
 {% if 'HuBMAP Slack Workspace' in data['access_requests'] %}
-Email for HuBMAP Slack Workspace: {{ data['slack_username'] }} <br />
+Email for HuBMAP Slack Workspace: {{ data['slack_username'] }} 
 {% endif %}
 
 {% if 'protocols.io' in data['access_requests'] %}
-Email for protocols.io: {{ data['protocols_io_email'] }} <br />
+Email for protocols.io: {{ data['protocols_io_email'] }} 
 {% endif %} 
 
-<br />
+
 {% if data['pm'] %}
 The user would like the following project manager to be copied on all communications:
 Name: {{ data['pm_name'] }}
