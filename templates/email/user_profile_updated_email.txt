@@ -3,13 +3,11 @@ The following HuBMAP user has updated access requests list:
 Name: {{ data['first_name'] }} {{ data['last_name'] }}  
 Email: {{ data['email'] }} 
 
-
 Old access requests:
 
 {% for old_req in old_access_requests_data['access_requests'] %}
 {{ old_req }} 
 {% endfor %}
-
 
 {% if 'HuBMAP Data Via Globus' in old_access_requests_data['access_requests'] %}
 Globus username to be used for HuBMAP Data group access: {{ old_access_requests_data['globus_identity'] }} 
@@ -41,12 +39,12 @@ New access requests:
 Globus username to be used for HuBMAP Data group access: {{ data['globus_identity'] }} 
 {% endif %}
 
-{% if 'HuBMAP Google Drive Share' in data['access_requests'] %}
-Google account for HuBMAP Google Drive Share: {{ data['google_email'] }}
-{% endif %}
-
 {% if 'HuBMAP GitHub Repository' in data['access_requests'] %}
 Github username: {{ data['github_username'] }}
+{% endif %}
+
+{% if 'HuBMAP Google Drive Share' in data['access_requests'] %}
+Google account for HuBMAP Google Drive Share: {{ data['google_email'] }}
 {% endif %}
 
 {% if 'HuBMAP Slack Workspace' in data['access_requests'] %}
