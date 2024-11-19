@@ -27,7 +27,6 @@ HuBMAP service(s) access requested:
 - {{ req }}
 {% endfor %}
 
-
 {% if 'HuBMAP Data Via Globus' in data['access_requests'] %}
 Globus username to be used for HuBMAP Data group access: {{ data['globus_identity'] }} 
 {% endif %}
@@ -48,7 +47,6 @@ Email for HuBMAP Slack Workspace: {{ data['slack_username'] }}
 Email for protocols.io: {{ data['protocols_io_email'] }} 
 {% endif %} 
 
-
 {% if data['pm'] %}
 The user would like the following project manager to be copied on all communications:
 Name: {{ data['pm_name'] }}
@@ -57,9 +55,6 @@ Email: {{ data['pm_email'] }}
 No project manager for this user
 {% endif %}
 
-
 URL to approve this user: {{ config['FLASK_APP_BASE_URI'] }}/registrations/{{ data['globus_user_id'] }}
-
-
 
 HuBMAP Member Registration and Profile
