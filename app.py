@@ -1159,7 +1159,7 @@ def edit_connection(user_obj, wp_user, connection, new_user = False):
         connection_meta_google_email.meta_value = user_obj.google_email
         connection.metas.append(connection_meta_google_email)
 
-    connection_meta_globus_parsed_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'google_email', ConnectionMeta.entry_id == connection.id).first()
+    connection_meta_globus_parsed_email = ConnectionMeta.query.filter(ConnectionMeta.meta_key == connection_meta_key_prefix + 'globus_parsed_email', ConnectionMeta.entry_id == connection.id).first()
     if connection_meta_globus_parsed_email:
         connection_meta_globus_parsed_email.meta_value = user_obj.globus_parsed_email
     else:
@@ -1663,9 +1663,10 @@ def profile():
             # Deserialize the phone number value to a python dict
             deserilized_phone = ''
             deserilized_phone_dict = phpserialize.loads(connection_data['phone_numbers'].encode('utf-8'), decode_strings=True)
-            # Add another new property for display only
-            if deserilized_phone_dict:
-                deserilized_phone = (deserilized_phone_dict[0])['number']
+            
+            # Deseriliaze User Email
+            deserilized_email_dict = phpserialize.loads( connection_data['email'].encode('utf-8'), decode_strings=True)
+            
 
             initial_data = {
                 # Data pulled from the `wp_connections` table
@@ -1675,7 +1676,9 @@ def profile():
                 'organization': connection_data['organization'], 
                 'role': connection_data['title'], # Store the role value in title field
                 'bio': connection_data['bio'],
-                'email': wp_user['user_email'].lower(),
+                # 'email': # user['user_email'].lower(),
+                # 'email': connection_data['email'].lower(),
+                'email': (deserilized_email_dict[0])['address'],
                 # Other values pulled from `wp_connections_meta` table as customized fileds
                 'phone': deserilized_phone,
                 'other_component': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'other_component'), {'meta_value': ''})['meta_value'],
@@ -1781,6 +1784,8 @@ def members(globus_user_id):
         # Add another new property for display only
         if deserilized_phone_dict:
             deserilized_phone = (deserilized_phone_dict[0])['number']
+        
+        deserilized_email_dict = phpserialize.loads(profile.email.encode('utf-8'), decode_strings=True)
 
         initial_data = {
             # Data pulled from the `wp_connections` table
@@ -1790,8 +1795,8 @@ def members(globus_user_id):
             'organization': connection_data['organization'], 
             'role': connection_data['title'], # Store the role value in title field
             'bio': connection_data['bio'],
-            # email is pulled from the `wp_users` table that is linked with Globus login so no need to deserialize the wp_connections.email filed
-            'email': wp_user['user_email'].lower(),
+            'email': connection_data['email'].lower(),
+            # 'email': wp_user['user_email'].lower(),
             # Other values pulled from `wp_connections_meta` table as customized fileds
             'phone': deserilized_phone,
             'other_component': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'other_component'), {'meta_value': ''})['meta_value'],
