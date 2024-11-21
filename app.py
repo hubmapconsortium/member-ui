@@ -401,7 +401,6 @@ def show_registration_form():
         'last_name': name_words[1] if (len(name_words) > 1) else "",
         # 'email': session['email'],
         # Replacing the prefilled email with user-editable, and saving the globus email in a hidden field
-        # 'email': session['email'],
         'globus_parsed_email': session['email'],
         'recaptcha_site_key': app.config['GOOGLE_RECAPTCHA_SITE_KEY']
     }
@@ -1277,7 +1276,7 @@ def get_all_members():
                     'globus_user_id': wp_user_meta_globus_user_id.meta_value,
                     'first_name': connection_data.first_name,
                     'last_name': connection_data.last_name,
-                    'email': user.user_email,
+                    'email': connection_data.email,
                     'organization': connection_data.organization
                 }
 
@@ -1663,9 +1662,15 @@ def profile():
             # Deserialize the phone number value to a python dict
             deserilized_phone = ''
             deserilized_phone_dict = phpserialize.loads(connection_data['phone_numbers'].encode('utf-8'), decode_strings=True)
+            # Add another new property for display only
+            if deserilized_phone_dict:
+                deserilized_phone = (deserilized_phone_dict[0])['number']
             
-            # Deseriliaze User Email
+            # Deseriliaze User Email            
+            deserilized_email = ''
             deserilized_email_dict = phpserialize.loads( connection_data['email'].encode('utf-8'), decode_strings=True)
+            if deserilized_email_dict:
+                deserilized_email = (deserilized_email_dict[0])['address']
             
 
             initial_data = {
@@ -1676,9 +1681,7 @@ def profile():
                 'organization': connection_data['organization'], 
                 'role': connection_data['title'], # Store the role value in title field
                 'bio': connection_data['bio'],
-                # 'email': # user['user_email'].lower(),
-                # 'email': connection_data['email'].lower(),
-                'email': (deserilized_email_dict[0])['address'],
+                'email': deserilized_email,
                 # Other values pulled from `wp_connections_meta` table as customized fileds
                 'phone': deserilized_phone,
                 'other_component': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'other_component'), {'meta_value': ''})['meta_value'],
@@ -1785,8 +1788,12 @@ def members(globus_user_id):
         if deserilized_phone_dict:
             deserilized_phone = (deserilized_phone_dict[0])['number']
         
-        deserilized_email_dict = phpserialize.loads(profile.email.encode('utf-8'), decode_strings=True)
-
+        # Deseriliaze User Email            
+        deserilized_email = ''
+        deserilized_email_dict = phpserialize.loads( connection_data['email'].encode('utf-8'), decode_strings=True)
+        if deserilized_email_dict:
+            deserilized_email = (deserilized_email_dict[0])['address']
+            
         initial_data = {
             # Data pulled from the `wp_connections` table
             'first_name': connection_data['first_name'],
@@ -1795,8 +1802,7 @@ def members(globus_user_id):
             'organization': connection_data['organization'], 
             'role': connection_data['title'], # Store the role value in title field
             'bio': connection_data['bio'],
-            'email': connection_data['email'].lower(),
-            # 'email': wp_user['user_email'].lower(),
+            'email': deserilized_email,
             # Other values pulled from `wp_connections_meta` table as customized fileds
             'phone': deserilized_phone,
             'other_component': next((meta for meta in connection_data['metas'] if meta['meta_key'] == connection_meta_key_prefix + 'other_component'), {'meta_value': ''})['meta_value'],
@@ -2099,7 +2105,7 @@ def get_all_users_with_all_info():
                     'organization': connection_data.organization,
                     'component': connection_data.department,
                     'role': connection_data.title,
-                    'email': user.user_email.lower(),
+                    'email': connection_data.email,
                     'capability': capability
                 }
                 keys = get_connection_keys()
