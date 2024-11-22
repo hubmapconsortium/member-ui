@@ -1271,15 +1271,22 @@ def get_all_members():
                 # Also get the globus_user_id
                 wp_user_meta_globus_user_id = WPUserMeta.query.filter(WPUserMeta.user_id == user.id, WPUserMeta.meta_key.like('openid-connect-generic-subject-identity')).first()
                 
+                # Deseriliaze User Email            
+                deserilized_email = ''
+                deserilized_email_dict = phpserialize.loads( connection_data.email.encode('utf-8'), decode_strings=True)
+                if deserilized_email_dict:
+                    deserilized_email = (deserilized_email_dict[0])['address']
+            
                 # Construct a new member dict and add to the members list
                 member = {
                     'globus_user_id': wp_user_meta_globus_user_id.meta_value,
                     'first_name': connection_data.first_name,
                     'last_name': connection_data.last_name,
-                    'email': connection_data.email,
+                    'email': deserilized_email,
                     'organization': connection_data.organization
                 }
-
+                print(member)
+                print('-----------------')
                 members.append(member)
     
     return members
