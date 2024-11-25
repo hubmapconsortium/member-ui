@@ -223,7 +223,6 @@ class Connection(db.Model):
     metas = db.relationship('ConnectionMeta', backref='connection', lazy='joined')
     emails = db.relationship('ConnectionEmail', backref='connection', lazy='joined')
     phones = db.relationship('ConnectionPhone', backref='connection', lazy='joined')
-    globus_parsed_email = db.Column(db.Text)
 
 # Connection Schema
 class ConnectionSchema(ma.Schema):
@@ -2106,7 +2105,6 @@ def get_all_users_with_all_info():
                 # Construct a new member dict and add to the members list
                 member = {
                     'globus_user_id': wp_user_meta_globus_user_id.meta_value,
-                    'globus_parsed_email': connection_data.globus_parsed_email,
                     'first_name': connection_data.first_name,
                     'last_name': connection_data.last_name,
                     'organization': connection_data.organization,
